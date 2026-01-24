@@ -34,7 +34,7 @@ E-Masjid System is a web-based mosque management platform designed for Pakistani
 - **Authentication:** JWT
 
 ## Project Status
-🟡 In Progress - SDS Phase
+🟡 In Progress - Comprehensive Documentation Phase
 
 ## Documentation
 All project documentation is available in the `Documentation` folder.
