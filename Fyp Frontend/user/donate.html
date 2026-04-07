@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Make an online donation to Masjid Al-Noor, Sheikhupura. Support mosque operations, Zakat, Sadaqah, and community services."
+    />
+
+    <title>Online Donation | Masjid Al-Noor - E-Masjid System</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/images/favicon.png" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet"
+    />
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <!-- ============================================
+         NAVBAR
+         ============================================ -->
+    <header class="navbar" id="navbar">
+      <div class="container navbar-container">
+        <!-- Logo -->
+        <a href="index.html" class="navbar-logo">
+          <div class="logo-icon">
+            <i class="material-icons-round">mosque</i>
+          </div>
+          <div class="logo-text">
+            <span class="name">Masjid Al-Noor</span>
+            <span class="tagline">Sheikhupura</span>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="navbar-menu">
+          <a href="index.html" class="nav-link">Home</a>
+          <a href="prayer-times.html" class="nav-link">Prayer Times</a>
+          <a href="events.html" class="nav-link">Events</a>
+          <a href="donate.html" class="nav-link active">Donate</a>
+          <a href="nikah-booking.html" class="nav-link">Nikah Services</a>
+          <a href="transparency.html" class="nav-link">Transparency</a>
+        </nav>
+
+        <!-- Auth Buttons -->
+        <div class="navbar-auth">
+          <a href="login.html" class="btn btn-secondary btn-sm">Login</a>
+          <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+          <i class="material-icons-round">menu</i>
+        </button>
+      </div>
+
+      <!-- Mobile Menu -->
+      <nav class="mobile-menu" id="mobileMenu">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="prayer-times.html" class="nav-link">Prayer Times</a>
+        <a href="events.html" class="nav-link">Events</a>
+        <a href="donate.html" class="nav-link active">Donate</a>
+        <a href="nikah-booking.html" class="nav-link">Nikah Services</a>
+        <a href="transparency.html" class="nav-link">Transparency</a>
+        <div class="navbar-auth">
+          <a href="login.html" class="btn btn-secondary">Login</a>
+          <a href="register.html" class="btn btn-primary">Register</a>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ============================================
+         MAIN CONTENT - DONATION
+         ============================================ -->
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="donation-layout">
+            <!-- Left Side - Info -->
+            <div class="donation-info animate-fade-in">
+              <!-- Badge -->
+              <div class="donation-badge">
+                <i class="material-icons-round">volunteer_activism</i>
+                <span>Sadaqah Jariyah</span>
+              </div>
+
+              <!-- Title -->
+              <h1 class="donation-title">
+                Invest in your <span class="highlight">Akhirah</span>
+              </h1>
+
+              <!-- Description -->
+              <p class="donation-description">
+                Your contributions help maintain the House of Allah, support
+                community services, educational programs, and assist those in
+                need. Every donation makes a difference.
+              </p>
+
+              <!-- Hadith Quote -->
+              <div class="hadith-quote-card">
+                <i class="material-icons-round quote-icon">format_quote</i>
+                <blockquote>
+                  "The believer's shade on the Day of Resurrection will be their
+                  charity."
+                </blockquote>
+                <div class="hadith-source">Tirmidhi</div>
+              </div>
+
+              <!-- Help Card -->
+              <div class="donation-help-card">
+                <i class="material-icons-round">phone_in_talk</i>
+                <span
+                  >Need help donating? Call <strong>0321-5551234</strong></span
+                >
+              </div>
+            </div>
+
+            <!-- Right Side - Form -->
+            <div class="donation-form-card animate-fade-in-up">
+              <!-- Header -->
+              <div class="donation-form-header">
+                <h2 class="donation-form-title">Make a Donation</h2>
+                <div class="secure-badge">
+                  <i class="material-icons-round">lock</i>
+                  Secure Payment
+                </div>
+              </div>
+
+              <!-- Form Body -->
+              <div class="donation-form-body">
+                <form id="donationForm" novalidate>
+                  <!-- Donation Type -->
+                  <div class="donation-type-section">
+                    <label class="donation-type-label"
+                      >Select Donation Type</label
+                    >
+                    <div class="donation-type-grid">
+                      <label class="donation-type-option">
+                        <input
+                          type="radio"
+                          name="donationType"
+                          value="mosque-fund"
+                          checked
+                        />
+                        <div class="donation-type-card">
+                          <i class="material-icons-round">mosque</i>
+                          <span>Mosque Fund</span>
+                        </div>
+                      </label>
+
+                      <label class="donation-type-option">
+                        <input type="radio" name="donationType" value="zakat" />
+                        <div class="donation-type-card">
+                          <i class="material-icons-round">handshake</i>
+                          <span>Zakat</span>
+                        </div>
+                      </label>
+
+                      <label class="donation-type-option">
+                        <input
+                          type="radio"
+                          name="donationType"
+                          value="sadaqah"
+                        />
+                        <div class="donation-type-card">
+                          <i class="material-icons-round">favorite</i>
+                          <span>Sadaqah</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Amount Selection -->
+                  <div class="amount-section">
+                    <label class="donation-type-label">Select Amount</label>
+                    <div class="amount-grid">
+                      <button
+                        type="button"
+                        class="amount-btn"
+                        data-amount="500"
+                      >
+                        Rs. 500
+                      </button>
+                      <button
+                        type="button"
+                        class="amount-btn active"
+                        data-amount="1000"
+                      >
+                        Rs. 1,000
+                      </button>
+                      <button
+                        type="button"
+                        class="amount-btn"
+                        data-amount="5000"
+                      >
+                        Rs. 5,000
+                      </button>
+                      <button
+                        type="button"
+                        class="amount-btn"
+                        data-amount="10000"
+                      >
+                        Rs. 10,000
+                      </button>
+                    </div>
+                    <div class="custom-amount-wrapper">
+                      <span class="currency-prefix">PKR</span>
+                      <input
+                        type="number"
+                        id="customAmount"
+                        class="custom-amount-input"
+                        placeholder="Enter custom amount"
+                        min="100"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Donor Details -->
+                  <div class="donor-details-section">
+                    <label class="donation-type-label">
+                      Your Details
+                      <span class="optional-badge">Optional</span>
+                    </label>
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="donorName"
+                          >Full Name</label
+                        >
+                        <div class="input-wrapper">
+                          <i class="material-icons-round input-icon">person</i>
+                          <input
+                            type="text"
+                            id="donorName"
+                            class="form-input"
+                            placeholder="e.g. Abdullah Khan"
+                          />
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="donorPhone"
+                          >Phone Number</label
+                        >
+                        <div class="input-wrapper">
+                          <i class="material-icons-round input-icon">phone</i>
+                          <input
+                            type="tel"
+                            id="donorPhone"
+                            class="form-input"
+                            placeholder="03XX-XXXXXXX"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px">
+                      <label class="form-label" for="donorEmail"
+                        >Email (for receipt)</label
+                      >
+                      <div class="input-wrapper">
+                        <i class="material-icons-round input-icon">mail</i>
+                        <input
+                          type="email"
+                          id="donorEmail"
+                          class="form-input"
+                          placeholder="email@example.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Payment Section -->
+                  <div class="payment-section">
+                    <h3 class="payment-section-title">
+                      <i class="material-icons-round">credit_card</i>
+                      Payment Details
+                    </h3>
+                    <div class="card-input-group">
+                      <div class="card-number-input">
+                        <input
+                          type="text"
+                          id="cardNumber"
+                          class="card-input"
+                          placeholder="Card Number (1234 5678 9012 3456)"
+                          maxlength="19"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          id="cardExpiry"
+                          class="card-input"
+                          placeholder="MM/YY"
+                          maxlength="5"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          id="cardCvc"
+                          class="card-input"
+                          placeholder="CVC"
+                          maxlength="4"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Submit Button -->
+                  <button type="submit" class="btn btn-primary donate-btn">
+                    <i class="material-icons-round btn-icon"
+                      >volunteer_activism</i
+                    >
+                    <span class="btn-text">Donate Now</span>
+                  </button>
+
+                  <!-- Security Info -->
+                  <div class="security-info">
+                    <div class="security-text">
+                      <i class="material-icons-round">verified_user</i>
+                      <span>Secure 256-bit SSL Encrypted Payment</span>
+                    </div>
+                    <div class="payment-methods">
+                      <span class="payment-method visa">VISA</span>
+                      <span class="payment-method mastercard">MasterCard</span>
+                      <span class="payment-method easypaisa">EasyPaisa</span>
+                      <span class="payment-method jazzcash">JazzCash</span>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Donation Success Modal -->
+    <div class="donation-success-modal" id="donationSuccessModal">
+      <div class="donation-success-content">
+        <div class="success-icon-large">
+          <i class="material-icons-round">check</i>
+        </div>
+        <h3 class="donation-success-title">JazakAllah Khair!</h3>
+        <p class="donation-success-text">
+          Your donation has been processed successfully. May Allah accept your
+          contribution and reward you abundantly.
+        </p>
+        <div class="donation-amount-display" id="donatedAmount">PKR 1,000</div>
+        <div class="donation-receipt-info">
+          <strong>Transaction ID:</strong>
+          <span id="transactionId">TXN-2025-XXXXX</span><br />
+          A receipt has been sent to your email address.
+        </div>
+        <div
+          style="
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+          "
+        >
+          <a href="transparency.html" class="btn btn-secondary">
+            <i class="material-icons-round btn-icon">visibility</i>
+            View Transparency Report
+          </a>
+          <button class="btn btn-primary" onclick="closeDonationModal()">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================
+         FOOTER
+         ============================================ -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <!-- Brand Column -->
+          <div class="footer-brand">
+            <div class="logo-icon">
+              <i class="material-icons-round">mosque</i>
+            </div>
+            <h3 class="name">Masjid Al-Noor</h3>
+            <p>
+              A place for worship, learning, and community gathering. We are
+              dedicated to serving the spiritual and social needs of our
+              community in Sheikhupura.
+            </p>
+            <div class="footer-social">
+              <a href="#" class="social-link" aria-label="Facebook">
+                <i class="material-icons-round">facebook</i>
+              </a>
+              <a href="#" class="social-link" aria-label="YouTube">
+                <i class="material-icons-round">smart_display</i>
+              </a>
+              <a href="#" class="social-link" aria-label="WhatsApp">
+                <i class="material-icons-round">chat</i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Quick Links -->
+          <div>
+            <h4 class="footer-title">Quick Links</h4>
+            <nav class="footer-links">
+              <a href="index.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Home
+              </a>
+              <a href="prayer-times.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Prayer Times
+              </a>
+              <a href="events.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Upcoming Events
+              </a>
+              <a href="donate.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Make a Donation
+              </a>
+              <a href="transparency.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Transparency Report
+              </a>
+            </nav>
+          </div>
+
+          <!-- Services -->
+          <div>
+            <h4 class="footer-title">Our Services</h4>
+            <nav class="footer-links">
+              <a href="nikah-booking.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Nikah Services
+              </a>
+              <a href="events.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Event Registration
+              </a>
+              <a href="donate.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Online Donation
+              </a>
+              <a href="my-bookings.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                My Bookings
+              </a>
+            </nav>
+          </div>
+
+          <!-- Contact -->
+          <div>
+            <h4 class="footer-title">Contact Us</h4>
+            <div class="footer-contact-item">
+              <i class="material-icons-round">location_on</i>
+              <span
+                >Near Civil Lines,<br />Main GT Road,<br />Sheikhupura,
+                Punjab</span
+              >
+            </div>
+            <div class="footer-contact-item">
+              <i class="material-icons-round">call</i>
+              <span>0321-5551234</span>
+            </div>
+            <div class="footer-contact-item">
+              <i class="material-icons-round">mail</i>
+              <span>info@masjidalnoor.pk</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+          <p>
+            © 2025 Masjid Al-Noor, Sheikhupura. All rights reserved. |
+            <a href="#">Privacy Policy</a> |
+            <a href="#">Terms of Use</a>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ============================================
+         JAVASCRIPT
+         ============================================ -->
+    <script src="js/main.js"></script>
+
+    <!-- Donation Page Specific JS -->
+    <script>
+      // Amount Buttons
+      const amountBtns = document.querySelectorAll(".amount-btn");
+      const customAmountInput = document.getElementById("customAmount");
+      let selectedAmount = 1000;
+
+      amountBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          // Update active state
+          amountBtns.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+
+          // Set amount
+          selectedAmount = parseInt(btn.getAttribute("data-amount"));
+          customAmountInput.value = "";
+        });
+      });
+
+      // Custom Amount Input
+      customAmountInput.addEventListener("input", (e) => {
+        const value = e.target.value;
+        if (value) {
+          amountBtns.forEach((b) => b.classList.remove("active"));
+          selectedAmount = parseInt(value);
+        }
+      });
+
+      // Card Number Formatting
+      const cardNumberInput = document.getElementById("cardNumber");
+      cardNumberInput.addEventListener("input", (e) => {
+        let value = e.target.value.replace(/\s/g, "").replace(/\D/g, "");
+        let formattedValue = value.match(/.{1,4}/g)?.join(" ") || value;
+        e.target.value = formattedValue;
+      });
+
+      // Expiry Date Formatting
+      const cardExpiryInput = document.getElementById("cardExpiry");
+      cardExpiryInput.addEventListener("input", (e) => {
+        let value = e.target.value.replace(/\D/g, "");
+        if (value.length >= 2) {
+          value = value.slice(0, 2) + "/" + value.slice(2);
+        }
+        e.target.value = value;
+      });
+
+      // Form Submission
+      const donationForm = document.getElementById("donationForm");
+      const donationModal = document.getElementById("donationSuccessModal");
+
+      donationForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        // Get values
+        const cardNumber = document.getElementById("cardNumber").value.trim();
+        const cardExpiry = document.getElementById("cardExpiry").value.trim();
+        const cardCvc = document.getElementById("cardCvc").value.trim();
+        const customAmount = customAmountInput.value;
+
+        // Final amount
+        const finalAmount = customAmount
+          ? parseInt(customAmount)
+          : selectedAmount;
+
+        // Basic validation
+        if (finalAmount < 100) {
+          showToast("Minimum donation amount is PKR 100", "error");
+          return;
+        }
+
+        if (!cardNumber || cardNumber.replace(/\s/g, "").length < 16) {
+          showToast("Please enter a valid card number", "error");
+          return;
+        }
+
+        if (!cardExpiry || cardExpiry.length < 5) {
+          showToast("Please enter card expiry date", "error");
+          return;
+        }
+
+        if (!cardCvc || cardCvc.length < 3) {
+          showToast("Please enter CVC", "error");
+          return;
+        }
+
+        // Show loading
+        const submitBtn = donationForm.querySelector(".donate-btn");
+        submitBtn.classList.add("loading");
+
+        // Simulate Stripe payment processing
+        setTimeout(() => {
+          submitBtn.classList.remove("loading");
+
+          // Generate transaction ID
+          const txnId = "TXN-2025-" + Math.floor(10000 + Math.random() * 90000);
+
+          // Update modal
+          document.getElementById("donatedAmount").textContent =
+            "PKR " + finalAmount.toLocaleString();
+          document.getElementById("transactionId").textContent = txnId;
+
+          // Show success modal
+          donationModal.classList.add("active");
+          document.body.style.overflow = "hidden";
+
+          // Reset form
+          donationForm.reset();
+          amountBtns.forEach((b) => b.classList.remove("active"));
+          amountBtns[1].classList.add("active"); // Reset to Rs. 1000
+          selectedAmount = 1000;
+        }, 2500);
+      });
+
+      // Close Donation Modal
+      function closeDonationModal() {
+        donationModal.classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      // Close on outside click
+      donationModal.addEventListener("click", (e) => {
+        if (e.target === donationModal) {
+          closeDonationModal();
+        }
+      });
+
+      // Close on Escape
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && donationModal.classList.contains("active")) {
+          closeDonationModal();
+        }
+      });
+    </script>
+  </body>
+</html>
