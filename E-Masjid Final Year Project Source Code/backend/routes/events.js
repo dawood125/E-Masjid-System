@@ -6,7 +6,9 @@ const { protect, authorize } = require('../middleware/auth');
 // GET /api/events - List events (public)
 router.get('/', async (req, res, next) => {
   try {
-    const events = await Event.find({ isActive: true }).sort({ date: 1 });
+    const { mosqueId } = req.query;
+    const query = { isActive: true, ...(mosqueId ? { mosqueId } : {}) };
+    const events = await Event.find(query).sort({ date: 1 });
     res.json({ success: true, data: events });
   } catch (error) { next(error); }
 });

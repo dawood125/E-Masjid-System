@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
-import { mockFundRequests } from '../../../mocks/index.js'
+import { useEffect, useMemo, useState } from 'react'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate, formatCurrency } from '../../../utils/formatters.js'
+import { useUI } from '../../../hooks/useUI.js'
 
 const statusConfig = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-800', icon: 'schedule', label: 'Pending Review' },
@@ -10,7 +12,32 @@ const statusConfig = {
 }
 
 export default function MyRequests() {
-  const requests = mockFundRequests
+  const { showToast } = useUI()
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await api.getFundRequests()
+        if (!mounted) return
+        setRequests(res.data || [])
+      } catch (e) {
+        if (!mounted) return
+        showToast(e.message || 'Failed to load requests', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { mounted = false }
+  }, [showToast])
+
+  const totalLabel = useMemo(() => `${requests.length} request(s) found`, [requests.length])
 
   return (
     <div className="bg-primary-50 min-h-screen">
@@ -27,14 +54,14 @@ export default function MyRequests() {
         <div className="container max-w-4xl">
           {/* Action Bar */}
           <div className="flex items-center justify-between mb-8">
-            <p className="text-gray-600">{requests.length} request(s) found</p>
+            <p className="text-gray-600">{loading ? 'Loading...' : totalLabel}</p>
             <Link to={ROUTES.FUND_REQUEST} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
               <i className="material-icons-round text-lg">add</i>
               New Request
             </Link>
           </div>
 
-          {requests.length === 0 ? (
+          {!loading && requests.length === 0 ? (
             <div className="rounded-2xl bg-white p-12 text-center shadow-sm border border-gray-200">
               <i className="material-icons-round text-gray-300 text-6xl">inbox</i>
               <h3 className="mt-4 font-primary text-xl font-semibold text-gray-700">No Requests Yet</h3>
@@ -46,7 +73,7 @@ export default function MyRequests() {
               {requests.map((req) => {
                 const status = statusConfig[req.status]
                 return (
-                  <div key={req.id} className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                  <div key={req._id || req.id} className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
                     <div className="p-6">
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div className="flex-1">
@@ -76,7 +103,7 @@ export default function MyRequests() {
                               {req.status === 'approved' ? 'verified' : 'info'}
                             </i>
                             <span className="text-sm font-semibold text-gray-700">
-                              Committee Decision {req.reviewerName && `by ${req.reviewerName}`}
+                              Committee Decision {req.reviewedBy?.name && `by ${req.reviewedBy.name}`}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600">{req.reviewNote}</p>

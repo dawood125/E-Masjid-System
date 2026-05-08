@@ -1,5 +1,7 @@
-import { mockFundRequests } from '../../../mocks/index.js'
+import { useEffect, useState } from 'react'
+import api from '../../../utils/api.js'
 import { formatDate, formatCurrency } from '../../../utils/formatters.js'
+import { useUI } from '../../../hooks/useUI.js'
 
 const statusConfig = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-800', icon: 'schedule', label: 'Pending' },
@@ -8,7 +10,30 @@ const statusConfig = {
 }
 
 export default function AdminFundRequests() {
-  const requests = mockFundRequests
+  const { showToast } = useUI()
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await api.getFundRequests()
+        if (!mounted) return
+        setRequests(res.data || [])
+      } catch (e) {
+        if (!mounted) return
+        showToast(e.message || 'Failed to load fund requests', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { mounted = false }
+  }, [showToast])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -20,19 +45,19 @@ export default function AdminFundRequests() {
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm text-center">
-          <p className="text-3xl font-bold text-gray-900">{requests.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{loading ? '—' : requests.length}</p>
           <p className="text-sm text-gray-500">Total Requests</p>
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm text-center">
-          <p className="text-3xl font-bold text-amber-700">{requests.filter(r => r.status === 'pending').length}</p>
+          <p className="text-3xl font-bold text-amber-700">{loading ? '—' : requests.filter(r => r.status === 'pending').length}</p>
           <p className="text-sm text-amber-600">Pending</p>
         </div>
         <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm text-center">
-          <p className="text-3xl font-bold text-green-700">{requests.filter(r => r.status === 'approved').length}</p>
+          <p className="text-3xl font-bold text-green-700">{loading ? '—' : requests.filter(r => r.status === 'approved').length}</p>
           <p className="text-sm text-green-600">Approved</p>
         </div>
         <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm text-center">
-          <p className="text-3xl font-bold text-red-700">{requests.filter(r => r.status === 'rejected').length}</p>
+          <p className="text-3xl font-bold text-red-700">{loading ? '—' : requests.filter(r => r.status === 'rejected').length}</p>
           <p className="text-sm text-red-600">Rejected</p>
         </div>
       </div>
@@ -55,7 +80,7 @@ export default function AdminFundRequests() {
               {requests.map((req) => {
                 const status = statusConfig[req.status]
                 return (
-                  <tr key={req.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                  <tr key={req._id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4 text-gray-600">{formatDate(req.createdAt)}</td>
                     <td className="px-5 py-4">
                       <p className="font-medium text-gray-900">{req.requesterName}</p>
@@ -71,7 +96,7 @@ export default function AdminFundRequests() {
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-gray-600">{req.reviewerName || '—'}</td>
+                    <td className="px-5 py-4 text-gray-600">{req.reviewedBy?.name || '—'}</td>
                   </tr>
                 )
               })}

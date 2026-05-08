@@ -42,14 +42,14 @@ class ApiService {
 
   // Donations
   getDonations(params = '') { return this.request('GET', `/api/donations${params ? '?' + params : ''}`) }
-  getTopDonors() { return this.request('GET', '/api/donations/top-donors') }
-  getDonationSummary() { return this.request('GET', '/api/donations/summary') }
+  getTopDonors(params = '') { return this.request('GET', `/api/donations/top-donors${params ? '?' + params : ''}`) }
+  getDonationSummary(params = '') { return this.request('GET', `/api/donations/summary${params ? '?' + params : ''}`) }
   createDonation(data) { return this.request('POST', '/api/donations', data) }
   createOnlineDonation(data) { return this.request('POST', '/api/donations/online', data) }
 
   // Expenses
   getExpenses(params = '') { return this.request('GET', `/api/expenses${params ? '?' + params : ''}`) }
-  getExpenseSummary() { return this.request('GET', '/api/expenses/summary') }
+  getExpenseSummary(params = '') { return this.request('GET', `/api/expenses/summary${params ? '?' + params : ''}`) }
   createExpense(data) { return this.request('POST', '/api/expenses', data) }
   updateExpense(id, data) { return this.request('PUT', `/api/expenses/${id}`, data) }
   deleteExpense(id) { return this.request('DELETE', `/api/expenses/${id}`) }
@@ -84,6 +84,7 @@ class ApiService {
 
   // Mosques
   getMosques() { return this.request('GET', '/api/mosques') }
+  getPublicMosques() { return this.request('GET', '/api/mosques/public') }
   getMosque(id) { return this.request('GET', `/api/mosques/${id}`) }
   createMosque(data) { return this.request('POST', '/api/mosques', data) }
   updateMosque(id, data) { return this.request('PUT', `/api/mosques/${id}`, data) }

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { mockDonations, mockExpenses, mockFinancialSummary, mockTopDonors } from '../../../mocks/index.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 function donationTypeClass(type) {
   const key = type.toLowerCase()
@@ -32,40 +33,74 @@ export default function Transparency() {
   const [donationPage, setDonationPage] = useState(1)
   const [expensePage, setExpensePage] = useState(1)
   const { showToast } = useUI()
+  const [donations, setDonations] = useState([])
+  const [donationsTotalPages, setDonationsTotalPages] = useState(1)
+  const [expenses, setExpenses] = useState([])
+  const [expensesTotalPages, setExpensesTotalPages] = useState(1)
+  const [topDonors, setTopDonors] = useState([])
+  const [summary, setSummary] = useState({ totalDonations: 0, totalExpenses: 0, balance: 0 })
+  const [loading, setLoading] = useState(true)
 
   const allMonths = useMemo(() => {
-    const set = new Set([...mockDonations.map((d) => monthKey(d.date)), ...mockExpenses.map((e) => monthKey(e.date))])
+    const set = new Set([...donations.map((d) => monthKey(d.createdAt || d.date)), ...expenses.map((e) => monthKey(e.createdAt || e.date))])
     return ['all', ...Array.from(set)]
-  }, [])
+  }, [donations, expenses])
 
-  const filteredDonations = useMemo(() => {
-    return mockDonations.filter((item) => {
-      const monthOk = monthFilter === 'all' || monthKey(item.date) === monthFilter
-      const typeOk = typeFilter === 'all' || item.type.toLowerCase().includes(typeFilter)
-      return monthOk && typeOk
-    })
-  }, [monthFilter, typeFilter])
+  const donationSafePage = Math.max(1, donationPage)
+  const expenseSafePage = Math.max(1, expensePage)
 
-  const filteredExpenses = useMemo(() => {
-    return mockExpenses.filter((item) => {
-      const monthOk = monthFilter === 'all' || monthKey(item.date) === monthFilter
-      return monthOk
-    })
-  }, [monthFilter])
+  useEffect(() => {
+    let mounted = true
 
-  const pageSize = 6
-  const donationTotalPages = Math.max(1, Math.ceil(filteredDonations.length / pageSize))
-  const expenseTotalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize))
+    async function load() {
+      const mosqueId = getActiveMosqueId()
+      if (!mosqueId) {
+        setLoading(false)
+        return
+      }
 
-  const donationSafePage = Math.min(donationPage, donationTotalPages)
-  const expenseSafePage = Math.min(expensePage, expenseTotalPages)
+      setLoading(true)
+      try {
+        const queryParts = []
+        if (typeFilter !== 'all') queryParts.push(`type=${encodeURIComponent(typeFilter)}`)
+        if (monthFilter !== 'all') queryParts.push(`month=${encodeURIComponent(monthFilter)}`)
+        queryParts.push(`page=${donationSafePage}`)
+        queryParts.push('limit=6')
+        queryParts.push(`mosqueId=${encodeURIComponent(mosqueId)}`)
 
-  const donationSlice = filteredDonations.slice((donationSafePage - 1) * pageSize, donationSafePage * pageSize)
-  const expenseSlice = filteredExpenses.slice((expenseSafePage - 1) * pageSize, expenseSafePage * pageSize)
+        const [donRes, expRes, topRes, donSumRes, expSumRes] = await Promise.all([
+          api.getDonations(queryParts.join('&')),
+          api.getExpenses(`page=${expenseSafePage}&limit=6&mosqueId=${encodeURIComponent(mosqueId)}`),
+          api.getTopDonors(`mosqueId=${encodeURIComponent(mosqueId)}`),
+          api.getDonationSummary(`mosqueId=${encodeURIComponent(mosqueId)}`),
+          api.getExpenseSummary(`mosqueId=${encodeURIComponent(mosqueId)}`),
+        ])
 
-  const totalDonations = mockFinancialSummary.totalDonations
-  const totalExpenses = mockFinancialSummary.totalExpenses
-  const balance = mockFinancialSummary.balance
+        if (!mounted) return
+        setDonations(donRes.data || [])
+        setDonationsTotalPages(donRes.totalPages || 1)
+        setExpenses(expRes.data || [])
+        setExpensesTotalPages(expRes.totalPages || 1)
+        setTopDonors(topRes.data || [])
+
+        const totalDonations = donSumRes.data?.totalDonations || 0
+        const totalExpenses = expSumRes.data?.totalExpenses || 0
+        setSummary({ totalDonations, totalExpenses, balance: totalDonations - totalExpenses })
+      } catch (e) {
+        if (!mounted) return
+        showToast(e.message || 'Failed to load transparency data', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { mounted = false }
+  }, [showToast, monthFilter, typeFilter, donationSafePage, expenseSafePage])
+
+  const totalDonations = summary.totalDonations
+  const totalExpenses = summary.totalExpenses
+  const balance = summary.balance
 
   return (
     <section className="py-12 bg-white">
@@ -172,7 +207,7 @@ export default function Transparency() {
             <button
               type="button"
               className="inline-flex items-center gap-1 rounded-lg bg-[#047857] px-4 py-2 text-sm font-semibold text-white hover:bg-[#064e3b]"
-              onClick={() => showToast('Report downloaded successfully!', 'success')}
+              onClick={() => showToast('Export will be added in next iteration', 'info')}
             >
               <i className="material-icons-round text-base">download</i>
               Download Report
@@ -201,9 +236,9 @@ export default function Transparency() {
                   </tr>
                 </thead>
                 <tbody>
-                  {donationSlice.map((d) => (
-                    <tr key={d.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3">{formatDate(d.date)}</td>
+                  {donations.map((d) => (
+                    <tr key={d._id} className="border-t border-gray-100">
+                      <td className="px-4 py-3">{formatDate(d.createdAt || d.date)}</td>
                       <td className="px-4 py-3 font-medium text-gray-900">{d.donorName}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${donationTypeClass(d.type)}`}>{d.type}</span>
@@ -218,17 +253,17 @@ export default function Transparency() {
             <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3">
               <button
                 type="button"
-                disabled={donationSafePage === 1}
+                disabled={donationSafePage === 1 || loading}
                 onClick={() => setDonationPage((p) => Math.max(1, p - 1))}
                 className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
               >
                 <i className="material-icons-round text-base">chevron_left</i>
               </button>
-              <span className="text-xs text-gray-500">Page {donationSafePage} of {donationTotalPages}</span>
+              <span className="text-xs text-gray-500">Page {donationSafePage} of {donationsTotalPages}</span>
               <button
                 type="button"
-                disabled={donationSafePage === donationTotalPages}
-                onClick={() => setDonationPage((p) => Math.min(donationTotalPages, p + 1))}
+                disabled={donationSafePage === donationsTotalPages || loading}
+                onClick={() => setDonationPage((p) => Math.min(donationsTotalPages, p + 1))}
                 className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
               >
                 <i className="material-icons-round text-base">chevron_right</i>
@@ -256,9 +291,9 @@ export default function Transparency() {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenseSlice.map((e) => (
-                    <tr key={e.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3">{formatDate(e.date)}</td>
+                  {expenses.map((e) => (
+                    <tr key={e._id} className="border-t border-gray-100">
+                      <td className="px-4 py-3">{formatDate(e.createdAt || e.date)}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${expenseTypeClass(e.category)}`}>{e.category}</span>
                       </td>
@@ -273,17 +308,17 @@ export default function Transparency() {
             <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3">
               <button
                 type="button"
-                disabled={expenseSafePage === 1}
+                disabled={expenseSafePage === 1 || loading}
                 onClick={() => setExpensePage((p) => Math.max(1, p - 1))}
                 className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
               >
                 <i className="material-icons-round text-base">chevron_left</i>
               </button>
-              <span className="text-xs text-gray-500">Page {expenseSafePage} of {expenseTotalPages}</span>
+              <span className="text-xs text-gray-500">Page {expenseSafePage} of {expensesTotalPages}</span>
               <button
                 type="button"
-                disabled={expenseSafePage === expenseTotalPages}
-                onClick={() => setExpensePage((p) => Math.min(expenseTotalPages, p + 1))}
+                disabled={expenseSafePage === expensesTotalPages || loading}
+                onClick={() => setExpensePage((p) => Math.min(expensesTotalPages, p + 1))}
                 className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
               >
                 <i className="material-icons-round text-base">chevron_right</i>
@@ -304,7 +339,7 @@ export default function Transparency() {
           <div className="p-5">
             <p className="text-sm text-gray-500 mb-5">These generous community members have contributed the most to our mosque. Their names appear here with their consent to inspire others.</p>
             <div className="space-y-3">
-              {mockTopDonors.map((donor) => {
+              {topDonors.map((donor) => {
                 const rankConfig = {
                   1: { bg: 'bg-gradient-to-r from-yellow-100 to-amber-100', border: 'border-yellow-300', icon: '🥇', textColor: 'text-yellow-700' },
                   2: { bg: 'bg-gradient-to-r from-gray-100 to-slate-100', border: 'border-gray-300', icon: '🥈', textColor: 'text-gray-600' },

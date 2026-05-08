@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../utils/constants.js'
+import { useAuth } from '../../../hooks/useAuth.js'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const CATEGORIES = ['Medical', 'Education', 'Housing', 'Food', 'Clothing', 'Debt', 'Other']
 
 export default function FundRequest() {
+  const { isAuthenticated } = useAuth()
+  const { showToast } = useUI()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,6 +22,13 @@ export default function FundRequest() {
   })
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      showToast('Please login first to submit a fund request', 'warning')
+    }
+  }, [isAuthenticated, showToast])
 
   const validate = () => {
     const errs = {}
@@ -28,18 +41,43 @@ export default function FundRequest() {
     if (!formData.reason.trim()) errs.reason = 'Please explain why you need assistance'
     else if (formData.reason.trim().length < 30) errs.reason = 'Please provide more detail (at least 30 characters)'
     if (!formData.agreeTerms) errs.agreeTerms = 'You must agree to the terms'
+    if (!getActiveMosqueId()) errs.mosqueId = 'Please select a mosque before submitting a request'
     return errs
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!isAuthenticated) {
+      showToast('Please login first to submit a fund request', 'warning')
+      return
+    }
+
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
     }
     setErrors({})
-    setSubmitted(true)
+
+    setSubmitting(true)
+    try {
+      const mosqueId = getActiveMosqueId()
+      await api.createFundRequest({
+        requesterName: formData.name,
+        requesterEmail: formData.email,
+        requesterPhone: formData.phone,
+        amount: Number(formData.amount),
+        category: formData.category,
+        reason: formData.reason,
+        mosqueId,
+      })
+      setSubmitted(true)
+      showToast('Request submitted successfully', 'success')
+    } catch (e2) {
+      showToast(e2.message || 'Failed to submit request', 'error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleChange = (field, value) => {
@@ -180,13 +218,14 @@ export default function FundRequest() {
                 </span>
               </label>
               {errors.agreeTerms && <p className="form-error mt-2">{errors.agreeTerms}</p>}
+              {errors.mosqueId && <p className="form-error mt-2">{errors.mosqueId}</p>}
             </div>
 
             {/* Submit */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <button type="submit" className="btn btn-lg bg-[#047857] text-white hover:bg-[#064e3b] flex-1 shadow-md">
+              <button type="submit" disabled={submitting} className="btn btn-lg bg-[#047857] text-white hover:bg-[#064e3b] flex-1 shadow-md disabled:opacity-60 disabled:cursor-not-allowed">
                 <i className="material-icons-round text-xl">send</i>
-                Submit Request
+                {submitting ? 'Submitting...' : 'Submit Request'}
               </button>
               <Link to={ROUTES.HOME} className="btn btn-lg btn-secondary">
                 Cancel

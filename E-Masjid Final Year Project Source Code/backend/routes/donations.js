@@ -2,14 +2,16 @@ const express = require('express');
 const router = express.Router();
 const Donation = require('../models/Donation');
 const { protect, authorize } = require('../middleware/auth');
+const stripeLib = require('stripe');
 
 // @route   GET /api/donations
 // @desc    Get all donations (public for transparency)
 // @access  Public
 router.get('/', async (req, res, next) => {
   try {
-    const { type, month, page = 1, limit = 10 } = req.query;
+    const { type, month, page = 1, limit = 10, mosqueId } = req.query;
     const query = {};
+    if (mosqueId) query.mosqueId = mosqueId;
 
     if (type && type !== 'all') query.type = new RegExp(type, 'i');
     if (month && month !== 'all') {
@@ -45,8 +47,14 @@ router.get('/', async (req, res, next) => {
 // @access  Public
 router.get('/top-donors', async (req, res, next) => {
   try {
+    const { mosqueId } = req.query;
+    const mongoose = require('mongoose');
+    const match = {
+      isAnonymous: false,
+      ...(mosqueId ? { mosqueId: mongoose.Types.ObjectId.createFromHexString(mosqueId) } : {}),
+    };
     const topDonors = await Donation.aggregate([
-      { $match: { isAnonymous: false } },
+      { $match: match },
       { $group: { _id: '$donorName', totalAmount: { $sum: '$amount' }, donationCount: { $sum: 1 } } },
       { $sort: { totalAmount: -1 } },
       { $limit: 10 },
@@ -65,10 +73,14 @@ router.get('/top-donors', async (req, res, next) => {
 // @access  Public
 router.get('/summary', async (req, res, next) => {
   try {
+    const { mosqueId } = req.query;
+    const match = mosqueId ? { mosqueId: require('mongoose').Types.ObjectId.createFromHexString(mosqueId) } : {};
     const totalResult = await Donation.aggregate([
+      { $match: match },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]);
     const byType = await Donation.aggregate([
+      { $match: match },
       { $group: { _id: '$type', total: { $sum: '$amount' } } },
     ]);
 
@@ -107,29 +119,63 @@ router.post('/', protect, authorize('admin'), async (req, res, next) => {
 // @access  Public (user doesn't need to be logged in to donate)
 router.post('/online', async (req, res, next) => {
   try {
-    const { donorName, email, phone, amount, type, isAnonymous } = req.body;
+    const { donorName, email, phone, amount, type, isAnonymous, mosqueId } = req.body;
 
     if (!amount || amount < 100) {
       return res.status(400).json({ success: false, message: 'Minimum donation amount is PKR 100' });
     }
 
-    // In production, integrate Stripe checkout here
-    // For now, create donation record directly
-    const donation = await Donation.create({
-      donorName: donorName || 'Online Donor',
-      email,
-      phone,
-      amount,
-      type: type || 'Mosque Fund',
-      paymentMethod: 'Online',
-      isAnonymous: isAnonymous || false,
+    // Legacy fallback (non-stripe) if no Stripe key set
+    if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('your_test_key_here')) {
+      const donation = await Donation.create({
+        donorName: donorName || 'Online Donor',
+        email,
+        phone,
+        amount,
+        type: type || 'Mosque Fund',
+        paymentMethod: 'Online',
+        isAnonymous: isAnonymous || false,
+        mosqueId,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: donation,
+        transactionId: `TXN-${new Date().getFullYear()}-${donation._id.toString().slice(-5).toUpperCase()}`,
+      });
+    }
+
+    const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'pkr',
+            product_data: {
+              name: `Donation (${type || 'Mosque Fund'})`,
+              description: 'E-Masjid Online Donation',
+            },
+            unit_amount: Math.round(Number(amount) * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.CLIENT_URL}/donate?success=1`,
+      cancel_url: `${process.env.CLIENT_URL}/donate?canceled=1`,
+      metadata: {
+        donorName: donorName || 'Online Donor',
+        email: email || '',
+        phone: phone || '',
+        amount: String(amount),
+        type: type || 'Mosque Fund',
+        isAnonymous: String(!!isAnonymous),
+        mosqueId: mosqueId || '',
+      },
     });
 
-    res.status(201).json({
-      success: true,
-      data: donation,
-      transactionId: `TXN-${new Date().getFullYear()}-${donation._id.toString().slice(-5).toUpperCase()}`,
-    });
+    return res.status(200).json({ success: true, url: session.url });
   } catch (error) {
     next(error);
   }
