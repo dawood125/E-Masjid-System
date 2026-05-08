@@ -7,6 +7,8 @@ const Mosque = require('../../models/Mosque');
 const Donation = require('../../models/Donation');
 const FundRequest = require('../../models/FundRequest');
 
+jest.setTimeout(30000);
+
 describe('E-Masjid API (integration)', () => {
   let mongoUri;
   let mosque;

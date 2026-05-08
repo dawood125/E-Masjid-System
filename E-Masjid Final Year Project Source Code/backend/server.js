@@ -6,8 +6,10 @@ const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { stripeWebhook } = require('./routes/stripeWebhook');
 
-// Connect to Database
-connectDB();
+// Connect to Database (tests manage their own connections)
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 const app = express();
 
@@ -54,17 +56,20 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 // ─── START SERVER ───────────────────────────────────
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`\n  🕌 E-Masjid API Server running on port ${PORT}`);
-  console.log(`  📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`  🔗 Health: http://localhost:${PORT}/api/health\n`);
-});
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 5000;
+  server = app.listen(PORT, () => {
+    console.log(`\n  🕌 E-Masjid API Server running on port ${PORT}`);
+    console.log(`  📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`  🔗 Health: http://localhost:${PORT}/api/health\n`);
+  });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
-  server.close(() => process.exit(1));
-});
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (err) => {
+    console.error(`Unhandled Rejection: ${err.message}`);
+    server.close(() => process.exit(1));
+  });
+}
 
 module.exports = app;

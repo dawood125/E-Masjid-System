@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="View transparent financial records of Masjid Al-Noor, Sheikhupura. See donation history, expenses, and how your contributions are used."
+    />
+
+    <title>Transparency Report | Masjid Al-Noor - E-Masjid System</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/images/favicon.png" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet"
+    />
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <!-- ============================================
+         NAVBAR
+         ============================================ -->
+    <header class="navbar" id="navbar">
+      <div class="container navbar-container">
+        <!-- Logo -->
+        <a href="index.html" class="navbar-logo">
+          <div class="logo-icon">
+            <i class="material-icons-round">mosque</i>
+          </div>
+          <div class="logo-text">
+            <span class="name">Masjid Al-Noor</span>
+            <span class="tagline">Sheikhupura</span>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="navbar-menu">
+          <a href="index.html" class="nav-link">Home</a>
+          <a href="prayer-times.html" class="nav-link">Prayer Times</a>
+          <a href="events.html" class="nav-link">Events</a>
+          <a href="donate.html" class="nav-link">Donate</a>
+          <a href="nikah-booking.html" class="nav-link">Nikah Services</a>
+          <a href="transparency.html" class="nav-link active">Transparency</a>
+        </nav>
+
+        <!-- Auth Buttons -->
+        <div class="navbar-auth">
+          <a href="login.html" class="btn btn-secondary btn-sm">Login</a>
+          <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+          <i class="material-icons-round">menu</i>
+        </button>
+      </div>
+
+      <!-- Mobile Menu -->
+      <nav class="mobile-menu" id="mobileMenu">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="prayer-times.html" class="nav-link">Prayer Times</a>
+        <a href="events.html" class="nav-link">Events</a>
+        <a href="donate.html" class="nav-link">Donate</a>
+        <a href="nikah-booking.html" class="nav-link">Nikah Services</a>
+        <a href="transparency.html" class="nav-link active">Transparency</a>
+        <div class="navbar-auth">
+          <a href="login.html" class="btn btn-secondary">Login</a>
+          <a href="register.html" class="btn btn-primary">Register</a>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ============================================
+         MAIN CONTENT - TRANSPARENCY
+         ============================================ -->
+    <main>
+      <section class="section">
+        <div class="container">
+          <!-- Header -->
+          <div class="transparency-header animate-fade-in">
+            <div class="transparency-header-content">
+              <h1 class="transparency-title">
+                Transparency & Financial Records
+              </h1>
+              <p class="transparency-subtitle">
+                We believe in complete transparency. Here is a real-time record
+                of how your generous donations are helping maintain the mosque
+                and serve the community.
+              </p>
+            </div>
+            <div class="audit-badge">
+              <i class="material-icons-round">verified_user</i>
+              <span>Audited by Mosque Committee</span>
+            </div>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="stats-grid animate-fade-in-up">
+            <!-- Total Donations -->
+            <div class="stat-card">
+              <div class="stat-card-accent green"></div>
+              <div class="stat-card-header">
+                <div class="stat-card-icon green">
+                  <i class="material-icons-round">volunteer_activism</i>
+                </div>
+                <span class="stat-card-period">FY 2024-2025</span>
+              </div>
+              <p class="stat-card-label">Total Donations Received</p>
+              <h3 class="stat-card-value">PKR 28,50,000</h3>
+              <div class="stat-card-trend positive">
+                <i class="material-icons-round">trending_up</i>
+                <span>+12% from last month</span>
+              </div>
+            </div>
+
+            <!-- Total Expenses -->
+            <div class="stat-card">
+              <div class="stat-card-accent red"></div>
+              <div class="stat-card-header">
+                <div class="stat-card-icon red">
+                  <i class="material-icons-round">account_balance_wallet</i>
+                </div>
+                <span class="stat-card-period">FY 2024-2025</span>
+              </div>
+              <p class="stat-card-label">Total Funds Utilized</p>
+              <h3 class="stat-card-value">PKR 21,30,000</h3>
+              <div class="stat-card-trend neutral">
+                <i class="material-icons-round">info</i>
+                <span>Maintenance & Operations</span>
+              </div>
+            </div>
+
+            <!-- Remaining Balance -->
+            <div class="stat-card featured">
+              <i class="material-icons-round stat-card-bg-icon"
+                >account_balance</i
+              >
+              <div class="stat-card-header">
+                <div class="stat-card-icon">
+                  <i class="material-icons-round">savings</i>
+                </div>
+                <span class="stat-card-period">Current Balance</span>
+              </div>
+              <p class="stat-card-label">Remaining Funds</p>
+              <h3 class="stat-card-value">PKR 7,20,000</h3>
+              <div class="stat-card-trend">
+                <i class="material-icons-round">check_circle</i>
+                <span>Safe & Allocated</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="transparency-filter-bar animate-fade-in">
+            <div class="filter-group">
+              <span class="filter-label">Filter by:</span>
+              <select class="filter-select" id="monthFilter">
+                <option value="all">All Months</option>
+                <option value="june">June 2025</option>
+                <option value="may">May 2025</option>
+                <option value="april">April 2025</option>
+                <option value="march">March 2025</option>
+              </select>
+              <select class="filter-select" id="typeFilter">
+                <option value="all">All Types</option>
+                <option value="zakat">Zakat</option>
+                <option value="sadaqah">Sadaqah</option>
+                <option value="mosque-fund">Mosque Fund</option>
+              </select>
+            </div>
+            <button class="download-btn">
+              <i class="material-icons-round">download</i>
+              <span>Download Report</span>
+            </button>
+          </div>
+
+          <!-- Records Grid -->
+          <div class="records-grid">
+            <!-- Donation History -->
+            <section class="records-section animate-fade-in-up">
+              <div class="records-header">
+                <h3 class="records-title">
+                  <i class="material-icons-round">history</i>
+                  Donation History
+                </h3>
+                <span class="records-view-all">View All</span>
+              </div>
+
+              <div class="records-table-wrapper">
+                <div class="records-table-scroll">
+                  <table class="records-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Donor</th>
+                        <th>Type</th>
+                        <th class="text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="date-cell">Jun 14, 2025</td>
+                        <td class="donor-cell">Anonymous</td>
+                        <td>
+                          <span class="category-tagtwo sadaqah">Sadaqah</span>
+                        </td>
+                        <td class="amount-cell">PKR 15,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 13, 2025</td>
+                        <td class="donor-cell">Muhammad A.</td>
+                        <td><span class="category-tagtwo zakat">Zakat</span></td>
+                        <td class="amount-cell">PKR 50,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 13, 2025</td>
+                        <td class="donor-cell">Jummah Collection</td>
+                        <td><span class="category-tagtwo jummah">Jummah</span></td>
+                        <td class="amount-cell">PKR 32,450</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 12, 2025</td>
+                        <td class="donor-cell">Anonymous</td>
+                        <td>
+                          <span class="category-tagtwo mosque-fund"
+                            >Mosque Fund</span
+                          >
+                        </td>
+                        <td class="amount-cell">PKR 1,00,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 11, 2025</td>
+                        <td class="donor-cell">Hassan R.</td>
+                        <td>
+                          <span class="category-tagtwo sadaqah">Sadaqah</span>
+                        </td>
+                        <td class="amount-cell">PKR 5,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 10, 2025</td>
+                        <td class="donor-cell">Ali Khan</td>
+                        <td><span class="category-tagtwo zakat">Zakat</span></td>
+                        <td class="amount-cell">PKR 25,000</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="records-pagination">
+                  <button class="pagination-btn-small" disabled>
+                    <i class="material-icons-round">chevron_left</i>
+                  </button>
+                  <span class="pagination-info">Page 1 of 24</span>
+                  <button class="pagination-btn-small">
+                    <i class="material-icons-round">chevron_right</i>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Expense History -->
+            <section
+              class="records-section animate-fade-in-up"
+              style="animation-delay: 0.1s"
+            >
+              <div class="records-header">
+                <h3 class="records-title">
+                  <i class="material-icons-round">receipt_long</i>
+                  Expense History
+                </h3>
+                <span class="records-view-all">View All</span>
+              </div>
+
+              <div class="records-table-wrapper">
+                <div class="records-table-scroll">
+                  <table class="records-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th class="text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="date-cell">Jun 12, 2025</td>
+                        <td>
+                          <span class="category-tagtwo utilities">Utilities</span>
+                        </td>
+                        <td class="donor-cell">Electricity Bill - June</td>
+                        <td class="amount-cell">PKR 48,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 10, 2025</td>
+                        <td>
+                          <span class="category-tagtwo maintenance"
+                            >Maintenance</span
+                          >
+                        </td>
+                        <td class="donor-cell">AC Repair & Servicing</td>
+                        <td class="amount-cell">PKR 22,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 05, 2025</td>
+                        <td><span class="category-tagtwo salary">Salary</span></td>
+                        <td class="donor-cell">Imam Sahib - June</td>
+                        <td class="amount-cell">PKR 45,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 05, 2025</td>
+                        <td><span class="category-tagtwo salary">Salary</span></td>
+                        <td class="donor-cell">Moazzin - June</td>
+                        <td class="amount-cell">PKR 28,000</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 03, 2025</td>
+                        <td>
+                          <span class="category-tagtwo supplies">Supplies</span>
+                        </td>
+                        <td class="donor-cell">Water & Cleaning Supplies</td>
+                        <td class="amount-cell">PKR 8,500</td>
+                      </tr>
+                      <tr>
+                        <td class="date-cell">Jun 01, 2025</td>
+                        <td>
+                          <span class="category-tagtwo utilities">Utilities</span>
+                        </td>
+                        <td class="donor-cell">Internet & PTCL Bill</td>
+                        <td class="amount-cell">PKR 4,500</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="records-pagination">
+                  <button class="pagination-btn-small" disabled>
+                    <i class="material-icons-round">chevron_left</i>
+                  </button>
+                  <span class="pagination-info">Page 1 of 18</span>
+                  <button class="pagination-btn-small">
+                    <i class="material-icons-round">chevron_right</i>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Donate CTA -->
+          <div class="donate-cta-banner animate-fade-in">
+            <i class="material-icons-round donate-cta-icon"
+              >volunteer_activism</i
+            >
+            <div class="donate-cta-content">
+              <h4>Want to contribute?</h4>
+              <p>
+                Your donations help us maintain the mosque and serve the
+                community better.
+              </p>
+            </div>
+            <a href="donate.html" class="btn btn-primary btn-lg">
+              <i class="material-icons-round btn-icon">favorite</i>
+              Donate Now
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============================================
+         FOOTER
+         ============================================ -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <!-- Brand Column -->
+          <div class="footer-brand">
+            <div class="logo-icon">
+              <i class="material-icons-round">mosque</i>
+            </div>
+            <h3 class="name">Masjid Al-Noor</h3>
+            <p>
+              A place for worship, learning, and community gathering. We are
+              dedicated to serving the spiritual and social needs of our
+              community in Sheikhupura.
+            </p>
+            <div class="footer-social">
+              <a href="#" class="social-link" aria-label="Facebook">
+                <i class="material-icons-round">facebook</i>
+              </a>
+              <a href="#" class="social-link" aria-label="YouTube">
+                <i class="material-icons-round">smart_display</i>
+              </a>
+              <a href="#" class="social-link" aria-label="WhatsApp">
+                <i class="material-icons-round">chat</i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Quick Links -->
+          <div>
+            <h4 class="footer-title">Quick Links</h4>
+            <nav class="footer-links">
+              <a href="index.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Home
+              </a>
+              <a href="prayer-times.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Prayer Times
+              </a>
+              <a href="events.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Upcoming Events
+              </a>
+              <a href="donate.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Make a Donation
+              </a>
+              <a href="transparency.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Transparency Report
+              </a>
+            </nav>
+          </div>
+
+          <!-- Services -->
+          <div>
+            <h4 class="footer-title">Our Services</h4>
+            <nav class="footer-links">
+              <a href="nikah-booking.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Nikah Services
+              </a>
+              <a href="events.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Event Registration
+              </a>
+              <a href="donate.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                Online Donation
+              </a>
+              <a href="my-bookings.html" class="footer-link">
+                <i class="material-icons-round">chevron_right</i>
+                My Bookings
+              </a>
+            </nav>
+          </div>
+
+          <!-- Contact -->
+          <div>
+            <h4 class="footer-title">Contact Us</h4>
+            <div class="footer-contact-item">
+              <i class="material-icons-round">location_on</i>
+              <span
+                >Near Civil Lines,<br />Main GT Road,<br />Sheikhupura,
+                Punjab</span
+              >
+            </div>
+            <div class="footer-contact-item">
+              <i class="material-icons-round">call</i>
+              <span>0321-5551234</span>
+            </div>
+            <div class="footer-contact-item">
+              <i class="material-icons-round">mail</i>
+              <span>info@masjidalnoor.pk</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+          <p>
+            © 2025 Masjid Al-Noor, Sheikhupura. All rights reserved. |
+            <a href="#">Privacy Policy</a> |
+            <a href="#">Terms of Use</a>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ============================================
+         JAVASCRIPT
+         ============================================ -->
+    <script src="js/main.js"></script>
+
+    <!-- Transparency Page Specific JS -->
+    <script>
+      // Download Report (Simulated)
+      const downloadBtn = document.querySelector(".download-btn");
+
+      if (downloadBtn) {
+        downloadBtn.addEventListener("click", () => {
+          downloadBtn.innerHTML =
+            '<i class="material-icons-round">hourglass_empty</i><span>Preparing...</span>';
+
+          setTimeout(() => {
+            showToast("Report downloaded successfully!", "success");
+            downloadBtn.innerHTML =
+              '<i class="material-icons-round">download</i><span>Download Report</span>';
+          }, 1500);
+        });
+      }
+
+      // Filter Functionality (Simulated)
+      const monthFilter = document.getElementById("monthFilter");
+      const typeFilter = document.getElementById("typeFilter");
+
+      [monthFilter, typeFilter].forEach((filter) => {
+        if (filter) {
+          filter.addEventListener("change", () => {
+            showToast("Filter applied", "info");
+            // In real app, this would fetch filtered data
+          });
+        }
+      });
+
+      // View All Links
+      document.querySelectorAll(".records-view-all").forEach((link) => {
+        link.addEventListener("click", () => {
+          showToast("Loading full records...", "info");
+          // In real app, would navigate or expand table
+        });
+      });
+
+      // Pagination
+      document
+        .querySelectorAll(".pagination-btn-small:not(:disabled)")
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            // Simulate page change
+            showToast("Loading page...", "info");
+          });
+        });
+
+      // Animate numbers on load (optional enhancement)
+      function animateValue(element, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+          if (!startTimestamp) startTimestamp = timestamp;
+          const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+          const currentValue = Math.floor(progress * (end - start) + start);
+          element.textContent = "PKR " + currentValue.toLocaleString("en-PK");
+          if (progress < 1) {
+            window.requestAnimationFrame(step);
+          }
+        };
+        window.requestAnimationFrame(step);
+      }
+
+      // You can uncomment to enable number animation on page load
+      // document.addEventListener('DOMContentLoaded', () => {
+      //     const statValues = document.querySelectorAll('.stat-card-value');
+      //     // animateValue(statValues[0], 0, 2850000, 1500);
+      //     // animateValue(statValues[1], 0, 2130000, 1500);
+      //     // animateValue(statValues[2], 0, 720000, 1500);
+      // });
+    </script>
+  </body>
+</html>
