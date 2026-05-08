@@ -6,7 +6,9 @@ const { protect, authorize } = require('../middleware/auth');
 // GET /api/announcements - Public
 router.get('/', async (req, res, next) => {
   try {
-    const announcements = await Announcement.find().sort({ createdAt: -1 });
+    const { mosqueId } = req.query;
+    const query = mosqueId ? { mosqueId } : {};
+    const announcements = await Announcement.find(query).sort({ createdAt: -1 });
     res.json({ success: true, data: announcements });
   } catch (error) { next(error); }
 });

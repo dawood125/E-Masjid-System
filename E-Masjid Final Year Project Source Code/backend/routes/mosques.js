@@ -3,6 +3,16 @@ const router = express.Router();
 const Mosque = require('../models/Mosque');
 const { protect, authorize } = require('../middleware/auth');
 
+// GET /api/mosques/public - List active mosques (public)
+router.get('/public', async (req, res, next) => {
+  try {
+    const mosques = await Mosque.find({ isActive: true })
+      .select('name city address phone email image enabledModules')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: mosques });
+  } catch (error) { next(error); }
+});
+
 // GET /api/mosques - List mosques (manager)
 router.get('/', protect, authorize('manager'), async (req, res, next) => {
   try {

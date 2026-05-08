@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { mockMosques } from '../../../mocks/index.js'
+import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 
 const ALL_MODULES = [
   { key: 'donations', label: 'Donations', icon: 'volunteer_activism', desc: 'Accept and track donations' },
@@ -13,15 +13,33 @@ const ALL_MODULES = [
 ]
 
 export default function ManageMosques() {
-  const [mosques, setMosques] = useState(mockMosques)
+  const [mosques, setMosques] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [selectedMosque, setSelectedMosque] = useState(null)
   const { showToast } = useUI()
+  const [loading, setLoading] = useState(true)
 
   const [formData, setFormData] = useState({
     name: '', address: '', city: '', phone: '', email: '',
   })
+
+  const loadMosques = async () => {
+    setLoading(true)
+    try {
+      const res = await api.getMosques()
+      setMosques(res.data || [])
+    } catch (e) {
+      showToast(e.message || 'Failed to load mosques', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMosques()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCreateMosque = (e) => {
     e.preventDefault()
@@ -29,36 +47,58 @@ export default function ManageMosques() {
       showToast('Mosque name and city are required', 'warning')
       return
     }
-    const newMosque = {
-      id: Date.now().toString(),
-      ...formData,
-      image: 'https://images.unsplash.com/photo-1585036156171-384164a8c675?w=600',
-      enabledModules: ['prayerTimes', 'announcements'],
-      managerId: 'mgr1',
-      admins: [],
-      isActive: true,
-      createdAt: new Date().toISOString().split('T')[0],
-    }
-    setMosques(prev => [...prev, newMosque])
-    setFormData({ name: '', address: '', city: '', phone: '', email: '' })
-    setShowForm(false)
-    showToast('Mosque created successfully!', 'success')
+    ;(async () => {
+      try {
+        const res = await api.createMosque({
+          ...formData,
+          enabledModules: ['prayerTimes', 'announcements'],
+          isActive: true,
+        })
+        setMosques((prev) => [res.data, ...prev])
+        setFormData({ name: '', address: '', city: '', phone: '', email: '' })
+        setShowForm(false)
+        showToast('Mosque created successfully!', 'success')
+      } catch (e) {
+        showToast(e.message || 'Failed to create mosque', 'error')
+      }
+    })()
   }
 
   const toggleModule = (mosqueId, moduleKey) => {
-    setMosques(prev => prev.map(m => {
-      if (m.id !== mosqueId) return m
-      const modules = m.enabledModules.includes(moduleKey)
-        ? m.enabledModules.filter(mod => mod !== moduleKey)
-        : [...m.enabledModules, moduleKey]
-      return { ...m, enabledModules: modules }
-    }))
-    showToast('Module updated', 'success')
+    const target = mosques.find((m) => m._id === mosqueId)
+    if (!target) return
+    const modules = target.enabledModules?.includes(moduleKey)
+      ? target.enabledModules.filter((mod) => mod !== moduleKey)
+      : [...(target.enabledModules || []), moduleKey]
+
+    setMosques((prev) => prev.map((m) => (m._id === mosqueId ? { ...m, enabledModules: modules } : m)))
+    ;(async () => {
+      try {
+        const res = await api.updateMosqueModules(mosqueId, modules)
+        setMosques((prev) => prev.map((m) => (m._id === mosqueId ? res.data : m)))
+        showToast('Module updated', 'success')
+      } catch (e) {
+        showToast(e.message || 'Failed to update module', 'error')
+        loadMosques()
+      }
+    })()
   }
 
   const toggleActive = (mosqueId) => {
-    setMosques(prev => prev.map(m => m.id === mosqueId ? { ...m, isActive: !m.isActive } : m))
-    showToast('Status updated', 'success')
+    const target = mosques.find((m) => m._id === mosqueId)
+    if (!target) return
+    const newStatus = !target.isActive
+    setMosques((prev) => prev.map((m) => (m._id === mosqueId ? { ...m, isActive: newStatus } : m)))
+    ;(async () => {
+      try {
+        const res = await api.updateMosque(mosqueId, { isActive: newStatus })
+        setMosques((prev) => prev.map((m) => (m._id === mosqueId ? res.data : m)))
+        showToast('Status updated', 'success')
+      } catch (e) {
+        showToast(e.message || 'Failed to update status', 'error')
+        loadMosques()
+      }
+    })()
   }
 
   return (
@@ -124,8 +164,12 @@ export default function ManageMosques() {
 
       {/* Mosque List with Module Config */}
       <div className="space-y-6">
-        {mosques.map((mosque) => (
-          <div key={mosque.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500">
+            Loading mosques...
+          </div>
+        ) : mosques.map((mosque) => (
+          <div key={mosque._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {/* Mosque Header */}
             <div className="flex flex-col md:flex-row">
               <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0">
@@ -152,13 +196,13 @@ export default function ManageMosques() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => toggleActive(mosque.id)}
+                      onClick={() => toggleActive(mosque._id)}
                       className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${mosque.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                     >
                       {mosque.isActive ? 'Active' : 'Inactive'}
                     </button>
                     <button
-                      onClick={() => setSelectedMosque(selectedMosque === mosque.id ? null : mosque.id)}
+                      onClick={() => setSelectedMosque(selectedMosque === mosque._id ? null : mosque._id)}
                       className="btn btn-secondary btn-sm"
                     >
                       <i className="material-icons-round text-base">settings</i>
@@ -169,7 +213,7 @@ export default function ManageMosques() {
 
                 {/* Module badges */}
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  {mosque.enabledModules.map((mod) => (
+                  {(mosque.enabledModules || []).map((mod) => (
                     <span key={mod} className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-[#047857] capitalize">
                       {mod}
                     </span>
@@ -179,7 +223,7 @@ export default function ManageMosques() {
             </div>
 
             {/* Module Configuration Panel */}
-            {selectedMosque === mosque.id && (
+            {selectedMosque === mosque._id && (
               <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fade-in">
                 <h4 className="font-primary text-lg font-semibold text-gray-900 mb-4">
                   <i className="material-icons-round text-[#047857] align-middle mr-2">tune</i>
@@ -191,7 +235,7 @@ export default function ManageMosques() {
                     return (
                       <button
                         key={mod.key}
-                        onClick={() => toggleModule(mosque.id, mod.key)}
+                        onClick={() => toggleModule(mosque._id, mod.key)}
                         className={`rounded-xl border p-4 text-left transition-all ${isEnabled ? 'border-[#047857] bg-primary-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
                       >
                         <div className="flex items-center justify-between mb-2">

@@ -6,16 +6,19 @@ const { protect, authorize } = require('../middleware/auth');
 // GET /api/prayer-times - Public
 router.get('/', async (req, res, next) => {
   try {
+    const { mosqueId } = req.query;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const todayPrayer = await PrayerTime.findOne({
       date: { $gte: today, $lt: new Date(today.getTime() + 86400000) },
+      ...(mosqueId ? { mosqueId } : {}),
     });
 
     const endOfWeek = new Date(today.getTime() + 7 * 86400000);
     const weekPrayers = await PrayerTime.find({
       date: { $gte: today, $lt: endOfWeek },
+      ...(mosqueId ? { mosqueId } : {}),
     }).sort({ date: 1 });
 
     res.json({

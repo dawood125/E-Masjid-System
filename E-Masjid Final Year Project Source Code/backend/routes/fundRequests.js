@@ -8,14 +8,20 @@ const { protect, authorize } = require('../middleware/auth');
 // POST /api/fund-requests - Submit a fund request (community member)
 router.post('/', protect, async (req, res, next) => {
   try {
+    const mosqueId = req.body.mosqueId || req.user.mosqueId;
+    if (!mosqueId) {
+      return res.status(400).json({ success: false, message: 'mosqueId is required' });
+    }
+
     const request = await FundRequest.create({
       ...req.body,
       userId: req.user._id,
+      mosqueId,
     });
 
     // Notify committee members via email
     try {
-      const committeeMembers = await User.find({ role: 'committee', isActive: true });
+      const committeeMembers = await User.find({ role: 'committee', isActive: true, mosqueId });
       const emailPromises = committeeMembers.map((member) =>
         sendEmail({
           to: member.email,
@@ -49,6 +55,9 @@ router.get('/', protect, async (req, res, next) => {
   try {
     let query = {};
     if (req.user.role === 'community') query.userId = req.user._id;
+    if (req.user.role === 'committee' || req.user.role === 'admin' || req.user.role === 'scholar') {
+      query.mosqueId = req.user.mosqueId;
+    }
     if (req.query.status && req.query.status !== 'all') query.status = req.query.status;
 
     const requests = await FundRequest.find(query)
@@ -69,6 +78,12 @@ router.put('/:id', protect, authorize('committee', 'admin'), async (req, res, ne
     }
     if (!reviewNote) {
       return res.status(400).json({ success: false, message: 'Review note is required' });
+    }
+
+    const existing = await FundRequest.findById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Request not found' });
+    if (String(existing.mosqueId) !== String(req.user.mosqueId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this mosque request' });
     }
 
     const request = await FundRequest.findByIdAndUpdate(

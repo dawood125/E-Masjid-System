@@ -4,6 +4,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { stripeWebhook } = require('./routes/stripeWebhook');
 
 // Connect to Database
 connectDB();
@@ -16,6 +17,9 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }));
+
+// Stripe webhook must use raw body
+app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));

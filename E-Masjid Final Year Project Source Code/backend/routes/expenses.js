@@ -6,8 +6,9 @@ const { protect, authorize } = require('../middleware/auth');
 // GET /api/expenses - Get all expenses (public for transparency)
 router.get('/', async (req, res, next) => {
   try {
-    const { category, page = 1, limit = 10 } = req.query;
+    const { category, page = 1, limit = 10, mosqueId } = req.query;
     const query = {};
+    if (mosqueId) query.mosqueId = mosqueId;
     if (category && category !== 'all') query.category = category;
 
     const total = await Expense.countDocuments(query);
@@ -20,10 +21,14 @@ router.get('/', async (req, res, next) => {
 // GET /api/expenses/summary
 router.get('/summary', async (req, res, next) => {
   try {
+    const { mosqueId } = req.query;
+    const match = mosqueId ? { mosqueId: require('mongoose').Types.ObjectId.createFromHexString(mosqueId) } : {};
     const result = await Expense.aggregate([
+      { $match: match },
       { $group: { _id: '$category', total: { $sum: '$amount' } } },
     ]);
     const totalResult = await Expense.aggregate([
+      { $match: match },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]);
     res.json({

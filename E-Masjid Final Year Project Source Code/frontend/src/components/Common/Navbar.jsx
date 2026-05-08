@@ -1,14 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useUI } from '../../hooks/useUI.js'
 import { ROUTES } from '../../utils/constants.js'
+import api from '../../utils/api.js'
+import { getActiveMosqueId, setActiveMosqueId } from '../../utils/mosque.js'
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
   const { toggleMobileMenu, mobileMenuOpen, closeMobileMenu } = useUI()
   const location = useLocation()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [mosques, setMosques] = useState([])
+  const [activeMosqueId, setActiveMosqueIdState] = useState(() => getActiveMosqueId())
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,6 +22,40 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  useEffect(() => {
+    let mounted = true
+    async function loadMosques() {
+      try {
+        const res = await api.getPublicMosques()
+        if (!mounted) return
+        const list = res.data || []
+        setMosques(list)
+        const existing = getActiveMosqueId()
+        if (!existing && list.length > 0) {
+          setActiveMosqueId(list[0]._id)
+          setActiveMosqueIdState(list[0]._id)
+        }
+      } catch {
+        // Silent: navbar should still render even if API is down
+      }
+    }
+    loadMosques()
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    // If user has a mosqueId, prefer it
+    if (user?.mosqueId && user.mosqueId !== activeMosqueId) {
+      setActiveMosqueId(user.mosqueId)
+      setActiveMosqueIdState(user.mosqueId)
+    }
+  }, [user?.mosqueId, activeMosqueId])
+
+  const activeMosque = useMemo(() => {
+    if (!activeMosqueId) return null
+    return mosques.find((m) => m._id === activeMosqueId) || null
+  }, [mosques, activeMosqueId])
 
   const navLinks = [
     { label: 'Home', path: ROUTES.HOME },
@@ -42,10 +80,33 @@ export default function Navbar() {
             <i className="material-icons-round text-white text-[26px]">mosque</i>
           </div>
           <div className="hidden sm:flex flex-col">
-            <span className="font-primary text-xl font-bold leading-tight text-[#064e3b]">Masjid Al-Noor</span>
-            <span className="text-xs font-medium text-gray-500">Sheikhupura</span>
+            <span className="font-primary text-xl font-bold leading-tight text-[#064e3b]">
+              {activeMosque?.name || 'E-Masjid'}
+            </span>
+            <span className="text-xs font-medium text-gray-500">{activeMosque?.city || 'Select a mosque'}</span>
           </div>
         </Link>
+
+        {/* Mosque Selector */}
+        {mosques.length > 0 && (
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Mosque</span>
+            <select
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={activeMosqueId || ''}
+              onChange={(e) => {
+                setActiveMosqueId(e.target.value)
+                setActiveMosqueIdState(e.target.value)
+              }}
+            >
+              {mosques.map((m) => (
+                <option key={m._id} value={m._id}>
+                  {m.name} ({m.city})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Desktop Navigation */}
         <nav className="hidden xl:flex items-center gap-2">
@@ -123,6 +184,26 @@ export default function Navbar() {
         <div className="xl:hidden fixed top-20 inset-x-0 bottom-0 bg-white border-t border-gray-200 shadow-lg animate-slide-in-right overflow-y-auto">
           <div className="container py-5">
             <nav className="flex flex-col gap-1">
+              {mosques.length > 0 && (
+                <div className="mb-3 rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Select Mosque</p>
+                  <select
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                    value={activeMosqueId || ''}
+                    onChange={(e) => {
+                      setActiveMosqueId(e.target.value)
+                      setActiveMosqueIdState(e.target.value)
+                      closeMobileMenu()
+                    }}
+                  >
+                    {mosques.map((m) => (
+                      <option key={m._id} value={m._id}>
+                        {m.name} ({m.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {navLinks.map((link) => (
                 <Link
                   key={link.path}

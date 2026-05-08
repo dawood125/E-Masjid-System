@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency } from '../../../utils/formatters.js'
+import api from '../../../utils/api.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const donationTypes = [
   { value: 'mosque-fund', label: 'Mosque Fund', icon: 'mosque' },
@@ -59,16 +61,41 @@ export default function Donate() {
       return
     }
 
+    const mosqueId = getActiveMosqueId()
+    if (!mosqueId) {
+      showToast('Please select a mosque from the navbar first', 'warning')
+      return
+    }
+
     setLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700))
-      const tx = `TXN-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`
-      setTransactionId(tx)
+      const backendType = donationData.type === 'zakat'
+        ? 'Zakat'
+        : donationData.type === 'sadaqah'
+          ? 'Sadaqah'
+          : 'Mosque Fund'
+
+      const res = await api.createOnlineDonation({
+        donorName: donationData.donorName,
+        email: donationData.email,
+        phone: donationData.phone,
+        amount: effectiveAmount,
+        type: backendType,
+        isAnonymous: !!donationData.isAnonymous,
+        mosqueId,
+      })
+
+      if (res.url) {
+        window.location.assign(res.url)
+        return
+      }
+
+      setTransactionId(res.transactionId || 'TXN-PENDING')
       setShowSuccess(true)
       showToast('Donation processed successfully. JazakAllah Khair!', 'success')
-    } catch {
-      showToast('Failed to process donation', 'error')
+    } catch (e2) {
+      showToast(e2.message || 'Failed to process donation', 'error')
     } finally {
       setLoading(false)
     }

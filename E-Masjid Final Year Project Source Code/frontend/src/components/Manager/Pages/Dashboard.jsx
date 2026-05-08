@@ -1,11 +1,35 @@
 import { Link } from 'react-router-dom'
-import { mockMosques } from '../../../mocks/index.js'
 import { ROUTES } from '../../../utils/constants.js'
+import { useEffect, useMemo, useState } from 'react'
+import api from '../../../utils/api.js'
+import { useUI } from '../../../hooks/useUI.js'
 
 export default function ManagerDashboard() {
-  const mosques = mockMosques
-  const activeMosques = mosques.filter(m => m.isActive).length
-  const totalModules = mosques.reduce((acc, m) => acc + m.enabledModules.length, 0)
+  const { showToast } = useUI()
+  const [mosques, setMosques] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await api.getMosques()
+        if (!mounted) return
+        setMosques(res.data || [])
+      } catch (e) {
+        if (!mounted) return
+        showToast(e.message || 'Failed to load mosques', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [showToast])
+
+  const activeMosques = useMemo(() => mosques.filter(m => m.isActive).length, [mosques])
+  const totalModules = useMemo(() => mosques.reduce((acc, m) => acc + (m.enabledModules?.length || 0), 0), [mosques])
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -68,8 +92,12 @@ export default function ManagerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {mosques.map((mosque) => (
-            <div key={mosque.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
+          {loading ? (
+            <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-gray-500">
+              Loading mosques...
+            </div>
+          ) : mosques.map((mosque) => (
+            <div key={mosque._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
               <div className="relative h-40 overflow-hidden">
                 <img src={mosque.image} alt={mosque.name} className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -84,7 +112,7 @@ export default function ManagerDashboard() {
               <div className="p-5">
                 <p className="text-sm text-gray-500 mb-3">{mosque.address}</p>
                 <div className="flex flex-wrap gap-1.5 mb-4">
-                  {mosque.enabledModules.slice(0, 4).map((mod) => (
+                  {(mosque.enabledModules || []).slice(0, 4).map((mod) => (
                     <span key={mod} className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-[#047857] capitalize">{mod}</span>
                   ))}
                   {mosque.enabledModules.length > 4 && (

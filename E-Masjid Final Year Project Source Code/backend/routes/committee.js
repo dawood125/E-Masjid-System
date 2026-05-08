@@ -6,7 +6,7 @@ const { protect, authorize } = require('../middleware/auth');
 // GET /api/committee - List committee members (admin)
 router.get('/', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const members = await User.find({ role: 'committee' }).select('-password');
+    const members = await User.find({ role: 'committee', mosqueId: req.user.mosqueId }).select('-password');
     res.json({ success: true, data: members });
   } catch (error) { next(error); }
 });

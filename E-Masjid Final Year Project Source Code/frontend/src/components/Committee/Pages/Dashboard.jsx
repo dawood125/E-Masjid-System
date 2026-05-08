@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { mockFundRequests } from '../../../mocks/index.js'
+import { useEffect, useMemo, useState } from 'react'
 import { formatDate, formatCurrency } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 
 const statusConfig = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-800', icon: 'schedule', label: 'Pending' },
@@ -10,30 +10,52 @@ const statusConfig = {
 }
 
 export default function CommitteeDashboard() {
-  const [requests, setRequests] = useState(mockFundRequests)
+  const [requests, setRequests] = useState([])
   const [filter, setFilter] = useState('all')
   const [reviewingId, setReviewingId] = useState(null)
   const [reviewNote, setReviewNote] = useState('')
   const { showToast } = useUI()
+  const [loading, setLoading] = useState(true)
 
-  const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter)
-  const pendingCount = requests.filter(r => r.status === 'pending').length
+  const filtered = useMemo(() => (filter === 'all' ? requests : requests.filter(r => r.status === filter)), [filter, requests])
+  const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests])
 
-  const handleReview = (id, decision) => {
+  useEffect(() => {
+    let mounted = true
+
+    async function load() {
+      setLoading(true)
+      try {
+        const res = await api.getFundRequests()
+        if (!mounted) return
+        setRequests(res.data || [])
+      } catch (e) {
+        if (!mounted) return
+        showToast(e.message || 'Failed to load requests', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { mounted = false }
+  }, [showToast])
+
+  const handleReview = async (id, decision) => {
     if (!reviewNote.trim()) {
       showToast('Please provide a reason for your decision', 'warning')
       return
     }
-    setRequests(prev => prev.map(r => r.id === id ? {
-      ...r,
-      status: decision,
-      reviewedBy: 'cm1',
-      reviewerName: 'Current User',
-      reviewNote: reviewNote.trim(),
-    } : r))
-    setReviewingId(null)
-    setReviewNote('')
-    showToast(`Request ${decision}!`, decision === 'approved' ? 'success' : 'info')
+    try {
+      const res = await api.reviewFundRequest(id, { status: decision, reviewNote: reviewNote.trim() })
+      const updated = res.data
+      setRequests((prev) => prev.map((r) => (r._id === id ? updated : r)))
+      setReviewingId(null)
+      setReviewNote('')
+      showToast(`Request ${decision}!`, decision === 'approved' ? 'success' : 'info')
+    } catch (e) {
+      showToast(e.message || 'Failed to update request', 'error')
+    }
   }
 
   return (
@@ -86,7 +108,12 @@ export default function CommitteeDashboard() {
 
       {/* Requests List */}
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-2xl bg-white border border-gray-200 p-12 text-center">
+            <i className="material-icons-round text-gray-300 text-5xl">hourglass_top</i>
+            <p className="mt-3 text-gray-500">Loading requests...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-2xl bg-white border border-gray-200 p-12 text-center">
             <i className="material-icons-round text-gray-300 text-5xl">inbox</i>
             <p className="mt-3 text-gray-500">No {filter !== 'all' ? filter : ''} requests found</p>
@@ -94,7 +121,7 @@ export default function CommitteeDashboard() {
         ) : filtered.map((req) => {
           const status = statusConfig[req.status]
           return (
-            <div key={req.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div key={req._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   <div className="flex-1">
@@ -134,7 +161,7 @@ export default function CommitteeDashboard() {
                 {/* Review Actions for Pending */}
                 {req.status === 'pending' && (
                   <div className="mt-5 border-t border-gray-100 pt-5">
-                    {reviewingId === req.id ? (
+                    {reviewingId === req._id ? (
                       <div className="space-y-3 animate-fade-in">
                         <textarea
                           rows={3}
@@ -144,17 +171,17 @@ export default function CommitteeDashboard() {
                           onChange={e => setReviewNote(e.target.value)}
                         />
                         <div className="flex flex-wrap gap-2">
-                          <button onClick={() => handleReview(req.id, 'approved')} className="btn bg-green-600 text-white hover:bg-green-700">
+                          <button onClick={() => handleReview(req._id, 'approved')} className="btn bg-green-600 text-white hover:bg-green-700">
                             <i className="material-icons-round text-lg">check_circle</i>Approve
                           </button>
-                          <button onClick={() => handleReview(req.id, 'rejected')} className="btn bg-red-600 text-white hover:bg-red-700">
+                          <button onClick={() => handleReview(req._id, 'rejected')} className="btn bg-red-600 text-white hover:bg-red-700">
                             <i className="material-icons-round text-lg">cancel</i>Reject
                           </button>
                           <button onClick={() => { setReviewingId(null); setReviewNote('') }} className="btn btn-secondary">Cancel</button>
                         </div>
                       </div>
                     ) : (
-                      <button onClick={() => setReviewingId(req.id)} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
+                      <button onClick={() => setReviewingId(req._id)} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
                         <i className="material-icons-round text-lg">rate_review</i>
                         Review Request
                       </button>
