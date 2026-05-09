@@ -101,122 +101,149 @@ export default function PrayerTimes() {
         </div>
       </section>
 
-      <section className="-mt-10 pb-14">
+      {/* Countdown Section */}
+      <section className="-mt-14 relative z-20 pb-14">
         <div className="container">
-          <div className="mb-8 rounded-2xl bg-[#064e3b] text-white p-6 shadow-xl animate-fade-in">
-            <p className="text-sm uppercase tracking-wide text-white/80">Next Prayer</p>
-            <p className="mt-1 text-2xl font-primary font-bold">{countdown.nextPrayerName}</p>
-            <div className="mt-4 flex items-center gap-2 sm:gap-4">
+          <div className="mx-auto max-w-2xl rounded-2xl bg-[#064e3b] text-white p-8 shadow-xl text-center border-t-[5px] border-[#d4af37] animate-fade-in">
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-[#d4af37]">Next Prayer</h2>
+            <p className="mt-2 font-primary text-4xl font-bold">{countdown.nextPrayerName}</p>
+            <div className="mt-6 flex items-center justify-center gap-3 sm:gap-6">
               {[
-                { label: 'Hours', value: countdown.left.h },
-                { label: 'Minutes', value: countdown.left.m },
-                { label: 'Seconds', value: countdown.left.s },
+                { label: 'HOURS', value: countdown.left.h },
+                { label: 'MINUTES', value: countdown.left.m },
+                { label: 'SECONDS', value: countdown.left.s },
               ].map((item, i) => (
-                <div key={item.label} className="flex items-center gap-2">
-                  <div className="rounded-xl bg-white/15 px-4 py-3 min-w-[72px] text-center">
-                    <div className="text-2xl font-bold">{item.value}</div>
-                    <div className="text-xs text-white/80">{item.label}</div>
+                <div key={item.label} className="flex items-center gap-3 sm:gap-6">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-xl bg-white/10 text-4xl sm:text-5xl font-bold shadow-inner">
+                      {item.value}
+                    </div>
+                    <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-white/70">{item.label}</div>
                   </div>
-                  {i < 2 && <span className="text-xl font-bold text-white/70">:</span>}
+                  {i < 2 && <span className="text-3xl sm:text-4xl font-bold text-[#d4af37] pb-6">:</span>}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="mb-5 inline-flex items-center gap-2 text-[#064e3b]">
-            <i className="material-icons-round">schedule</i>
+          <div className="mb-6 mt-16 inline-flex items-center gap-2 text-[#064e3b]">
+            <i className="material-icons-round text-2xl">schedule</i>
             <h2 className="font-primary text-2xl font-bold">Today's Schedule</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {prayers.map((prayer, i) => {
+          {/* Prayer Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+            {/* Fajr */}
+            <div className={`relative rounded-2xl border p-6 shadow-sm transition-all animate-fade-in-up ${
+              'fajr' === countdown.nextPrayerKey
+                ? 'bg-[#047857] border-[#047857] text-white shadow-lg -translate-y-1'
+                : 'bg-white border-gray-200 hover:-translate-y-1 hover:shadow-md'
+            }`} style={{ animationDelay: '0ms' }}>
+              {'fajr' === countdown.nextPrayerKey && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#d4af37] px-4 py-1 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-md whitespace-nowrap">
+                  Next Prayer
+                </span>
+              )}
+              <div className="flex flex-col items-center text-center">
+                <i className={`material-icons-round text-4xl mb-2 ${'fajr' === countdown.nextPrayerKey ? 'text-[#d4af37]' : 'text-[#047857]'}`}>wb_twilight</i>
+                <span className={`font-semibold text-lg ${'fajr' === countdown.nextPrayerKey ? 'text-white' : 'text-gray-700'}`}>Fajr</span>
+                <div className="mt-3 font-primary text-3xl font-bold">{formatTime(mockPrayerTimes.today.fajr)}</div>
+              </div>
+            </div>
+
+            {/* Sunrise (Secondary Card) */}
+            <div className="relative rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm animate-fade-in-up hover:-translate-y-1 hover:shadow-md transition-all" style={{ animationDelay: '90ms' }}>
+              <div className="flex flex-col items-center text-center">
+                <i className="material-icons-round text-4xl mb-2 text-amber-500">wb_sunny</i>
+                <span className="font-semibold text-lg text-amber-900">Sunrise</span>
+                <div className="mt-3 font-primary text-3xl font-bold text-amber-900">{formatTime('06:45')}</div>
+              </div>
+            </div>
+
+            {/* Dhuhr, Asr, Maghrib, Isha */}
+            {prayers.slice(1).map((prayer, i) => {
               const isActive = prayer.key === countdown.nextPrayerKey
               return (
                 <div
                   key={prayer.key}
-                  className={`relative rounded-2xl border p-5 shadow-sm transition-all animate-fade-in-up ${
+                  className={`relative rounded-2xl border p-6 shadow-sm transition-all animate-fade-in-up ${
                     isActive
-                      ? 'bg-[#047857] border-[#047857] text-white shadow-lg'
-                      : 'bg-white border-gray-200 hover:-translate-y-0.5 hover:shadow-md'
+                      ? 'bg-[#047857] border-[#047857] text-white shadow-lg -translate-y-1'
+                      : 'bg-white border-gray-200 hover:-translate-y-1 hover:shadow-md'
                   }`}
-                  style={{ animationDelay: `${i * 90}ms` }}
+                  style={{ animationDelay: `${(i + 2) * 90}ms` }}
                 >
                   {isActive && (
-                    <span className="absolute -top-2 left-4 rounded-full bg-[#d4af37] px-3 py-1 text-xs font-semibold text-gray-900">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#d4af37] px-4 py-1 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-md whitespace-nowrap">
                       Next Prayer
                     </span>
                   )}
-                  <div className="flex items-center gap-2">
-                    <i className="material-icons-round">{prayer.icon}</i>
-                    <span className={`font-semibold ${isActive ? 'text-white/90' : 'text-gray-700'}`}>{prayer.name}</span>
+                  <div className="flex flex-col items-center text-center">
+                    <i className={`material-icons-round text-4xl mb-2 ${isActive ? 'text-[#d4af37]' : 'text-[#047857]'}`}>{prayer.icon}</i>
+                    <span className={`font-semibold text-lg ${isActive ? 'text-white' : 'text-gray-700'}`}>{prayer.name}</span>
+                    <div className="mt-3 font-primary text-3xl font-bold">{formatTime(prayer.time)}</div>
                   </div>
-                  <div className="mt-3 text-3xl font-bold">{formatTime(prayer.time)}</div>
                 </div>
               )
             })}
-
-            <div className="rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-100 to-amber-300 p-5 shadow-sm animate-fade-in-up" style={{ animationDelay: '460ms' }}>
-              <div className="flex items-center gap-2">
-                <i className="material-icons-round">wb_sunny</i>
-                <span className="font-semibold text-gray-800">Sunrise</span>
-              </div>
-              <div className="mt-3 text-3xl font-bold text-gray-900">{formatTime('06:45')}</div>
-            </div>
           </div>
         </div>
       </section>
 
+      {/* Weekly Schedule Table */}
       <section className="bg-primary-50 py-16">
         <div className="container">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 text-[#064e3b]">
-              <i className="material-icons-round">calendar_month</i>
-              <h2 className="font-primary text-2xl font-bold">Weekly Jama'ah Schedule</h2>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex items-center gap-3 text-[#064e3b]">
+              <i className="material-icons-round text-3xl">calendar_month</i>
+              <h2 className="font-primary text-3xl font-bold">Weekly Jama'ah Schedule</h2>
             </div>
-            <p className="text-sm text-gray-500">Times may vary slightly based on sunset</p>
+            <p className="text-sm font-medium text-gray-500 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">Times may vary slightly based on sunset</p>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
+              <table className="min-w-full text-base">
                 <thead className="bg-[#064e3b] text-white">
                   <tr>
-                    <th className="px-4 py-3 text-left">Day / Date</th>
-                    <th className="px-4 py-3 text-center">Fajr</th>
-                    <th className="px-4 py-3 text-center">Dhuhr</th>
-                    <th className="px-4 py-3 text-center">Asr</th>
-                    <th className="px-4 py-3 text-center">Maghrib</th>
-                    <th className="px-4 py-3 text-center">Isha</th>
+                    <th className="px-6 py-4 text-left font-semibold">Day / Date</th>
+                    <th className="px-6 py-4 text-center font-semibold">Fajr</th>
+                    <th className="px-6 py-4 text-center font-semibold text-amber-200">Sunrise</th>
+                    <th className="px-6 py-4 text-center font-semibold">Dhuhr</th>
+                    <th className="px-6 py-4 text-center font-semibold">Asr</th>
+                    <th className="px-6 py-4 text-center font-semibold">Maghrib</th>
+                    <th className="px-6 py-4 text-center font-semibold">Isha</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200">
                   {mockPrayerTimes.week.map((day) => {
                     const today = day.date === new Date().toISOString().slice(0, 10)
                     const hasJummah = Boolean(day.jummah)
                     return (
-                      <tr key={day.date} className={`border-b last:border-b-0 ${today ? 'bg-primary-50' : 'bg-white'}`}>
-                        <td className="px-4 py-3 font-semibold text-gray-800">
+                      <tr key={day.date} className={`transition-colors ${today ? 'bg-[#f0fdf4]' : 'bg-white hover:bg-gray-50'}`}>
+                        <td className="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap">
                           {new Date(day.date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            day: '2-digit',
+                            weekday: 'long',
+                            day: 'numeric',
                             month: 'short',
                           })}
-                          {today && <span className="ml-2 rounded-full bg-[#047857] px-2 py-0.5 text-xs text-white">Today</span>}
+                          {today && <span className="ml-3 rounded-full bg-[#047857] px-3 py-1 text-xs font-bold uppercase text-white shadow-sm">Today</span>}
                         </td>
-                        <td className="px-4 py-3 text-center">{formatTime(day.fajr)}</td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.fajr)}</td>
+                        <td className="px-6 py-4 text-center font-medium text-amber-600 bg-amber-50/50">{formatTime('06:45')}</td>
+                        <td className="px-6 py-4 text-center font-medium text-gray-700">
                           {hasJummah ? (
                             <span className="inline-flex flex-col items-center">
-                              <span className="font-semibold text-[#047857]">{formatTime(day.jummah)}</span>
-                              <span className="text-[10px] uppercase tracking-wide text-[#047857]">Jummah</span>
+                              <span className="font-bold text-[#047857]">{formatTime(day.jummah)}</span>
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#047857] mt-1">Jummah</span>
                             </span>
                           ) : (
                             formatTime(day.zuhr)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center">{formatTime(day.asr)}</td>
-                        <td className="px-4 py-3 text-center">{formatTime(day.maghrib)}</td>
-                        <td className="px-4 py-3 text-center">{formatTime(day.isha)}</td>
+                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.asr)}</td>
+                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.maghrib)}</td>
+                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.isha)}</td>
                       </tr>
                     )
                   })}
@@ -227,14 +254,16 @@ export default function PrayerTimes() {
         </div>
       </section>
 
-      <section className="py-16">
+      <section className="py-20">
         <div className="container">
-          <div className="rounded-2xl bg-gradient-to-br from-[#064e3b] to-[#047857] px-6 py-10 text-center text-white shadow-lg animate-fade-in">
-            <i className="material-icons-round text-5xl text-white/90">format_quote</i>
-            <p className="mx-auto mt-4 max-w-3xl text-2xl leading-relaxed italic">
-              The most beloved of deeds to Allah are those that are most consistent, even if they are small.
+          <div className="rounded-3xl bg-gradient-to-br from-[#064e3b] to-[#047857] px-8 py-14 text-center text-white shadow-xl relative overflow-hidden animate-fade-in">
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M40 40c0-8.8-7.2-16-16-16v-8c13.3 0 24 10.7 24 24h-8zm16 0c0-17.7-14.3-32-32-32V0c22.1 0 40 17.9 40 40h-8z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+            <i className="material-icons-round text-6xl text-[#d4af37] relative z-10 mb-4">format_quote</i>
+            <p className="mx-auto max-w-3xl font-primary text-3xl leading-relaxed font-medium relative z-10">
+              "The most beloved of deeds to Allah are those that are most consistent, even if they are small."
             </p>
-            <p className="mt-3 text-white/80">Sahih Muslim</p>
+            <div className="mt-8 mx-auto h-1 w-16 rounded-full bg-[#d4af37] relative z-10" />
+            <p className="mt-6 text-lg font-semibold text-[#d4af37] uppercase tracking-widest relative z-10">Sahih Muslim</p>
           </div>
         </div>
       </section>
