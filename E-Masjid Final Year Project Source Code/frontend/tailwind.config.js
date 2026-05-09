@@ -57,7 +57,7 @@ export default {
         secondary: ["'Open Sans'", 'sans-serif'],
       },
       spacing: {
-        'header': '70px',
+        'header': '80px',
         'sidebar': '280px',
       },
       borderRadius: {
