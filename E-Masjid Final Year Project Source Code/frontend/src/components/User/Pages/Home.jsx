@@ -135,7 +135,7 @@ export default function Home() {
       {/* ==================== PRAYER TIMES WIDGET ==================== */}
       <section className="relative z-20 -mt-16 mb-16">
         <div className="container">
-          <div className="overflow-hidden rounded-2xl border-t-4 border-[#d4af37] bg-white shadow-xl">
+          <div className="overflow-hidden rounded-2xl border-t-[5px] border-[#d4af37] bg-white shadow-xl">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-6 py-5 border-b border-gray-200 bg-primary-50">
               <div className="flex items-center gap-3">
                 <i className="material-icons-round text-[#047857] text-3xl">schedule</i>
@@ -315,23 +315,32 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {topAnnouncements.map((item, index) => (
-              <article key={item.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-                <div className="relative h-48 overflow-hidden rounded-t-2xl bg-gradient-to-br from-[#047857] to-[#064e3b]">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.3),transparent_60%)]" />
-                  <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${item.isUrgent ? 'bg-red-600 text-white' : index === 1 ? 'bg-[#d4af37] text-gray-900' : 'bg-white text-[#047857]'}`}>
-                    {item.isUrgent ? 'Urgent' : index === 1 ? 'Important' : 'News'}
-                  </span>
+              <article key={item.id} className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-white p-7 shadow-sm border border-gray-100 transition-all hover:-translate-y-1 hover:shadow-xl animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
+                <div className={`absolute top-0 left-0 h-full w-1 ${
+                  item.isUrgent ? 'bg-amber-500' :
+                  item.title.toLowerCase().includes('event') ? 'bg-blue-500' :
+                  item.title.toLowerCase().includes('community') ? 'bg-green-500' : 'bg-gray-400'
+                }`} />
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                      item.isUrgent ? 'bg-amber-100 text-amber-700' :
+                      item.title.toLowerCase().includes('event') ? 'bg-blue-100 text-blue-700' :
+                      item.title.toLowerCase().includes('community') ? 'bg-green-100 text-green-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {item.isUrgent ? 'Urgent' : item.title.toLowerCase().includes('event') ? 'Event' : item.title.toLowerCase().includes('community') ? 'Community' : 'News'}
+                    </span>
+                    <span className="text-sm font-medium text-gray-500">{formatDate(item.date)}</span>
+                  </div>
+                  <h3 className="mb-3 font-primary text-xl font-bold text-gray-900 group-hover:text-[#047857] transition-colors">{item.title}</h3>
+                  <p className="text-gray-600 leading-relaxed line-clamp-3">{item.content}</p>
                 </div>
-                <div className="p-6">
-                  <p className="mb-3 flex items-center gap-2 text-sm text-gray-500">
-                    <i className="material-icons-round text-base">calendar_today</i>
-                    {formatDate(item.date)}
-                  </p>
-                  <h3 className="font-primary text-xl font-semibold text-gray-900 leading-snug">{item.title}</h3>
-                  <p className="mt-3 text-gray-600 leading-relaxed">{item.content}</p>
-                  <Link to={ROUTES.ANNOUNCEMENTS} className="mt-4 inline-flex items-center gap-1 font-semibold text-[#047857] hover:text-[#d4af37] transition-colors">
-                    Read More
-                    <i className="material-icons-round text-base">arrow_forward</i>
+                <div className="mt-6 pt-5 border-t border-gray-50 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">By {item.publishedBy || 'Admin'}</span>
+                  <Link to={ROUTES.ANNOUNCEMENTS} className="inline-flex items-center gap-1 text-sm font-bold text-[#047857] group-hover:text-[#d4af37] transition-colors">
+                    Read Details
+                    <i className="material-icons-round text-base transition-transform group-hover:translate-x-1">arrow_forward</i>
                   </Link>
                 </div>
               </article>
