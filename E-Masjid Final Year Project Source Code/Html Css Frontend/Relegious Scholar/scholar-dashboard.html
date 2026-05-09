@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Religious Scholar Dashboard - Manage Nikah ceremony requests at Masjid Al-Noor."
+    />
+
+    <title>Scholar Dashboard | Masjid Al-Noor - E-Masjid System</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/images/favicon.png" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet"
+    />
+
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="/Relegious Scholar/style.css" />
+  </head>
+  <body class="dashboard-body">
+    <!-- ============================================
+         DASHBOARD HEADER
+         ============================================ -->
+    <header class="dashboard-header">
+      <div class="container dashboard-header-container">
+        <!-- Logo -->
+        <a href="scholar-dashboard.html" class="dashboard-logo">
+          <div class="logo-icon">
+            <i class="material-icons-round">mosque</i>
+          </div>
+          <div class="logo-text">
+            <span class="name">E-Masjid</span>
+            <span class="role">Scholar Panel</span>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="dashboard-nav">
+          <a href="scholar-dashboard.html" class="dashboard-nav-link active">
+            <i class="material-icons-round">dashboard</i>
+            Dashboard
+          </a>
+          
+        </nav>
+
+        <!-- User Menu -->
+        <div class="dashboard-user">
+          <div class="dashboard-user-info">
+            <span class="dashboard-user-name">Maulana Abdullah</span>
+            <span class="dashboard-user-role">Religious Scholar</span>
+          </div>
+          <div class="dashboard-user-avatar">
+            <i class="material-icons-round">person</i>
+          </div>
+          <a href="login.html" class="btn btn-outlinetwo btn-sm dashboard-logout">
+            <i class="material-icons-round btn-icon">logout</i>
+            Logout
+          </a>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+          <i class="material-icons-round">menu</i>
+        </button>
+      </div>
+
+      <!-- Mobile Menu -->
+      <nav class="mobile-menu" id="mobileMenu">
+        <a href="scholar-dashboard.html" class="nav-link active">
+          <i class="material-icons-round">dashboard</i>
+          Dashboard
+        </a>
+        <div class="mobile-menu-divider"></div>
+        <a href="login.html" class="nav-link" style="color: var(--error)">
+          <i class="material-icons-round">logout</i>
+          Logout
+        </a>
+      </nav>
+    </header>
+
+    <!-- ============================================
+         MAIN CONTENT
+         ============================================ -->
+    <main class="dashboard-main">
+      <div class="container">
+        <!-- Welcome Section -->
+        <div class="dashboard-welcome animate-fade-in">
+          <div class="dashboard-welcome-content">
+            <h1 class="dashboard-welcome-title">
+              <span class="greeting">Assalam-o-Alaikum,</span>
+              Maulana Abdullah!
+            </h1>
+            <p class="dashboard-welcome-text">
+              Manage your Nikah ceremony requests from the community. Review
+              pending requests and confirm ceremonies.
+            </p>
+          </div>
+          <div class="dashboard-welcome-date">
+            <i class="material-icons-round">calendar_today</i>
+            <span id="currentDate">Monday, June 16, 2025</span>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="dashboard-stats animate-fade-in-up">
+          <div class="stat-card stat-card-warning">
+            <div class="stat-card-icon">
+              <i class="material-icons-round">hourglass_empty</i>
+            </div>
+            <div class="stat-card-content">
+              <h3 class="stat-card-value">3</h3>
+              <p class="stat-card-label">Pending Requests</p>
+            </div>
+          </div>
+          <div class="stat-card stat-card-success">
+            <div class="stat-card-icon">
+              <i class="material-icons-round">check_circle</i>
+            </div>
+            <div class="stat-card-content">
+              <h3 class="stat-card-value">2</h3>
+              <p class="stat-card-label">Confirmed This Month</p>
+            </div>
+          </div>
+          <div class="stat-card stat-card-primary">
+            <div class="stat-card-icon">
+              <i class="material-icons-round">favorite</i>
+            </div>
+            <div class="stat-card-content">
+              <h3 class="stat-card-value">24</h3>
+              <p class="stat-card-label">Total Ceremonies</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Nikah Requests Section -->
+        <section class="dashboard-section animate-fade-in-up">
+          <div class="section-header">
+            <div class="section-header-left">
+              <i class="material-icons-round section-icon">pending_actions</i>
+              <div>
+                <h2 class="section-title">Pending Nikah Requests</h2>
+                <p class="section-subtitle">
+                  Review and respond to ceremony booking requests
+                </p>
+              </div>
+            </div>
+            <span class="badge badge-warning">3 Pending</span>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Applicant Name</th>
+                  <th>Contact</th>
+                  <th>Requested Date</th>
+                  <th>Time Slot</th>
+                  <th>Status</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span class="booking-id-cell">
+                      <i class="material-icons-round">tag</i>
+                      NKH-2025-0058
+                    </span>
+                  </td>
+                  <td>
+                    <div class="applicant-cell">
+                      <span class="applicant-name">Ahmad Ali</span>
+                      <span class="applicant-detail"
+                        >Groom: Ahmad & Bride: Fatima</span
+                      >
+                    </div>
+                  </td>
+                  <td>
+                    <div class="contact-cell">
+                      <span>0321-1234567</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="date-cell">
+                      <i class="material-icons-round">event</i>
+                      June 25, 2025
+                    </div>
+                  </td>
+                  <td>
+                    <div class="time-cell">
+                      <i class="material-icons-round">schedule</i>
+                      After Zuhr
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge pending">
+                      <i class="material-icons-round">hourglass_empty</i>
+                      Pending
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button
+                      class="btn btn-sm btn-icon btn-view"
+                      title="View Details"
+                      onclick="viewRequestDetails('NKH-2025-0058')"
+                    >
+                      <i class="material-icons-round">visibility</i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-reject"
+                      onclick="rejectRequest('NKH-2025-0058')"
+                    >
+                      <i class="material-icons-round btn-icon">close</i>
+                      Reject
+                    </button>
+                    <button
+                      class="btn btn-sm btn-accept"
+                      onclick="acceptRequest('NKH-2025-0058')"
+                    >
+                      <i class="material-icons-round btn-icon">check</i>
+                      Accept
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="booking-id-cell">
+                      <i class="material-icons-round">tag</i>
+                      NKH-2025-0061
+                    </span>
+                  </td>
+                  <td>
+                    <div class="applicant-cell">
+                      <span class="applicant-name">Bilal Khan</span>
+                      <span class="applicant-detail"
+                        >Groom: Bilal & Bride: Ayesha</span
+                      >
+                    </div>
+                  </td>
+                  <td>
+                    <div class="contact-cell">
+                      <span>0300-9876543</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="date-cell">
+                      <i class="material-icons-round">event</i>
+                      June 28, 2025
+                    </div>
+                  </td>
+                  <td>
+                    <div class="time-cell">
+                      <i class="material-icons-round">schedule</i>
+                      After Asr
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge pending">
+                      <i class="material-icons-round">hourglass_empty</i>
+                      Pending
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button
+                      class="btn btn-sm btn-icon btn-view"
+                      title="View Details"
+                      onclick="viewRequestDetails('NKH-2025-0061')"
+                    >
+                      <i class="material-icons-round">visibility</i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-reject"
+                      onclick="rejectRequest('NKH-2025-0061')"
+                    >
+                      <i class="material-icons-round btn-icon">close</i>
+                      Reject
+                    </button>
+                    <button
+                      class="btn btn-sm btn-accept"
+                      onclick="acceptRequest('NKH-2025-0061')"
+                    >
+                      <i class="material-icons-round btn-icon">check</i>
+                      Accept
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="booking-id-cell">
+                      <i class="material-icons-round">tag</i>
+                      NKH-2025-0065
+                    </span>
+                  </td>
+                  <td>
+                    <div class="applicant-cell">
+                      <span class="applicant-name">Zain Ahmed</span>
+                      <span class="applicant-detail"
+                        >Groom: Zain & Bride: Maryam</span
+                      >
+                    </div>
+                  </td>
+                  <td>
+                    <div class="contact-cell">
+                      <span>0333-4567890</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="date-cell">
+                      <i class="material-icons-round">event</i>
+                      July 01, 2025
+                    </div>
+                  </td>
+                  <td>
+                    <div class="time-cell">
+                      <i class="material-icons-round">schedule</i>
+                      After Maghrib
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge pending">
+                      <i class="material-icons-round">hourglass_empty</i>
+                      Pending
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button
+                      class="btn btn-sm btn-icon btn-view"
+                      title="View Details"
+                      onclick="viewRequestDetails('NKH-2025-0065')"
+                    >
+                      <i class="material-icons-round">visibility</i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-reject"
+                      onclick="rejectRequest('NKH-2025-0065')"
+                    >
+                      <i class="material-icons-round btn-icon">close</i>
+                      Reject
+                    </button>
+                    <button
+                      class="btn btn-sm btn-accept"
+                      onclick="acceptRequest('NKH-2025-0065')"
+                    >
+                      <i class="material-icons-round btn-icon">check</i>
+                      Accept
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Cards (for responsive) -->
+          <div class="mobile-cards">
+            <!-- Request Card 1 -->
+            <div class="request-card">
+              <div class="request-card-header">
+                <span class="booking-id-cell">
+                  <i class="material-icons-round">tag</i>
+                  NKH-2025-0058
+                </span>
+                <span class="status-badge pending">
+                  <i class="material-icons-round">hourglass_empty</i>
+                  Pending
+                </span>
+              </div>
+              <div class="request-card-body">
+                <div class="request-detail">
+                  <span class="request-label">Applicant</span>
+                  <span class="request-value">Ahmad Ali</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Couple</span>
+                  <span class="request-value">Ahmad & Fatima</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Contact</span>
+                  <span class="request-value">0321-1234567</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Date & Time</span>
+                  <span class="request-value">June 25, 2025 - After Zuhr</span>
+                </div>
+              </div>
+              <div class="request-card-footer">
+                <button
+                  class="btn btn-sm btn-reject"
+                  onclick="rejectRequest('NKH-2025-0058')"
+                >
+                  <i class="material-icons-round btn-icon">close</i>
+                  Reject
+                </button>
+                <button
+                  class="btn btn-sm btn-accept"
+                  onclick="acceptRequest('NKH-2025-0058')"
+                >
+                  <i class="material-icons-round btn-icon">check</i>
+                  Accept
+                </button>
+              </div>
+            </div>
+
+            <!-- Request Card 2 -->
+            <div class="request-card">
+              <div class="request-card-header">
+                <span class="booking-id-cell">
+                  <i class="material-icons-round">tag</i>
+                  NKH-2025-0061
+                </span>
+                <span class="status-badge pending">
+                  <i class="material-icons-round">hourglass_empty</i>
+                  Pending
+                </span>
+              </div>
+              <div class="request-card-body">
+                <div class="request-detail">
+                  <span class="request-label">Applicant</span>
+                  <span class="request-value">Bilal Khan</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Couple</span>
+                  <span class="request-value">Bilal & Ayesha</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Contact</span>
+                  <span class="request-value">0300-9876543</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Date & Time</span>
+                  <span class="request-value">June 28, 2025 - After Asr</span>
+                </div>
+              </div>
+              <div class="request-card-footer">
+                <button
+                  class="btn btn-sm btn-reject"
+                  onclick="rejectRequest('NKH-2025-0061')"
+                >
+                  <i class="material-icons-round btn-icon">close</i>
+                  Reject
+                </button>
+                <button
+                  class="btn btn-sm btn-accept"
+                  onclick="acceptRequest('NKH-2025-0061')"
+                >
+                  <i class="material-icons-round btn-icon">check</i>
+                  Accept
+                </button>
+              </div>
+            </div>
+
+            <!-- Request Card 3 -->
+            <div class="request-card">
+              <div class="request-card-header">
+                <span class="booking-id-cell">
+                  <i class="material-icons-round">tag</i>
+                  NKH-2025-0065
+                </span>
+                <span class="status-badge pending">
+                  <i class="material-icons-round">hourglass_empty</i>
+                  Pending
+                </span>
+              </div>
+              <div class="request-card-body">
+                <div class="request-detail">
+                  <span class="request-label">Applicant</span>
+                  <span class="request-value">Zain Ahmed</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Couple</span>
+                  <span class="request-value">Zain & Maryam</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Contact</span>
+                  <span class="request-value">0333-4567890</span>
+                </div>
+                <div class="request-detail">
+                  <span class="request-label">Date & Time</span>
+                  <span class="request-value"
+                    >July 01, 2025 - After Maghrib</span
+                  >
+                </div>
+              </div>
+              <div class="request-card-footer">
+                <button
+                  class="btn btn-sm btn-reject"
+                  onclick="rejectRequest('NKH-2025-0065')"
+                >
+                  <i class="material-icons-round btn-icon">close</i>
+                  Reject
+                </button>
+                <button
+                  class="btn btn-sm btn-accept"
+                  onclick="acceptRequest('NKH-2025-0065')"
+                >
+                  <i class="material-icons-round btn-icon">check</i>
+                  Accept
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Confirmed Ceremonies Section -->
+        <section
+          class="dashboard-section animate-fade-in-up"
+          style="animation-delay: 0.1s"
+        >
+          <div class="section-header">
+            <div class="section-header-left">
+              <i class="material-icons-round section-icon">event_available</i>
+              <div>
+                <h2 class="section-title">My Confirmed Ceremonies</h2>
+                <p class="section-subtitle">
+                  Upcoming Nikah ceremonies you are assigned to
+                </p>
+              </div>
+            </div>
+            <span class="badge badge-success">2 Upcoming</span>
+          </div>
+
+          <div class="ceremonies-list">
+            <!-- Ceremony Card 1 -->
+            <div class="ceremony-card">
+              <div class="ceremony-date-badge">
+                <span class="day">20</span>
+                <span class="month">Jun</span>
+                <span class="year">2025</span>
+              </div>
+              <div class="ceremony-content">
+                <div class="ceremony-main">
+                  <h4 class="ceremony-title">
+                    <i class="material-icons-round">favorite</i>
+                    Nikah: Omar & Sara
+                  </h4>
+                  <div class="ceremony-meta">
+                    <span class="ceremony-meta-item">
+                      <i class="material-icons-round">schedule</i>
+                      After Jummah Prayer (02:00 PM)
+                    </span>
+                    <span class="ceremony-meta-item">
+                      <i class="material-icons-round">location_on</i>
+                      Masjid Al-Noor, Main Hall
+                    </span>
+                    <span class="ceremony-meta-item">
+                      <i class="material-icons-round">call</i>
+                      Contact: 0321-5556789
+                    </span>
+                  </div>
+                </div>
+                <div class="ceremony-status">
+                  <span class="status-badge accepted">
+                    <i class="material-icons-round">check_circle</i>
+                    Confirmed
+                  </span>
+                  <span class="ceremony-days-left">In 4 days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ceremony Card 2 -->
+            <div class="ceremony-card">
+              <div class="ceremony-date-badge">
+                <span class="day">22</span>
+                <span class="month">Jun</span>
+                <span class="year">2025</span>
+              </div>
+              <div class="ceremony-content">
+                <div class="ceremony-main">
+                  <h4 class="ceremony-title">
+                    <i class="material-icons-round">favorite</i>
+                    Nikah: Haris & Zainab
+                  </h4>
+                  <div class="ceremony-meta">
+                    <span class="ceremony-meta-item">
+                      <i class="material-icons-round">schedule</i>
+                      After Zuhr Prayer (01:30 PM)
+                    </span>
+                    <span class="ceremony-meta-item">
+                      <i class="material-icons-round">location_on</i>
+                      Masjid Al-Noor, Main Hall
+                    </span>
+                    <span class="ceremony-meta-item">
+                      <i class="material-icons-round">call</i>
+                      Contact: 0300-1112233
+                    </span>
+                  </div>
+                </div>
+                <div class="ceremony-status">
+                  <span class="status-badge accepted">
+                    <i class="material-icons-round">check_circle</i>
+                    Confirmed
+                  </span>
+                  <span class="ceremony-days-left">In 6 days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div class="ceremony-card ceremony-card-empty">
+              <div class="empty-state-inline">
+                <i class="material-icons-round">event_busy</i>
+                <p>No other confirmed ceremonies scheduled.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        
+      </div>
+    </main>
+
+    <!-- ============================================
+         FOOTER (Simple Dashboard Footer)
+         ============================================ -->
+    <footer class="dashboard-footer">
+      <div class="container">
+        <div class="dashboard-footer-content">
+          <p>
+            © 2025 Masjid Al-Noor, Sheikhupura. E-Masjid System - Scholar Panel
+          </p>
+          <p class="dashboard-footer-contact">
+            <span>Need help?</span>
+            <a href="tel:03215551234">0321-5551234</a> |
+            <a href="mailto:admin@masjidalnoor.pk">admin@masjidalnoor.pk</a>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ============================================
+         REQUEST DETAILS MODAL
+         ============================================ -->
+    <div class="modal-overlay" id="requestModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <i class="material-icons-round">info</i>
+            Nikah Booking Details
+          </h3>
+          <button class="modal-close" onclick="closeModal()">
+            <i class="material-icons-round">close</i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-detail-grid">
+            <div class="modal-detail">
+              <span class="modal-label">Booking ID</span>
+              <span class="modal-value" id="modalBookingId">NKH-2025-0058</span>
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Applicant Name</span>
+              <span class="modal-value" id="modalApplicant">Ahmad Ali</span>
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Groom Name</span>
+              <span class="modal-value" id="modalGroom">Ahmad Ali</span>
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Bride Name</span>
+              <span class="modal-value" id="modalBride">Fatima Ahmed</span>
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Contact Number</span>
+              <span class="modal-value" id="modalContact">0321-1234567</span>
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Email</span>
+              <span class="modal-value" id="modalEmail"
+                >ahmad.ali@email.com</span
+              >
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Requested Date</span>
+              <span class="modal-value" id="modalDate">June 25, 2025</span>
+            </div>
+            <div class="modal-detail">
+              <span class="modal-label">Preferred Time</span>
+              <span class="modal-value" id="modalTime">After Zuhr Prayer</span>
+            </div>
+            <div class="modal-detail full-width">
+              <span class="modal-label">Venue Preference</span>
+              <span class="modal-value" id="modalVenue"
+                >Masjid Al-Noor Main Hall</span
+              >
+            </div>
+            <div class="modal-detail full-width">
+              <span class="modal-label">Additional Notes</span>
+              <span class="modal-value" id="modalNotes"
+                >Expected guests: 50-60 people. Need parking arrangements.</span
+              >
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal()">
+            Close
+          </button>
+          <button class="btn btn-reject" onclick="rejectFromModal()">
+            <i class="material-icons-round btn-icon">close</i>
+            Reject
+          </button>
+          <button class="btn btn-accept" onclick="acceptFromModal()">
+            <i class="material-icons-round btn-icon">check</i>
+            Accept
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================
+         JAVASCRIPT
+         ============================================ -->
+    <script src="js/main.js"></script>
+
+    <!-- Scholar Dashboard Specific JS -->
+    <script>
+      // Set current date
+      const dateElement = document.getElementById("currentDate");
+      if (dateElement) {
+        const options = {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        };
+        dateElement.textContent = new Date().toLocaleDateString(
+          "en-US",
+          options
+        );
+      }
+
+      // Mobile menu toggle
+      const menuToggle = document.getElementById("menuToggle");
+      const mobileMenu = document.getElementById("mobileMenu");
+
+      if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener("click", () => {
+          mobileMenu.classList.toggle("active");
+          const icon = menuToggle.querySelector("i");
+          icon.textContent = mobileMenu.classList.contains("active")
+            ? "close"
+            : "menu";
+        });
+      }
+
+      // Modal Functions
+      const modal = document.getElementById("requestModal");
+      let currentBookingId = null;
+
+      function viewRequestDetails(bookingId) {
+        currentBookingId = bookingId;
+        // In real app, fetch details from API
+        // For now, show modal with sample data
+        modal.classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeModal() {
+        modal.classList.remove("active");
+        document.body.style.overflow = "";
+        currentBookingId = null;
+      }
+
+      // Close modal on outside click
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+
+      // Close modal on Escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modal.classList.contains("active")) {
+          closeModal();
+        }
+      });
+
+      // Accept/Reject Functions
+      function acceptRequest(bookingId) {
+        if (
+          confirm(
+            `Are you sure you want to ACCEPT booking ${bookingId}?\n\nThis will confirm the Nikah ceremony.`
+          )
+        ) {
+          showToast(`Booking ${bookingId} has been accepted!`, "success");
+          // In real app, make API call
+          // Then refresh the table or remove the row
+        }
+      }
+
+      function rejectRequest(bookingId) {
+        const reason = prompt(
+          `Please provide a reason for rejecting booking ${bookingId}:\n\n(This will be sent to the applicant)`
+        );
+        if (reason !== null) {
+          showToast(`Booking ${bookingId} has been rejected.`, "info");
+          // In real app, make API call with reason
+        }
+      }
+
+      function acceptFromModal() {
+        if (currentBookingId) {
+          closeModal();
+          acceptRequest(currentBookingId);
+        }
+      }
+
+      function rejectFromModal() {
+        if (currentBookingId) {
+          closeModal();
+          rejectRequest(currentBookingId);
+        }
+      }
+
+      // Toast notification (uses main.js showToast if available)
+      function showToast(message, type = "info") {
+        // Check if showToast exists in main.js
+        if (typeof window.showToast === "function") {
+          window.showToast(message, type);
+        } else {
+          // Fallback alert
+          alert(message);
+        }
+      }
+    </script>
+  </body>
+</html>
