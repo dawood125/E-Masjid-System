@@ -17,7 +17,7 @@ export default function ForgotPassword() {
       await new Promise(resolve => setTimeout(resolve, 500))
       setSubmitted(true)
       showToast('Reset link sent to your email!', 'success')
-    } catch (error) {
+    } catch {
       showToast('Failed to send reset link', 'error')
     } finally {
       setLoading(false)

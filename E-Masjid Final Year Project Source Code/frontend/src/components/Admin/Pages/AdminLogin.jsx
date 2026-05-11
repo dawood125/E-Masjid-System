@@ -25,11 +25,11 @@ export default function AdminLogin() {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 500))
-      login(formData.email, formData.password, 'admin')
+      await login(formData.email, formData.password, 'admin')
       showToast('Admin logged in successfully.', 'success')
       navigate(ROUTES.ADMIN)
-    } catch (error) {
-      showToast('Admin login failed. Please try again.', 'error')
+    } catch (err) {
+      showToast(err.message || 'Admin login failed. Please try again.', 'error')
     } finally {
       setLoading(false)
     }

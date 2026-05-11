@@ -1,3 +1,5 @@
+jest.mock('../../utils/sendEmail', () => jest.fn().mockResolvedValue({ messageId: 'test-mock' }));
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 
@@ -10,7 +12,7 @@ const FundRequest = require('../../models/FundRequest');
 jest.setTimeout(30000);
 
 describe('E-Masjid API (integration)', () => {
-  let mongoUri;
+  let mongod;
   let mosque;
   let adminToken;
   let committeeToken;
@@ -18,19 +20,16 @@ describe('E-Masjid API (integration)', () => {
   let committeeUser;
 
   beforeAll(async () => {
-    // Use mongodb-memory-server if available, otherwise fallback to MONGODB_URI
+    await mongoose.disconnect().catch(() => {});
+    const { MongoMemoryServer } = require('mongodb-memory-server');
     try {
-      // Lazy import to avoid failing if optional
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
-      mongoUri = mongod.getUri();
-      await mongoose.disconnect();
-      await mongoose.connect(mongoUri);
-    } catch {
-      mongoUri = process.env.MONGODB_URI;
-      await mongoose.disconnect();
-      await mongoose.connect(mongoUri);
+      mongod = await MongoMemoryServer.create();
+    } catch (err) {
+      throw new Error(
+        `mongodb-memory-server failed to start (refusing MONGODB_URI so tests never wipe a real database): ${err.message}`
+      );
     }
+    await mongoose.connect(mongod.getUri());
 
     await Promise.all([
       User.deleteMany({}),
@@ -69,6 +68,15 @@ describe('E-Masjid API (integration)', () => {
 
   afterAll(async () => {
     await mongoose.disconnect();
+    if (mongod) await mongod.stop();
+  });
+
+  test('GET /api/mosques/public lists active mosques', async () => {
+    const res = await request(app).get('/api/mosques/public');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.some((m) => String(m._id) === String(mosque._id))).toBe(true);
   });
 
   test('auth /me works with token', async () => {

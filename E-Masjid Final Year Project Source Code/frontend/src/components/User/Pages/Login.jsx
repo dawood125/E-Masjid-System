@@ -20,7 +20,7 @@ export default function Login() {
       // Mock login delay
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      login(formData.email, formData.password, formData.role)
+      await login(formData.email, formData.password, formData.role)
       showToast('Successfully logged in!', 'success')
 
       // Redirect based on selected public portal role.
@@ -29,8 +29,8 @@ export default function Login() {
       } else {
         navigate(ROUTES.HOME)
       }
-    } catch (error) {
-      showToast('Login failed. Please try again.', 'error')
+    } catch (err) {
+      showToast(err.message || 'Login failed. Please try again.', 'error')
     } finally {
       setLoading(false)
     }

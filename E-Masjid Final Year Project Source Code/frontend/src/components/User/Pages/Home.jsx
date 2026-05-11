@@ -78,12 +78,13 @@ export default function Home() {
 
   // Countdown for next event
   const [countdown, setCountdown] = useState(() => topEvents[0] ? getCountdown(topEvents[0].date) : null)
+  const nextEventDate = topEvents[0]?.date
   useEffect(() => {
     const timer = setInterval(() => {
-      if (topEvents[0]) setCountdown(getCountdown(topEvents[0].date))
+      if (nextEventDate) setCountdown(getCountdown(nextEventDate))
     }, 60000)
     return () => clearInterval(timer)
-  }, [])
+  }, [nextEventDate])
 
   return (
     <div className="bg-white">
