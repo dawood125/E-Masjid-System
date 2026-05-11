@@ -53,9 +53,10 @@ export default function Footer() {
             <nav className="flex flex-col gap-3">
               {[
                 { label: 'Nikah Services', to: ROUTES.NIKAH_BOOKING },
-                { label: 'Event Registration', to: ROUTES.EVENTS },
+                { label: 'Fund Request', to: ROUTES.FUND_REQUEST },
                 { label: 'Online Donation', to: ROUTES.DONATE },
                 { label: 'My Bookings', to: ROUTES.MY_BOOKINGS },
+                { label: 'Announcements', to: ROUTES.ANNOUNCEMENTS },
               ].map((item) => (
                 <Link key={item.label} to={item.to} className="text-gray-400 hover:text-white transition-all hover:translate-x-1 inline-flex items-center gap-2">
                   <i className="material-icons-round text-sm">chevron_right</i>

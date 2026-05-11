@@ -23,14 +23,6 @@ function categoryTagClass(category) {
   return 'bg-gray-100 text-gray-700'
 }
 
-const cardImages = [
-  'https://images.unsplash.com/photo-1564769625905-50e93615e769?w=900',
-  'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=900',
-  'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=900',
-  'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=900',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=900',
-  'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=900',
-]
 
 export default function Announcements() {
   const [query, setQuery] = useState('')
@@ -39,10 +31,9 @@ export default function Announcements() {
 
   const enriched = useMemo(
     () =>
-      mockAnnouncements.map((item, idx) => ({
+      mockAnnouncements.map((item) => ({
         ...item,
         category: inferCategory(item),
-        image: cardImages[idx % cardImages.length],
       })),
     []
   )
@@ -85,22 +76,19 @@ export default function Announcements() {
 
           {urgent && (
             <article className="mb-7 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm animate-fade-in">
-              <div className="grid grid-cols-1 lg:grid-cols-[1.8fr_1fr]">
-                <div className="p-6">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold uppercase text-white">
-                    <i className="material-icons-round text-sm">campaign</i>
-                    Urgent Notice
-                  </span>
-                  <h3 className="mt-3 font-primary text-3xl font-bold text-gray-900">{urgent.title}</h3>
-                  <p className="mt-3 text-gray-700 leading-relaxed">{urgent.content}</p>
-                  <div className="mt-4">
-                    <button type="button" className="btn btn-primary bg-[#047857]">
-                      <span>Read Full Details</span>
-                      <i className="material-icons-round">arrow_forward</i>
-                    </button>
-                  </div>
+              <div className="p-8">
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold uppercase text-white">
+                  <i className="material-icons-round text-sm">campaign</i>
+                  Urgent Notice
+                </span>
+                <h3 className="mt-4 font-primary text-3xl font-bold text-gray-900">{urgent.title}</h3>
+                <p className="mt-3 text-gray-700 leading-relaxed text-lg max-w-4xl">{urgent.content}</p>
+                <div className="mt-6">
+                  <button type="button" className="btn btn-primary bg-[#047857]">
+                    <span>Read Full Details</span>
+                    <i className="material-icons-round">arrow_forward</i>
+                  </button>
                 </div>
-                <div className="min-h-[220px] bg-cover bg-center" style={{ backgroundImage: `url(${urgent.image})` }} />
               </div>
             </article>
           )}
@@ -151,23 +139,30 @@ export default function Announcements() {
 
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {paged.map((item, idx) => (
-              <article key={item.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
-                <div className="relative h-48">
-                  <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
-                  <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase ${categoryTagClass(item.category)}`}>
-                    {item.category}
-                  </span>
+              <article key={item.id} className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+                <div className={`absolute top-0 left-0 h-full w-1 ${
+                  item.category === 'important' ? 'bg-amber-500' :
+                  item.category === 'event' ? 'bg-blue-500' :
+                  item.category === 'community' ? 'bg-green-500' : 'bg-gray-400'
+                }`} />
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${categoryTagClass(item.category)}`}>
+                      {item.category}
+                    </span>
+                    <p className="inline-flex items-center gap-1 text-sm font-medium text-gray-500">
+                      <i className="material-icons-round text-base">calendar_today</i>
+                      {formatDate(item.date)}
+                    </p>
+                  </div>
+                  <h3 className="mb-3 font-primary text-xl font-bold text-gray-900 group-hover:text-[#047857] transition-colors">{item.title}</h3>
+                  <p className="text-gray-600 leading-relaxed line-clamp-3">{item.content}</p>
                 </div>
-                <div className="p-5">
-                  <p className="inline-flex items-center gap-1 text-sm text-gray-500">
-                    <i className="material-icons-round text-base">calendar_today</i>
-                    {formatDate(item.date)}
-                  </p>
-                  <h3 className="mt-2 font-primary text-xl font-semibold text-gray-900">{item.title}</h3>
-                  <p className="mt-2 text-gray-600">{item.content}</p>
-                  <button type="button" className="mt-4 inline-flex items-center gap-1 font-semibold text-[#047857] hover:text-[#d4af37]">
+                <div className="mt-6 pt-5 border-t border-gray-50 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">By {item.publishedBy || 'Admin'}</span>
+                  <button type="button" className="inline-flex items-center gap-1 font-bold text-[#047857] group-hover:text-[#d4af37] transition-colors">
                     Read Details
-                    <i className="material-icons-round text-base">arrow_forward</i>
+                    <i className="material-icons-round text-base transition-transform group-hover:translate-x-1">arrow_forward</i>
                   </button>
                 </div>
               </article>

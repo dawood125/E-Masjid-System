@@ -1,10 +1,64 @@
-import { useState, useEffect, useMemo, startTransition } from 'react'
+import { useState, useEffect, useMemo, useRef, startTransition } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useUI } from '../../hooks/useUI.js'
 import { ROUTES } from '../../utils/constants.js'
 import api from '../../utils/api.js'
 import { getActiveMosqueId, setActiveMosqueId } from '../../utils/mosque.js'
+
+function DropdownMenu({ label, items, isActive, closeMobileMenu: closeMobileFn }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`relative flex items-center gap-1 rounded-md px-3 py-2 font-primary text-[0.95rem] font-medium transition-all duration-150 ${
+          isActive
+            ? 'bg-primary-50 text-[#047857]'
+            : 'text-gray-700 hover:bg-primary-50 hover:text-[#047857]'
+        }`}
+      >
+        {label}
+        <i className={`material-icons-round text-base transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+          expand_more
+        </i>
+        {isActive && (
+          <span className="absolute left-1/2 bottom-0 h-[3px] w-8 -translate-x-1/2 rounded-full bg-[#d4af37]" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-52 rounded-xl border border-gray-200 bg-white py-2 shadow-xl animate-fade-in z-50">
+          {items.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => {
+                setOpen(false)
+                if (closeMobileFn) closeMobileFn()
+              }}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-[#047857]"
+            >
+              <i className="material-icons-round text-lg text-gray-400">{item.icon}</i>
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
@@ -52,19 +106,35 @@ export default function Navbar() {
     return mosques.find((m) => m._id === activeMosqueId) || null
   }, [mosques, activeMosqueId])
 
-  const navLinks = [
+  // Primary nav links (always visible)
+  const primaryLinks = [
     { label: 'Home', path: ROUTES.HOME },
     { label: 'Prayer Times', path: ROUTES.PRAYER_TIMES },
     { label: 'Events', path: ROUTES.EVENTS },
     { label: 'Donate', path: ROUTES.DONATE },
-    { label: 'Nikah Services', path: ROUTES.NIKAH_BOOKING },
-    { label: 'Transparency', path: ROUTES.TRANSPARENCY },
+  ]
+
+  // Services dropdown items
+  const servicesItems = [
+    { label: 'Nikah Booking', path: ROUTES.NIKAH_BOOKING, icon: 'favorite' },
+    { label: 'My Bookings', path: ROUTES.MY_BOOKINGS, icon: 'bookmark' },
+    { label: 'Transparency', path: ROUTES.TRANSPARENCY, icon: 'visibility' },
+  ]
+
+  // More dropdown items
+  const moreItems = [
+    { label: 'Announcements', path: ROUTES.ANNOUNCEMENTS, icon: 'campaign' },
+    { label: 'Fund Request', path: ROUTES.FUND_REQUEST, icon: 'request_quote' },
+    { label: 'My Requests', path: ROUTES.MY_REQUESTS, icon: 'assignment' },
   ]
 
   const isActive = (path) => {
     if (path === ROUTES.HOME) return location.pathname === ROUTES.HOME
     return location.pathname.startsWith(path)
   }
+
+  const isServicesActive = servicesItems.some((item) => isActive(item.path))
+  const isMoreActive = moreItems.some((item) => isActive(item.path))
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-40 border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`}>
@@ -104,8 +174,8 @@ export default function Navbar() {
         )}
 
         {/* Desktop Navigation */}
-        <nav className="hidden xl:flex items-center gap-2">
-          {navLinks.map((link) => (
+        <nav className="hidden xl:flex items-center gap-1">
+          {primaryLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -116,11 +186,27 @@ export default function Navbar() {
               }`}
             >
               {link.label}
-              {(isActive(link.path)) && (
+              {isActive(link.path) && (
                 <span className="absolute left-1/2 bottom-0 h-[3px] w-8 -translate-x-1/2 rounded-full bg-[#d4af37]" />
               )}
             </Link>
           ))}
+
+          {/* Services Dropdown */}
+          <DropdownMenu
+            label="Services"
+            items={servicesItems}
+            isActive={isServicesActive}
+            closeMobileMenu={closeMobileMenu}
+          />
+
+          {/* More Dropdown */}
+          <DropdownMenu
+            label="More"
+            items={moreItems}
+            isActive={isMoreActive}
+            closeMobileMenu={closeMobileMenu}
+          />
         </nav>
 
         {/* Auth Buttons */}
@@ -135,27 +221,27 @@ export default function Navbar() {
                   logout()
                   closeMobileMenu()
                 }}
-                className="btn btn-secondary btn-sm border border-[#047857] text-[#047857]"
+                className="btn btn-secondary btn-sm"
               >
                 Logout
               </button>
               {user?.role === 'admin' && (
-                <Link to={ROUTES.ADMIN} className="btn btn-primary btn-sm bg-[#047857] hover:bg-[#064e3b]">
+                <Link to={ROUTES.ADMIN} className="btn btn-primary btn-sm">
                   Admin
                 </Link>
               )}
               {user?.role === 'scholar' && (
-                <Link to={ROUTES.SCHOLAR} className="btn btn-primary btn-sm bg-[#047857] hover:bg-[#064e3b]">
+                <Link to={ROUTES.SCHOLAR} className="btn btn-primary btn-sm">
                   Dashboard
                 </Link>
               )}
             </div>
           ) : (
             <div className="hidden sm:flex items-center gap-2">
-              <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm border border-[#047857] text-[#047857] hover:bg-primary-50">
+              <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm">
                 Login
               </Link>
-              <Link to={ROUTES.REGISTER} className="btn btn-primary btn-sm bg-[#047857] hover:bg-[#064e3b]">
+              <Link to={ROUTES.REGISTER} className="btn btn-primary btn-sm">
                 Register
               </Link>
             </div>
@@ -199,12 +285,15 @@ export default function Navbar() {
                   </select>
                 </div>
               )}
-              {navLinks.map((link) => (
+
+              {/* Main Pages */}
+              <p className="px-5 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Main</p>
+              {primaryLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
                   onClick={closeMobileMenu}
-                  className={`rounded-lg border-b border-gray-100 px-5 py-4 text-base transition-colors duration-150 ${
+                  className={`rounded-lg px-5 py-3.5 text-base transition-colors duration-150 ${
                     isActive(link.path)
                       ? 'bg-primary-50 text-[#047857] font-semibold'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -214,19 +303,55 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              {/* Services Section */}
+              <p className="px-5 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Services</p>
+              {servicesItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={closeMobileMenu}
+                  className={`flex items-center gap-3 rounded-lg px-5 py-3.5 text-base transition-colors duration-150 ${
+                    isActive(item.path)
+                      ? 'bg-primary-50 text-[#047857] font-semibold'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className="material-icons-round text-lg text-gray-400">{item.icon}</i>
+                  {item.label}
+                </Link>
+              ))}
+
+              {/* More Section */}
+              <p className="px-5 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Community</p>
+              {moreItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={closeMobileMenu}
+                  className={`flex items-center gap-3 rounded-lg px-5 py-3.5 text-base transition-colors duration-150 ${
+                    isActive(item.path)
+                      ? 'bg-primary-50 text-[#047857] font-semibold'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className="material-icons-round text-lg text-gray-400">{item.icon}</i>
+                  {item.label}
+                </Link>
+              ))}
+
               {!isAuthenticated && (
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t">
                   <Link
                     to={ROUTES.LOGIN}
                     onClick={closeMobileMenu}
-                    className="btn w-full border border-[#047857] text-[#047857] bg-white"
+                    className="btn btn-secondary w-full"
                   >
                     Login
                   </Link>
                   <Link
                     to={ROUTES.REGISTER}
                     onClick={closeMobileMenu}
-                    className="btn w-full bg-[#047857] text-white"
+                    className="btn btn-primary w-full"
                   >
                     Register
                   </Link>
@@ -240,7 +365,7 @@ export default function Navbar() {
                       logout()
                       closeMobileMenu()
                     }}
-                    className="btn w-full border border-[#047857] text-[#047857] bg-white"
+                    className="btn btn-secondary w-full"
                   >
                     Logout
                   </button>
