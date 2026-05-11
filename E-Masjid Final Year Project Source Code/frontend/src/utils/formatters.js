@@ -18,7 +18,8 @@ export const formatDate = (dateString) => {
 
 export const formatTime = (timeString) => {
   if (!timeString) return ''
-  const [hours, minutes] = timeString.split(':')
+  const _parts = timeString.split(':')
+  if (_parts.length < 2) return ''
   return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',

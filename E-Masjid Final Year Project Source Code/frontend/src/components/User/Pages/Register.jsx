@@ -31,11 +31,11 @@ export default function Register() {
     try {
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      register(formData.email, formData.password, formData.name)
+      await register(formData.email, formData.password, formData.name, formData.phone)
       showToast('Account created successfully!', 'success')
       navigate(ROUTES.HOME)
-    } catch (error) {
-      showToast('Registration failed. Please try again.', 'error')
+    } catch (err) {
+      showToast(err.message || 'Registration failed. Please try again.', 'error')
     } finally {
       setLoading(false)
     }

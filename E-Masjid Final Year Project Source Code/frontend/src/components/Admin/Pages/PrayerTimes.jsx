@@ -203,14 +203,14 @@ export default function PrayerTimes() {
 
           <div className="space-y-4 py-6">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Jumu'ah (Friday Prayer)</h3>
-              <p className="mt-1 text-sm text-gray-500">Set the Jumu'ah congregational prayer time.</p>
+              <h3 className="text-base font-semibold text-gray-900">{'Jumu\'ah (Friday Prayer)'}</h3>
+              <p className="mt-1 text-sm text-gray-500">{'Set the Jumu\'ah congregational prayer time.'}</p>
             </div>
 
             <label className="block max-w-xs space-y-2">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
                 <i className="material-icons-round text-base text-primary-700">mosque</i>
-                Jumu'ah Prayer
+                {'Jumu\'ah Prayer'}
                 <span className="text-error">*</span>
               </span>
               <input

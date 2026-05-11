@@ -15,7 +15,6 @@ const ALL_MODULES = [
 export default function ManageMosques() {
   const [mosques, setMosques] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
   const [selectedMosque, setSelectedMosque] = useState(null)
   const { showToast } = useUI()
   const [loading, setLoading] = useState(true)
@@ -108,7 +107,7 @@ export default function ManageMosques() {
           <h1 className="font-primary text-3xl font-bold text-gray-900">Manage Mosques</h1>
           <p className="mt-1 text-gray-500">Create, configure and manage your mosques</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm); setEditingId(null) }} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
+        <button onClick={() => { setShowForm(!showForm) }} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
           <i className="material-icons-round text-lg">{showForm ? 'close' : 'add'}</i>
           {showForm ? 'Cancel' : 'Add Mosque'}
         </button>

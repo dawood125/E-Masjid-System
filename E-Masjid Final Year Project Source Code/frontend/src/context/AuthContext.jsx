@@ -1,5 +1,6 @@
 import { createContext, useState, useCallback, useEffect } from 'react'
 import api from '../utils/api'
+import { setActiveMosqueId } from '../utils/mosque.js'
 
 export const AuthContext = createContext()
 
@@ -19,6 +20,7 @@ export function AuthProvider({ children }) {
           if (data.success) {
             setUser(data.user)
             localStorage.setItem('user', JSON.stringify(data.user))
+            if (data.user?.mosqueId) setActiveMosqueId(data.user.mosqueId)
           } else {
             throw new Error('Invalid session')
           }
@@ -47,6 +49,7 @@ export function AuthProvider({ children }) {
       setUser(data.user)
       localStorage.setItem('user', JSON.stringify(data.user))
       localStorage.setItem('authToken', data.token)
+      if (data.user?.mosqueId) setActiveMosqueId(data.user.mosqueId)
       return data.user
     } catch (err) {
       setError(err.message || 'Login failed')
@@ -62,6 +65,7 @@ export function AuthProvider({ children }) {
       setUser(data.user)
       localStorage.setItem('user', JSON.stringify(data.user))
       localStorage.setItem('authToken', data.token)
+      if (data.user?.mosqueId) setActiveMosqueId(data.user.mosqueId)
       return data.user
     } catch (err) {
       setError(err.message || 'Registration failed')

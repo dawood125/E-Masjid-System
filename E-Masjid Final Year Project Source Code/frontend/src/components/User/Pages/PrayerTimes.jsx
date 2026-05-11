@@ -125,7 +125,7 @@ export default function PrayerTimes() {
 
           <div className="mb-5 inline-flex items-center gap-2 text-[#064e3b]">
             <i className="material-icons-round">schedule</i>
-            <h2 className="font-primary text-2xl font-bold">Today's Schedule</h2>
+            <h2 className="font-primary text-2xl font-bold">{'Today\'s Schedule'}</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -171,7 +171,7 @@ export default function PrayerTimes() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex items-center gap-2 text-[#064e3b]">
               <i className="material-icons-round">calendar_month</i>
-              <h2 className="font-primary text-2xl font-bold">Weekly Jama'ah Schedule</h2>
+              <h2 className="font-primary text-2xl font-bold">{'Weekly Jama\'ah Schedule'}</h2>
             </div>
             <p className="text-sm text-gray-500">Times may vary slightly based on sunset</p>
           </div>

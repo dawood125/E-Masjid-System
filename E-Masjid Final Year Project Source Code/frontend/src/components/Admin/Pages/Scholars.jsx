@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockNikahBookings, mockScholars } from '../../../mocks'
+import { mockScholars } from '../../../mocks'
 
 const ASSIGNMENT_MOCKS = [
   { id: 'NKH-2025-0058', couple: 'Ahmad Ali & Fatima', date: 'June 25, 2025' },
@@ -34,11 +34,6 @@ export default function Scholars() {
     password: '',
     confirmPassword: '',
   })
-
-  const pendingNikahCount = useMemo(
-    () => mockNikahBookings.filter((booking) => booking.status === 'pending').length,
-    []
-  )
 
   const activeCount = scholars.filter((scholar) => scholar.isActive).length
 

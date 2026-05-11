@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, startTransition } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useUI } from '../../hooks/useUI.js'
@@ -12,7 +12,8 @@ export default function Navbar() {
   const location = useLocation()
   const [isScrolled, setIsScrolled] = useState(false)
   const [mosques, setMosques] = useState([])
-  const [activeMosqueId, setActiveMosqueIdState] = useState(() => getActiveMosqueId())
+  const [pickedMosqueId, setPickedMosqueId] = useState(() => getActiveMosqueId() || '')
+  const activeMosqueId = user?.mosqueId || pickedMosqueId || ''
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,8 +34,10 @@ export default function Navbar() {
         setMosques(list)
         const existing = getActiveMosqueId()
         if (!existing && list.length > 0) {
-          setActiveMosqueId(list[0]._id)
-          setActiveMosqueIdState(list[0]._id)
+          startTransition(() => {
+            setActiveMosqueId(list[0]._id)
+            setPickedMosqueId(list[0]._id)
+          })
         }
       } catch {
         // Silent: navbar should still render even if API is down
@@ -43,14 +46,6 @@ export default function Navbar() {
     loadMosques()
     return () => { mounted = false }
   }, [])
-
-  useEffect(() => {
-    // If user has a mosqueId, prefer it
-    if (user?.mosqueId && user.mosqueId !== activeMosqueId) {
-      setActiveMosqueId(user.mosqueId)
-      setActiveMosqueIdState(user.mosqueId)
-    }
-  }, [user?.mosqueId, activeMosqueId])
 
   const activeMosque = useMemo(() => {
     if (!activeMosqueId) return null
@@ -96,7 +91,7 @@ export default function Navbar() {
               value={activeMosqueId || ''}
               onChange={(e) => {
                 setActiveMosqueId(e.target.value)
-                setActiveMosqueIdState(e.target.value)
+                setPickedMosqueId(e.target.value)
               }}
             >
               {mosques.map((m) => (
@@ -192,7 +187,7 @@ export default function Navbar() {
                     value={activeMosqueId || ''}
                     onChange={(e) => {
                       setActiveMosqueId(e.target.value)
-                      setActiveMosqueIdState(e.target.value)
+                      setPickedMosqueId(e.target.value)
                       closeMobileMenu()
                     }}
                   >
