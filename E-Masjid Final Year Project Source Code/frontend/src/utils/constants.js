@@ -78,6 +78,7 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password/:token',
   PRAYER_TIMES: '/prayer-times',
   EVENTS: '/events',
   DONATE: '/donate',
