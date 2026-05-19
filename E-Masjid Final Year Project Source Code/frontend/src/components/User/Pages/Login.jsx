@@ -151,6 +151,13 @@ export default function Login() {
                   Create Account
                 </Link>
               </div>
+
+              <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2">
+                  <i className="material-icons-round text-base text-[#047857]">school</i>
+                  <span>Religious Scholar? Use the credentials provided by your mosque admin to login here.</span>
+                </div>
+              </div>
             </div>
           </div>
 

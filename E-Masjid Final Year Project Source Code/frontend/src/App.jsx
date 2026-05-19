@@ -8,6 +8,7 @@ import Home from './components/User/Pages/Home'
 import Login from './components/User/Pages/Login'
 import Register from './components/User/Pages/Register'
 import ForgotPassword from './components/User/Pages/ForgotPassword'
+import ResetPassword from './components/User/Pages/ResetPassword'
 import PrayerTimes from './components/User/Pages/PrayerTimes'
 import Events from './components/User/Pages/Events'
 import Donate from './components/User/Pages/Donate'
@@ -60,6 +61,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/prayer-times" element={<PrayerTimes />} />
               <Route path="/events" element={<Events />} />
               <Route path="/donate" element={<Donate />} />
