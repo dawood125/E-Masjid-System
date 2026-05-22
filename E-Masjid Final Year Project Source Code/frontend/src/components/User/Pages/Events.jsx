@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { mockEvents } from '../../../mocks/index.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
+import { useAuth } from '../../../hooks/useAuth.js'
+import { ROUTES } from '../../../utils/constants.js'
 
 const categories = ['all', 'lecture', 'religious', 'education', 'community', 'youth']
 const categoryLabel = {
@@ -44,6 +47,8 @@ export default function Events() {
   const [visibleCount, setVisibleCount] = useState(6)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [registration, setRegistration] = useState({ name: '', phone: '', email: '' })
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   const enrichedEvents = useMemo(
     () =>
@@ -68,6 +73,10 @@ export default function Events() {
   const visibleEvents = filtered.slice(0, visibleCount)
 
   const openModal = (event) => {
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN)
+      return
+    }
     setSelectedEvent(event)
   }
 
@@ -148,8 +157,8 @@ export default function Events() {
                     onClick={() => openModal(featuredEvent)}
                     className="btn btn-lg mt-6 bg-[#d4af37] text-gray-900 hover:bg-[#b7791f]"
                   >
-                    <i className="material-icons-round">how_to_reg</i>
-                    Register Now
+                    <i className="material-icons-round">{isAuthenticated ? 'how_to_reg' : 'login'}</i>
+                    {isAuthenticated ? 'Register Now' : 'Login to Register'}
                   </button>
                 </div>
                 <div className="min-h-[320px]">
@@ -193,7 +202,8 @@ export default function Events() {
 
                     <div className="mt-5">
                       <button type="button" onClick={() => openModal(event)} className="btn btn-primary w-full bg-[#047857] hover:bg-[#064e3b]">
-                        Register
+                        <i className="material-icons-round text-base">{isAuthenticated ? 'how_to_reg' : 'login'}</i>
+                        {isAuthenticated ? 'Register' : 'Login to Register'}
                       </button>
                     </div>
                   </div>
