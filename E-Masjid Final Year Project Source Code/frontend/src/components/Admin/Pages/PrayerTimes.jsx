@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockPrayerTimes } from '../../../mocks'
+import api from '../../../utils/api.js'
 import { formatTime } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const PRAYER_ICONS = {
   fajr: 'wb_twilight',
@@ -15,12 +16,12 @@ const PRAYER_ICONS = {
 
 function getInitialTimes() {
   return {
-    fajr: mockPrayerTimes.today.fajr,
-    zuhr: mockPrayerTimes.today.zuhr,
-    asr: mockPrayerTimes.today.asr,
-    maghrib: mockPrayerTimes.today.maghrib,
-    isha: mockPrayerTimes.today.isha,
-    jummah: mockPrayerTimes.today.jummah,
+    fajr: '05:30',
+    zuhr: '12:45',
+    asr: '15:45',
+    maghrib: '18:25',
+    isha: '19:45',
+    jummah: '13:00',
   }
 }
 
@@ -28,14 +29,46 @@ export default function PrayerTimes() {
   const { showToast } = useUI()
 
   const [times, setTimes] = useState(getInitialTimes)
+  const [loading, setLoading] = useState(true)
   const [specialEnabled, setSpecialEnabled] = useState(false)
   const [specialTimes, setSpecialTimes] = useState({
     occasion: '',
     taraweeh: '21:30',
     suhoor: '04:45',
-    iftar: mockPrayerTimes.today.maghrib,
+    iftar: '18:25',
   })
   const [lastUpdated, setLastUpdated] = useState(new Date())
+
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const res = await api.getPrayerTimes(params)
+        if (!mounted) return
+        const today = res.data?.today
+        if (today) {
+          setTimes((prev) => ({
+            ...prev,
+            fajr: today.fajr || prev.fajr,
+            zuhr: today.zuhr || prev.zuhr,
+            asr: today.asr || prev.asr,
+            maghrib: today.maghrib || prev.maghrib,
+            isha: today.isha || prev.isha,
+            jummah: today.jummah || prev.jummah,
+          }))
+          setSpecialTimes((prev) => ({ ...prev, iftar: today.maghrib || prev.iftar }))
+          if (today.updatedAt) setLastUpdated(new Date(today.updatedAt))
+        }
+      } catch (err) {
+        showToast(err.message || 'Failed to load prayer times.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
 
   const currentTimes = useMemo(
     () => [
@@ -57,10 +90,24 @@ export default function PrayerTimes() {
     setSpecialTimes((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    setLastUpdated(new Date())
-    showToast('Prayer times updated successfully!', 'success')
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const res = await api.updatePrayerTimes({
+        date: today,
+        fajr: times.fajr,
+        zuhr: times.zuhr,
+        asr: times.asr,
+        maghrib: times.maghrib,
+        isha: times.isha,
+        jummah: times.jummah,
+      })
+      setLastUpdated(new Date(res.data?.updatedAt || Date.now()))
+      showToast('Prayer times updated successfully!', 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to update prayer times.', 'error')
+    }
   }
 
   const resetForm = () => {
@@ -70,7 +117,7 @@ export default function PrayerTimes() {
       occasion: '',
       taraweeh: '21:30',
       suhoor: '04:45',
-      iftar: mockPrayerTimes.today.maghrib,
+      iftar: times.maghrib,
     })
     showToast('Form has been reset to defaults.', 'info')
   }
@@ -117,6 +164,9 @@ export default function PrayerTimes() {
           </span>
         </div>
 
+        {loading ? (
+          <p className="text-sm text-gray-500">Loading current prayer times...</p>
+        ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {currentTimes.map((prayer) => (
             <article
@@ -155,6 +205,7 @@ export default function PrayerTimes() {
             </article>
           ))}
         </div>
+        )}
 
         <p className="mt-4 inline-flex items-center gap-1 border-t border-gray-100 pt-4 text-sm text-gray-500">
           <i className="material-icons-round text-base">update</i>

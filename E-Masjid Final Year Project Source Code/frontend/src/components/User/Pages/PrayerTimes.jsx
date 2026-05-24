@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { mockPrayerTimes } from '../../../mocks/index.js'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { formatTime } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const prayersConfig = [
   { key: 'fajr', name: 'Fajr', icon: 'wb_twilight' },
@@ -61,18 +63,48 @@ function nextPrayerCountdown(todaySchedule) {
 }
 
 export default function PrayerTimes() {
-  const [countdown, setCountdown] = useState(nextPrayerCountdown(mockPrayerTimes.today))
-  const prayers = useMemo(
-    () => prayersConfig.map((item) => ({ ...item, time: mockPrayerTimes.today[item.key] })),
+  const { showToast } = useUI()
+  const defaultToday = useMemo(
+    () => ({ fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45', jummah: '13:00' }),
     []
+  )
+  const [todayTimes, setTodayTimes] = useState(defaultToday)
+  const [weekTimes, setWeekTimes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [countdown, setCountdown] = useState(nextPrayerCountdown(defaultToday))
+
+  const prayers = useMemo(
+    () => prayersConfig.map((item) => ({ ...item, time: todayTimes[item.key] || '--:--' })),
+    [todayTimes]
   )
 
   useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const res = await api.getPrayerTimes(params)
+        if (!mounted) return
+        const today = res.data?.today || defaultToday
+        const week = Array.isArray(res.data?.week) ? res.data.week : []
+        setTodayTimes(today)
+        setWeekTimes(week)
+      } catch (err) {
+        showToast(err.message || 'Failed to load prayer times.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [defaultToday, showToast])
+
+  useEffect(() => {
     const t = setInterval(() => {
-      setCountdown(nextPrayerCountdown(mockPrayerTimes.today))
+      setCountdown(nextPrayerCountdown(todayTimes))
     }, 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [todayTimes])
 
   const islamic = islamicDateLabel()
   const gregorian = new Date().toLocaleDateString('en-US', {
@@ -147,7 +179,7 @@ export default function PrayerTimes() {
               <div className="flex flex-col items-center text-center">
                 <i className={`material-icons-round text-4xl mb-2 ${'fajr' === countdown.nextPrayerKey ? 'text-[#d4af37]' : 'text-[#047857]'}`}>wb_twilight</i>
                 <span className={`font-semibold text-lg ${'fajr' === countdown.nextPrayerKey ? 'text-white' : 'text-gray-700'}`}>Fajr</span>
-                <div className="mt-3 font-primary text-3xl font-bold">{formatTime(mockPrayerTimes.today.fajr)}</div>
+                <div className="mt-3 font-primary text-3xl font-bold">{formatTime(todayTimes.fajr)}</div>
               </div>
             </div>
 
@@ -216,7 +248,7 @@ export default function PrayerTimes() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {mockPrayerTimes.week.map((day) => {
+                  {(weekTimes.length > 0 ? weekTimes : []).map((day) => {
                     const today = day.date === new Date().toISOString().slice(0, 10)
                     const hasJummah = Boolean(day.jummah)
                     return (
@@ -247,6 +279,11 @@ export default function PrayerTimes() {
                       </tr>
                     )
                   })}
+                  {!loading && weekTimes.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-6 text-center text-gray-500">No prayer schedule available yet.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

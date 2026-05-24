@@ -58,3 +58,4 @@ Frontend: `http://localhost:5173`
 - If using **MongoDB Atlas**, configure automated backups in Atlas.
 - For self-hosted MongoDB, use a scheduled job to run `mongodump` weekly and copy the archive to safe storage.
 
+ 

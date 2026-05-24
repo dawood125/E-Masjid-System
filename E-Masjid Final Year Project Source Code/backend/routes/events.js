@@ -33,7 +33,11 @@ router.post('/', protect, authorize('admin'), async (req, res, next) => {
 // PUT /api/events/:id
 router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const event = await Event.findOneAndUpdate(
+      { _id: req.params.id, mosqueId: req.user.mosqueId },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
     res.json({ success: true, data: event });
   } catch (error) { next(error); }
@@ -42,7 +46,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
 // DELETE /api/events/:id
 router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    await Event.findByIdAndDelete(req.params.id);
+    const event = await Event.findOneAndDelete({ _id: req.params.id, mosqueId: req.user.mosqueId });
+    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
     res.json({ success: true, message: 'Event deleted' });
   } catch (error) { next(error); }
 });

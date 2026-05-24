@@ -8,6 +8,8 @@ const Expense = require('../models/Expense');
 const Event = require('../models/Event');
 const Announcement = require('../models/Announcement');
 const PrayerTime = require('../models/PrayerTime');
+const NikahBooking = require('../models/NikahBooking');
+const FundRequest = require('../models/FundRequest');
 
 const seedDB = async () => {
   try {
@@ -18,7 +20,7 @@ const seedDB = async () => {
     await Promise.all([
       User.deleteMany({}), Mosque.deleteMany({}), Donation.deleteMany({}),
       Expense.deleteMany({}), Event.deleteMany({}), Announcement.deleteMany({}),
-      PrayerTime.deleteMany({}),
+      PrayerTime.deleteMany({}), NikahBooking.deleteMany({}), FundRequest.deleteMany({}),
     ]);
 
     // Create users
@@ -48,7 +50,7 @@ const seedDB = async () => {
 
     // Update users with mosque reference
     await User.updateMany(
-      { _id: { $in: [admin._id, scholar._id, committee1._id] } },
+      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id] } },
       { mosqueId: mosque._id }
     );
 
@@ -97,6 +99,61 @@ const seedDB = async () => {
         jummah: date.getDay() === 5 ? '13:00' : null, mosqueId: mosque._id,
       });
     }
+
+    // Seed Nikah bookings
+    await NikahBooking.insertMany([
+      {
+        groomName: 'Ali Raza',
+        brideName: 'Ayesha Noor',
+        preferredDate: new Date('2026-07-05'),
+        preferredTime: '11:00',
+        contact: '0302-1234567',
+        status: 'pending',
+        userId: user1._id,
+        mosqueId: mosque._id,
+      },
+      {
+        groomName: 'Usman Khalid',
+        brideName: 'Hina Shah',
+        preferredDate: new Date('2026-06-28'),
+        preferredTime: '12:30',
+        status: 'accepted',
+        scholarId: scholar._id,
+        confirmedDate: new Date('2026-06-28'),
+        confirmedTime: '13:00',
+        contact: '0305-2223344',
+        userId: user1._id,
+        mosqueId: mosque._id,
+      },
+    ]);
+
+    // Seed fund requests
+    await FundRequest.insertMany([
+      {
+        requesterName: 'Abdullah Ahmed',
+        requesterEmail: 'user@emasjid.pk',
+        requesterPhone: '0300-5555555',
+        amount: 12000,
+        category: 'Medical',
+        reason: 'Need support for medical treatment and medicine expenses for my family this month.',
+        status: 'pending',
+        userId: user1._id,
+        mosqueId: mosque._id,
+      },
+      {
+        requesterName: 'Abdullah Ahmed',
+        requesterEmail: 'user@emasjid.pk',
+        requesterPhone: '0300-5555555',
+        amount: 7000,
+        category: 'Education',
+        reason: 'Need assistance for school fee and books for children due to temporary job loss.',
+        status: 'approved',
+        reviewedBy: committee1._id,
+        reviewNote: 'Verified by committee with local reference and documents.',
+        userId: user1._id,
+        mosqueId: mosque._id,
+      },
+    ]);
 
     console.log('\n✅ Database seeded successfully!');
     console.log('\n📧 Login Credentials:');

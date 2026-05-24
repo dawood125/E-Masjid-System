@@ -52,7 +52,11 @@ router.post('/', protect, authorize('admin'), async (req, res, next) => {
 // PUT /api/expenses/:id - Update expense
 router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const expense = await Expense.findOneAndUpdate(
+      { _id: req.params.id, mosqueId: req.user.mosqueId },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
     res.json({ success: true, data: expense });
   } catch (error) { next(error); }
@@ -61,7 +65,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
 // DELETE /api/expenses/:id
 router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const expense = await Expense.findByIdAndDelete(req.params.id);
+    const expense = await Expense.findOneAndDelete({ _id: req.params.id, mosqueId: req.user.mosqueId });
     if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
     res.json({ success: true, message: 'Expense deleted' });
   } catch (error) { next(error); }

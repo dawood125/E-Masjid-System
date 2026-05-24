@@ -9,6 +9,7 @@ router.get('/', protect, async (req, res, next) => {
     let query = {};
     if (req.user.role === 'community') query.userId = req.user._id;
     if (req.user.role === 'scholar') query.scholarId = req.user._id;
+    if (req.user.role === 'admin') query.mosqueId = req.user.mosqueId;
 
     const bookings = await NikahBooking.find(query)
       .populate('scholarId', 'name email')

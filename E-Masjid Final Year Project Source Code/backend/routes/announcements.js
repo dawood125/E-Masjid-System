@@ -24,7 +24,11 @@ router.post('/', protect, authorize('admin'), async (req, res, next) => {
 // PUT /api/announcements/:id
 router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const announcement = await Announcement.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const announcement = await Announcement.findOneAndUpdate(
+      { _id: req.params.id, mosqueId: req.user.mosqueId },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!announcement) return res.status(404).json({ success: false, message: 'Not found' });
     res.json({ success: true, data: announcement });
   } catch (error) { next(error); }
@@ -33,7 +37,11 @@ router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
 // DELETE /api/announcements/:id
 router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    await Announcement.findByIdAndDelete(req.params.id);
+    const announcement = await Announcement.findOneAndDelete({
+      _id: req.params.id,
+      mosqueId: req.user.mosqueId,
+    });
+    if (!announcement) return res.status(404).json({ success: false, message: 'Not found' });
     res.json({ success: true, message: 'Deleted' });
   } catch (error) { next(error); }
 });

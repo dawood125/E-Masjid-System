@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 
 export default function ForgotPassword() {
@@ -14,11 +15,11 @@ export default function ForgotPassword() {
     setLoading(true)
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await api.forgotPassword(email)
       setSubmitted(true)
       showToast('Reset link sent to your email!', 'success')
-    } catch {
-      showToast('Failed to send reset link', 'error')
+    } catch (err) {
+      showToast(err.message || 'Failed to send reset link', 'error')
     } finally {
       setLoading(false)
     }
@@ -116,7 +117,14 @@ export default function ForgotPassword() {
                     <button
                       type="button"
                       className="font-semibold text-[#047857] hover:text-[#065f46]"
-                      onClick={() => showToast('Reset link sent again', 'success')}
+                      onClick={async () => {
+                        try {
+                          await api.forgotPassword(email)
+                          showToast('Reset link sent again', 'success')
+                        } catch (err) {
+                          showToast(err.message || 'Failed to resend reset link', 'error')
+                        }
+                      }}
                     >
                       Resend
                     </button>

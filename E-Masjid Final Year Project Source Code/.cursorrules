@@ -1,0 +1,4 @@
+# Git Configuration Rules
+When executing any Git commands, you must ALWAYS use the globally or locally configured Git user credentials. 
+Under NO circumstances are you allowed to use "cursoragent", "Cursor Agent", or any AI-related name as the commit author or committer.
+Never use the --author flag in your git commit commands.

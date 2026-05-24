@@ -69,7 +69,7 @@ class ApiService {
   deleteAnnouncement(id) { return this.request('DELETE', `/api/announcements/${id}`) }
 
   // Prayer Times
-  getPrayerTimes() { return this.request('GET', '/api/prayer-times') }
+  getPrayerTimes(params = '') { return this.request('GET', `/api/prayer-times${params ? '?' + params : ''}`) }
   updatePrayerTimes(data) { return this.request('PUT', '/api/prayer-times', data) }
 
   // Nikah Bookings
