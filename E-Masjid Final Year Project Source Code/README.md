@@ -58,4 +58,11 @@ Frontend: `http://localhost:5173`
 - If using **MongoDB Atlas**, configure automated backups in Atlas.
 - For self-hosted MongoDB, use a scheduled job to run `mongodump` weekly and copy the archive to safe storage.
 
+### Verification and viva artifacts
+
+- Manual feature verification: `MANUAL_TEST_CHECKLIST.md`
+- Stripe end-to-end evidence template: `STRIPE_E2E_PROOF.md`
+- Non-functional readiness notes: `NFR_PROOF.md`
+- Deployment readiness checklist: `DEPLOYMENT_CHECKLIST.md`
+
  

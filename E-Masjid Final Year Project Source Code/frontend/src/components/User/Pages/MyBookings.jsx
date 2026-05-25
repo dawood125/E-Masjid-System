@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { mockNikahBookings } from '../../../mocks/index.js'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate } from '../../../utils/formatters.js'
 
@@ -27,7 +28,26 @@ function statusMeta(status) {
 }
 
 export default function MyBookings() {
-  const [bookings, setBookings] = useState(mockNikahBookings)
+  const { showToast } = useUI()
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await api.getNikahBookings()
+        if (!mounted) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setBookings(list.map((item) => ({ ...item, id: item._id || item.id })))
+      } catch (err) {
+        showToast(err.message || 'Failed to load booking status.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
 
   const stats = useMemo(() => {
     const pending = bookings.filter((b) => b.status === 'pending').length
@@ -39,8 +59,8 @@ export default function MyBookings() {
     }
   }, [bookings])
 
-  const cancelPending = (id) => {
-    setBookings((prev) => prev.filter((b) => b.id !== id))
+  const cancelPending = () => {
+    showToast('Cancellation endpoint is not available yet. Please contact admin.', 'warning')
   }
 
   return (
@@ -98,6 +118,11 @@ export default function MyBookings() {
           </div>
 
           <div className="space-y-4">
+            {loading && (
+              <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-gray-500">
+                Loading bookings...
+              </div>
+            )}
             {bookings.map((booking, idx) => {
               const status = statusMeta(booking.status)
               return (
@@ -105,7 +130,7 @@ export default function MyBookings() {
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
                     <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700">
                       <i className="material-icons-round text-base">tag</i>
-                      NKH-2025-{String(Number(booking.id) + 41).padStart(4, '0')}
+                      NKH-{String(booking.id).slice(-6).toUpperCase()}
                     </span>
                     <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ${status.cls}`}>
                       <i className="material-icons-round text-sm">{status.icon}</i>
@@ -124,7 +149,7 @@ export default function MyBookings() {
                     </div>
                     <div>
                       <p className="text-xs uppercase text-gray-500">Religious Scholar</p>
-                      <p className="mt-1 font-semibold text-gray-900">{booking.scholarName || booking.schollarName || 'Awaiting Assignment'}</p>
+                      <p className="mt-1 font-semibold text-gray-900">{booking.scholarId?.name || booking.scholarName || booking.schollarName || 'Awaiting Assignment'}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase text-gray-500">Couple</p>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 
 const timeSlots = [
@@ -46,13 +47,20 @@ export default function NikahBooking() {
     setLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700))
-      const id = `NK-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+      const res = await api.createNikahBooking({
+        groomName: formData.groomName,
+        brideName: formData.brideName,
+        preferredDate: formData.ceremonyDate,
+        preferredTime: formData.ceremonyTime,
+        contact: formData.phone,
+        notes: formData.notes,
+      })
+      const id = res.data?._id || res.data?.id || `${Date.now()}`
       setBookingId(id)
       setShowSuccess(true)
       showToast('Nikah booking request submitted successfully', 'success')
-    } catch {
-      showToast('Failed to submit booking request', 'error')
+    } catch (err) {
+      showToast(err.message || 'Failed to submit booking request', 'error')
     } finally {
       setLoading(false)
     }

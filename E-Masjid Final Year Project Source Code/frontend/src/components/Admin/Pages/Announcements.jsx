@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockAnnouncements } from '../../../mocks'
+import api from '../../../utils/api.js'
 import { formatDate } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const FILTERS = ['all', 'published', 'urgent', 'draft']
 const PAGE_SIZE = 6
@@ -21,6 +22,8 @@ export default function Announcements() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [page, setPage] = useState(1)
+  const [announcements, setAnnouncements] = useState([])
+  const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
@@ -30,15 +33,35 @@ export default function Announcements() {
     mode: 'publish',
   })
 
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const res = await api.getAnnouncements(params)
+        if (!mounted) return
+        setAnnouncements(Array.isArray(res.data) ? res.data : [])
+      } catch (err) {
+        showToast(err.message || 'Failed to load announcements.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
+
   const preparedAnnouncements = useMemo(() => {
-    return mockAnnouncements.map((item, index) => {
+    return announcements.map((item, index) => {
       const status = getAnnouncementStatus(item, index)
       return {
         ...item,
+        id: item._id || item.id,
+        date: item.createdAt || item.date,
         status,
       }
     })
-  }, [])
+  }, [announcements])
 
   const filtered = useMemo(() => {
     return preparedAnnouncements.filter((item) => {
@@ -57,17 +80,29 @@ export default function Announcements() {
   const visible = filtered.slice(0, page * PAGE_SIZE)
   const hasMore = visible.length < filtered.length
 
-  const createAnnouncement = (event) => {
+  const createAnnouncement = async (event) => {
     event.preventDefault()
-    setIsModalOpen(false)
-    setNewAnnouncement({
-      title: '',
-      content: '',
-      publishDate: '',
-      urgent: false,
-      mode: 'publish',
-    })
-    showToast('Announcement created in demo mode.', 'success')
+    try {
+      const payload = {
+        title: newAnnouncement.title,
+        content: newAnnouncement.content,
+        isUrgent: newAnnouncement.urgent,
+        publishedBy: 'Admin',
+      }
+      const res = await api.createAnnouncement(payload)
+      setAnnouncements((prev) => [res.data, ...prev])
+      setIsModalOpen(false)
+      setNewAnnouncement({
+        title: '',
+        content: '',
+        publishDate: '',
+        urgent: false,
+        mode: 'publish',
+      })
+      showToast('Announcement created successfully.', 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to create announcement.', 'error')
+    }
   }
 
   return (
@@ -159,6 +194,11 @@ export default function Announcements() {
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {!loading && visible.length === 0 && (
+          <section className="xl:col-span-2 rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+            <p className="text-gray-500">No announcements found for this filter.</p>
+          </section>
+        )}
         {visible.map((item) => {
           const badgeStyle =
             item.status === 'urgent'
@@ -225,7 +265,15 @@ export default function Announcements() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => showToast('Delete action is disabled in demo mode.', 'warning')}
+                    onClick={async () => {
+                      try {
+                        await api.deleteAnnouncement(item.id)
+                        setAnnouncements((prev) => prev.filter((a) => (a._id || a.id) !== item.id))
+                        showToast('Announcement deleted successfully.', 'success')
+                      } catch (err) {
+                        showToast(err.message || 'Failed to delete announcement.', 'error')
+                      }
+                    }}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
                   >
                     <i className="material-icons-round text-base">delete</i>
@@ -236,12 +284,6 @@ export default function Announcements() {
           )
         })}
       </div>
-
-      {!visible.length && (
-        <section className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
-          <p className="text-gray-500">No announcements found for this filter.</p>
-        </section>
-      )}
 
       {visible.length > 0 && (
         <section className="flex flex-col items-center gap-3 py-2">

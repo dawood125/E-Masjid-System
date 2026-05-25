@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { mockAnnouncements } from '../../../mocks/index.js'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const filters = ['all', 'news', 'important', 'event', 'community']
 
@@ -25,17 +27,46 @@ function categoryTagClass(category) {
 
 
 export default function Announcements() {
+  const { showToast } = useUI()
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
   const [page, setPage] = useState(1)
+  const [announcements, setAnnouncements] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const res = await api.getAnnouncements(params)
+        if (!mounted) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setAnnouncements(
+          list.map((item) => ({
+            ...item,
+            id: item._id || item.id,
+            date: item.createdAt || item.date,
+            publishedBy: item.publishedBy || 'Admin',
+          }))
+        )
+      } catch (err) {
+        showToast(err.message || 'Failed to load announcements.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
 
   const enriched = useMemo(
     () =>
-      mockAnnouncements.map((item) => ({
+      announcements.map((item) => ({
         ...item,
         category: inferCategory(item),
       })),
-    []
+    [announcements]
   )
 
   const urgent = useMemo(() => enriched.find((item) => item.isUrgent) || enriched[0], [enriched])
@@ -138,6 +169,13 @@ export default function Announcements() {
           </section>
 
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {!loading && paged.length === 0 && (
+              <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-gray-200 bg-white p-10 text-center">
+                <i className="material-icons-round text-6xl text-gray-300">campaign</i>
+                <h3 className="mt-3 font-primary text-2xl font-bold text-gray-900">No announcements found</h3>
+                <p className="mt-2 text-gray-600">Try changing your search or filter options.</p>
+              </div>
+            )}
             {paged.map((item, idx) => (
               <article key={item.id} className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
                 <div className={`absolute top-0 left-0 h-full w-1 ${
@@ -168,14 +206,6 @@ export default function Announcements() {
               </article>
             ))}
           </section>
-
-          {paged.length === 0 && (
-            <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-10 text-center">
-              <i className="material-icons-round text-6xl text-gray-300">campaign</i>
-              <h3 className="mt-3 font-primary text-2xl font-bold text-gray-900">No announcements found</h3>
-              <p className="mt-2 text-gray-600">Try changing your search or filter options.</p>
-            </div>
-          )}
 
           <nav className="mt-8 flex flex-wrap items-center justify-center gap-2">
             <button

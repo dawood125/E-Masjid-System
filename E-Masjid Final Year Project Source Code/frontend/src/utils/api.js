@@ -55,7 +55,7 @@ class ApiService {
   deleteExpense(id) { return this.request('DELETE', `/api/expenses/${id}`) }
 
   // Events
-  getEvents() { return this.request('GET', '/api/events') }
+  getEvents(params = '') { return this.request('GET', `/api/events${params ? '?' + params : ''}`) }
   getEvent(id) { return this.request('GET', `/api/events/${id}`) }
   createEvent(data) { return this.request('POST', '/api/events', data) }
   updateEvent(id, data) { return this.request('PUT', `/api/events/${id}`, data) }
@@ -63,7 +63,7 @@ class ApiService {
   registerForEvent(id) { return this.request('POST', `/api/events/${id}/register`) }
 
   // Announcements
-  getAnnouncements() { return this.request('GET', '/api/announcements') }
+  getAnnouncements(params = '') { return this.request('GET', `/api/announcements${params ? '?' + params : ''}`) }
   createAnnouncement(data) { return this.request('POST', '/api/announcements', data) }
   updateAnnouncement(id, data) { return this.request('PUT', `/api/announcements/${id}`, data) }
   deleteAnnouncement(id) { return this.request('DELETE', `/api/announcements/${id}`) }

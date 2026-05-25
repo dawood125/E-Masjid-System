@@ -1,36 +1,79 @@
-import { useState } from 'react'
-import { mockCommitteeMembers } from '../../../mocks/index.js'
+import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 
 export default function AdminCommittee() {
-  const [members, setMembers] = useState(mockCommitteeMembers)
+  const [members, setMembers] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' })
+  const [loading, setLoading] = useState(true)
   const { showToast } = useUI()
 
-  const handleCreate = (e) => {
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await api.getCommitteeMembers()
+        if (!mounted) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setMembers(list.map((item) => ({ ...item, id: item._id || item.id, mosqueName: item.mosqueName || 'Current Mosque' })))
+      } catch (err) {
+        showToast(err.message || 'Failed to load committee members.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
+
+  const handleCreate = async (e) => {
     e.preventDefault()
     if (!formData.name || !formData.email) { showToast('Name and email are required', 'warning'); return }
-    setMembers(prev => [...prev, {
-      id: 'cm' + Date.now(),
-      ...formData,
-      mosqueId: '1',
-      mosqueName: 'Masjid Al-Noor',
-      isActive: true,
-    }])
-    setFormData({ name: '', email: '', phone: '' })
-    setShowForm(false)
-    showToast('Committee member created! Login credentials sent to email.', 'success')
+    try {
+      const res = await api.createCommitteeMember(formData)
+      const created = {
+        ...res.data,
+        id: res.data._id || res.data.id,
+        isActive: true,
+        mosqueName: 'Current Mosque',
+      }
+      setMembers((prev) => [created, ...prev])
+      setFormData({ name: '', email: '', phone: '' })
+      setShowForm(false)
+      if (res.tempPassword) {
+        showToast(`Member created. Temp password: ${res.tempPassword}`, 'success')
+      } else {
+        showToast('Committee member created successfully.', 'success')
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to create committee member.', 'error')
+    }
   }
 
-  const toggleActive = (id) => {
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, isActive: !m.isActive } : m))
-    showToast('Status updated', 'success')
+  const toggleActive = async (id) => {
+    const current = members.find((member) => member.id === id)
+    if (!current) return
+    try {
+      const res = await api.updateCommitteeMember(id, { isActive: !current.isActive })
+      setMembers((prev) =>
+        prev.map((member) =>
+          member.id === id ? { ...member, ...res.data, id: member.id, mosqueName: member.mosqueName } : member
+        )
+      )
+      showToast('Status updated', 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to update status.', 'error')
+    }
   }
 
-  const deleteMember = (id) => {
-    setMembers(prev => prev.filter(m => m.id !== id))
-    showToast('Committee member removed', 'info')
+  const deleteMember = async (id) => {
+    try {
+      await api.deleteCommitteeMember(id)
+      setMembers((prev) => prev.filter((member) => member.id !== id))
+      showToast('Committee member removed', 'info')
+    } catch (err) {
+      showToast(err.message || 'Failed to remove committee member.', 'error')
+    }
   }
 
   return (
@@ -94,6 +137,11 @@ export default function AdminCommittee() {
               </tr>
             </thead>
             <tbody>
+              {!loading && members.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-500">No committee members found.</td>
+                </tr>
+              )}
               {members.map((member) => (
                 <tr key={member.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-4">

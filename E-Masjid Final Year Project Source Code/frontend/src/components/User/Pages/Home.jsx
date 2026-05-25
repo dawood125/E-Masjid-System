@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { mockPrayerTimes, mockAnnouncements, mockEvents, mockPromotionalContent } from '../../../mocks/index.js'
+import { mockPromotionalContent } from '../../../mocks/index.js'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const prayerOrder = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha']
 
@@ -50,10 +53,20 @@ function getCountdown(dateStr) {
 }
 
 export default function Home() {
-  const today = mockPrayerTimes.today
+  const { showToast } = useUI()
+  const [today, setToday] = useState({
+    fajr: '05:30',
+    zuhr: '12:45',
+    asr: '15:45',
+    maghrib: '18:25',
+    isha: '19:45',
+    jummah: '13:00',
+  })
+  const [announcements, setAnnouncements] = useState([])
+  const [events, setEvents] = useState([])
   const nextPrayer = getNextPrayer(today)
-  const topAnnouncements = mockAnnouncements.slice(0, 3)
-  const topEvents = mockEvents.slice(0, 2)
+  const topAnnouncements = announcements.slice(0, 3)
+  const topEvents = events.slice(0, 2)
   const islamicDate = getIslamicDateLabel()
   const gregorianDate = formatDate(new Date().toISOString())
   const { mosquePhotos, message: promoMessage } = mockPromotionalContent
@@ -75,6 +88,44 @@ export default function Home() {
     const timer = setInterval(nextSlide, 4500)
     return () => clearInterval(timer)
   }, [isPaused, nextSlide])
+
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const [prayerRes, eventsRes, announcementsRes] = await Promise.all([
+          api.getPrayerTimes(params),
+          api.getEvents(params),
+          api.getAnnouncements(params),
+        ])
+        if (!mounted) return
+
+        setToday(prayerRes.data?.today || today)
+        setEvents(
+          (Array.isArray(eventsRes.data) ? eventsRes.data : []).map((event) => ({
+            ...event,
+            id: event._id || event.id,
+            date: event.date,
+            time: event.time || '18:30',
+          }))
+        )
+        setAnnouncements(
+          (Array.isArray(announcementsRes.data) ? announcementsRes.data : []).map((item) => ({
+            ...item,
+            id: item._id || item.id,
+            date: item.createdAt || item.date,
+            publishedBy: item.publishedBy || 'Admin',
+          }))
+        )
+      } catch (err) {
+        showToast(err.message || 'Failed to load home data.', 'error')
+      }
+    })()
+    return () => { mounted = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showToast])
 
   // Countdown for next event
   const [countdown, setCountdown] = useState(() => topEvents[0] ? getCountdown(topEvents[0].date) : null)

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockEvents } from '../../../mocks'
+import api from '../../../utils/api.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const PAGE_SIZE = 5
 
@@ -72,6 +73,8 @@ export default function Events() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('this-month')
   const [page, setPage] = useState(1)
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -84,16 +87,36 @@ export default function Events() {
     registrationRequired: 'yes',
   })
 
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const res = await api.getEvents(params)
+        if (!mounted) return
+        setEvents(Array.isArray(res.data) ? res.data : [])
+      } catch (err) {
+        showToast(err.message || 'Failed to load events.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
+
   const preparedEvents = useMemo(() => {
-    return mockEvents.map((event, index) => {
+    return events.map((event, index) => {
       const status = inferStatus(event.date)
       return {
         ...event,
+        id: event._id || event.id,
+        registeredCount: event.registeredUsers?.length || event.registeredCount || 0,
         status,
         icon: EVENT_ICON_BY_INDEX[index % EVENT_ICON_BY_INDEX.length],
       }
     })
-  }, [])
+  }, [events])
 
   const filteredEvents = useMemo(() => {
     return preparedEvents.filter((event) => {
@@ -117,20 +140,34 @@ export default function Events() {
   const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE))
   const visibleEvents = filteredEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const handleCreateEvent = (event) => {
+  const handleCreateEvent = async (event) => {
     event.preventDefault()
-    setIsModalOpen(false)
-    setNewEvent({
-      title: '',
-      description: '',
-      date: '',
-      time: '',
-      endTime: '',
-      location: '',
-      maxParticipants: '',
-      registrationRequired: 'yes',
-    })
-    showToast('Event created in demo mode. Connect API to persist.', 'success')
+    try {
+      const payload = {
+        title: newEvent.title,
+        description: newEvent.description,
+        date: newEvent.date,
+        time: newEvent.time,
+        location: newEvent.location,
+        maxParticipants: Number(newEvent.maxParticipants || 0),
+      }
+      const res = await api.createEvent(payload)
+      setEvents((prev) => [res.data, ...prev])
+      setIsModalOpen(false)
+      setNewEvent({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        endTime: '',
+        location: '',
+        maxParticipants: '',
+        registrationRequired: 'yes',
+      })
+      showToast('Event created successfully.', 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to create event.', 'error')
+    }
   }
 
   return (
@@ -253,6 +290,13 @@ export default function Events() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
+              {!loading && visibleEvents.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                    No events found for this filter.
+                  </td>
+                </tr>
+              )}
               {visibleEvents.map((event) => (
                 <tr key={event.id}>
                   <td className="px-4 py-3">
@@ -303,7 +347,15 @@ export default function Events() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => showToast('Delete action is disabled in demo mode.', 'warning')}
+                        onClick={async () => {
+                          try {
+                            await api.deleteEvent(event.id)
+                            setEvents((prev) => prev.filter((e) => (e._id || e.id) !== event.id))
+                            showToast('Event deleted successfully.', 'success')
+                          } catch (err) {
+                            showToast(err.message || 'Failed to delete event.', 'error')
+                          }
+                        }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
                       >
                         <i className="material-icons-round text-base">delete</i>
@@ -312,14 +364,6 @@ export default function Events() {
                   </td>
                 </tr>
               ))}
-
-              {!visibleEvents.length && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
-                    No events found for this filter.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

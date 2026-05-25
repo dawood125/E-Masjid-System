@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
-import { mockEvents } from '../../../mocks/index.js'
+import { useEffect, useMemo, useState } from 'react'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const categories = ['all', 'lecture', 'religious', 'education', 'community', 'youth']
 const categoryLabel = {
@@ -39,20 +41,43 @@ function dateBadgeParts(dateString) {
 }
 
 export default function Events() {
+  const { showToast } = useUI()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [visibleCount, setVisibleCount] = useState(6)
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [registration, setRegistration] = useState({ name: '', phone: '', email: '' })
+
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const res = await api.getEvents(params)
+        if (!mounted) return
+        setEvents(Array.isArray(res.data) ? res.data : [])
+      } catch (err) {
+        showToast(err.message || 'Failed to load events.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
 
   const enrichedEvents = useMemo(
     () =>
-      mockEvents.map((event, index) => ({
+      events.map((event, index) => ({
         ...event,
+        id: event._id || event.id,
+        registeredCount: event.registeredUsers?.length || event.registeredCount || 0,
         category: inferCategory(event.title),
         image: eventImages[index % eventImages.length],
       })),
-    []
+    [events]
   )
 
   const featuredEvent = enrichedEvents[0]
@@ -76,9 +101,23 @@ export default function Events() {
     setRegistration({ name: '', phone: '', email: '' })
   }
 
-  const submitRegistration = (e) => {
+  const submitRegistration = async (e) => {
     e.preventDefault()
-    closeModal()
+    if (!selectedEvent?.id) return
+    try {
+      await api.registerForEvent(selectedEvent.id)
+      showToast('Event registration submitted successfully.', 'success')
+      setEvents((prev) =>
+        prev.map((evt) =>
+          (evt._id || evt.id) === selectedEvent.id
+            ? { ...evt, registeredUsers: [...(evt.registeredUsers || []), 'self'] }
+            : evt
+        )
+      )
+      closeModal()
+    } catch (err) {
+      showToast(err.message || 'Failed to register for event.', 'error')
+    }
   }
 
   return (
@@ -160,6 +199,11 @@ export default function Events() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {!loading && visibleEvents.length === 0 && (
+              <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+                No events found.
+              </div>
+            )}
             {visibleEvents.map((event, idx) => {
               const badge = dateBadgeParts(event.date)
               const spotsLeft = Math.max(event.maxParticipants - event.registeredCount, 0)

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockDonations, mockExpenses, mockFinancialSummary } from '../../../mocks'
+import api from '../../../utils/api.js'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const DATE_FILTER_OPTIONS = [
   { value: 'this-month', label: 'This Month' },
@@ -58,6 +59,18 @@ function isWithinRange(dateString, range) {
 
 export default function DonationsExpenses() {
   const { showToast } = useUI()
+  const [donations, setDonations] = useState([])
+  const [expenses, setExpenses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [recordForm, setRecordForm] = useState({
+    donorName: '',
+    amount: '',
+    type: 'Zakat',
+    paymentMethod: 'Cash',
+    description: '',
+    category: 'Utilities',
+  })
 
   const [activeTab, setActiveTab] = useState('donations')
   const [dateFilter, setDateFilter] = useState('this-month')
@@ -65,29 +78,50 @@ export default function DonationsExpenses() {
   const [donationPage, setDonationPage] = useState(1)
   const [expensePage, setExpensePage] = useState(1)
 
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId()
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const [donationRes, expenseRes] = await Promise.all([api.getDonations(params), api.getExpenses(params)])
+        if (!mounted) return
+        const d = Array.isArray(donationRes.data) ? donationRes.data : []
+        const e = Array.isArray(expenseRes.data) ? expenseRes.data : []
+        setDonations(d.map((item) => ({ ...item, id: item._id || item.id, date: item.createdAt || item.date })))
+        setExpenses(e.map((item) => ({ ...item, id: item._id || item.id, date: item.createdAt || item.date })))
+      } catch (err) {
+        showToast(err.message || 'Failed to load donations/expenses.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
+
   const donationTypes = useMemo(() => {
-    return ['all', ...new Set(mockDonations.map((donation) => donation.type.toLowerCase()))]
-  }, [])
+    return ['all', ...new Set(donations.map((donation) => donation.type.toLowerCase()))]
+  }, [donations])
 
   const expenseCategories = useMemo(() => {
-    return ['all', ...new Set(mockExpenses.map((expense) => expense.category.toLowerCase()))]
-  }, [])
+    return ['all', ...new Set(expenses.map((expense) => expense.category.toLowerCase()))]
+  }, [expenses])
 
   const filteredDonations = useMemo(() => {
-    return mockDonations.filter((donation) => {
+    return donations.filter((donation) => {
       const matchesDate = isWithinRange(donation.date, dateFilter)
       const matchesCategory = categoryFilter === 'all' || donation.type.toLowerCase() === categoryFilter
       return matchesDate && matchesCategory
     })
-  }, [dateFilter, categoryFilter])
+  }, [dateFilter, categoryFilter, donations])
 
   const filteredExpenses = useMemo(() => {
-    return mockExpenses.filter((expense) => {
+    return expenses.filter((expense) => {
       const matchesDate = isWithinRange(expense.date, dateFilter)
       const matchesCategory = categoryFilter === 'all' || expense.category.toLowerCase() === categoryFilter
       return matchesDate && matchesCategory
     })
-  }, [dateFilter, categoryFilter])
+  }, [dateFilter, categoryFilter, expenses])
 
   const donationMaxPage = Math.max(1, Math.ceil(filteredDonations.length / PAGE_SIZE))
   const expenseMaxPage = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE))
@@ -107,7 +141,44 @@ export default function DonationsExpenses() {
   }
 
   const onAddRecord = () => {
-    showToast(activeTab === 'donations' ? 'Add Donation form opened (mock).' : 'Add Expense form opened (mock).', 'info')
+    setIsCreateOpen(true)
+  }
+
+  const handleCreateRecord = async (event) => {
+    event.preventDefault()
+    try {
+      if (activeTab === 'donations') {
+        const payload = {
+          donorName: recordForm.donorName || 'Walk-in Donor',
+          amount: Number(recordForm.amount),
+          type: recordForm.type,
+          paymentMethod: recordForm.paymentMethod,
+        }
+        const res = await api.createDonation(payload)
+        setDonations((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
+        showToast('Donation added successfully.', 'success')
+      } else {
+        const payload = {
+          description: recordForm.description,
+          amount: Number(recordForm.amount),
+          category: recordForm.category,
+        }
+        const res = await api.createExpense(payload)
+        setExpenses((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
+        showToast('Expense added successfully.', 'success')
+      }
+      setIsCreateOpen(false)
+      setRecordForm({
+        donorName: '',
+        amount: '',
+        type: 'Zakat',
+        paymentMethod: 'Cash',
+        description: '',
+        category: 'Utilities',
+      })
+    } catch (err) {
+      showToast(err.message || 'Failed to add record.', 'error')
+    }
   }
 
   return (
@@ -158,7 +229,7 @@ export default function DonationsExpenses() {
           <p className="text-xs font-semibold uppercase tracking-wide text-primary-100">Net Balance</p>
           <h3 className="mt-2 text-2xl font-bold">{formatCurrency(netBalance)}</h3>
           <span className="mt-2 inline-flex rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold">
-            {mockFinancialSummary.balance >= 0 ? 'Healthy' : 'Needs Attention'}
+            {netBalance >= 0 ? 'Healthy' : 'Needs Attention'}
           </span>
         </article>
       </div>
@@ -261,6 +332,13 @@ export default function DonationsExpenses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
+                      Loading donations...
+                    </td>
+                  </tr>
+                )}
                 {visibleDonations.map((donation) => {
                   const tone = DONATION_TYPE_COLORS[donation.type.toLowerCase()] || DONATION_TYPE_COLORS.default
                   return (
@@ -287,7 +365,7 @@ export default function DonationsExpenses() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => showToast('Delete action is disabled in demo mode.', 'warning')}
+                            onClick={() => showToast('Donation delete endpoint is not available yet.', 'warning')}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 transition-all duration-150 hover:bg-red-50"
                           >
                             <i className="material-icons-round text-base">delete</i>
@@ -297,7 +375,7 @@ export default function DonationsExpenses() {
                     </tr>
                   )
                 })}
-                {!visibleDonations.length && (
+                {!loading && !visibleDonations.length && (
                   <tr>
                     <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
                       No donations found for this filter.
@@ -348,6 +426,13 @@ export default function DonationsExpenses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
+                {loading && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
+                      Loading expenses...
+                    </td>
+                  </tr>
+                )}
                 {visibleExpenses.map((expense) => {
                   const tone = EXPENSE_CATEGORY_COLORS[expense.category.toLowerCase()] || EXPENSE_CATEGORY_COLORS.default
                   return (
@@ -369,7 +454,15 @@ export default function DonationsExpenses() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => showToast('Delete action is disabled in demo mode.', 'warning')}
+                            onClick={async () => {
+                              try {
+                                await api.deleteExpense(expense.id)
+                                setExpenses((prev) => prev.filter((item) => item.id !== expense.id))
+                                showToast('Expense deleted successfully.', 'success')
+                              } catch (err) {
+                                showToast(err.message || 'Failed to delete expense.', 'error')
+                              }
+                            }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 transition-all duration-150 hover:bg-red-50"
                           >
                             <i className="material-icons-round text-base">delete</i>
@@ -379,7 +472,7 @@ export default function DonationsExpenses() {
                     </tr>
                   )
                 })}
-                {!visibleExpenses.length && (
+                {!loading && !visibleExpenses.length && (
                   <tr>
                     <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
                       No expenses found for this filter.
@@ -416,6 +509,116 @@ export default function DonationsExpenses() {
             </div>
           </div>
         </section>
+      )}
+
+      {isCreateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                {activeTab === 'donations' ? 'Add Donation' : 'Add Expense'}
+              </h3>
+              <button type="button" onClick={() => setIsCreateOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <form onSubmit={handleCreateRecord} className="space-y-4 px-6 py-5">
+              {activeTab === 'donations' ? (
+                <>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-gray-700">Donor Name</span>
+                    <input
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      value={recordForm.donorName}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, donorName: e.target.value }))}
+                    />
+                  </label>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label className="space-y-2">
+                      <span className="text-sm font-medium text-gray-700">Type</span>
+                      <select
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        value={recordForm.type}
+                        onChange={(e) => setRecordForm((p) => ({ ...p, type: e.target.value }))}
+                      >
+                        <option>Zakat</option>
+                        <option>Sadaqah</option>
+                        <option>Mosque Fund</option>
+                        <option>Ramadan</option>
+                        <option>Wedding</option>
+                      </select>
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-sm font-medium text-gray-700">Payment Method</span>
+                      <select
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        value={recordForm.paymentMethod}
+                        onChange={(e) => setRecordForm((p) => ({ ...p, paymentMethod: e.target.value }))}
+                      >
+                        <option>Cash</option>
+                        <option>Card</option>
+                        <option>Online</option>
+                      </select>
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-gray-700">Description</span>
+                    <input
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      value={recordForm.description}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, description: e.target.value }))}
+                    />
+                  </label>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-gray-700">Category</span>
+                    <select
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      value={recordForm.category}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, category: e.target.value }))}
+                    >
+                      <option>Utilities</option>
+                      <option>Salary</option>
+                      <option>Renovation</option>
+                      <option>Charity</option>
+                      <option>Maintenance</option>
+                      <option>Events</option>
+                      <option>Education</option>
+                      <option>Equipment</option>
+                      <option>Other</option>
+                    </select>
+                  </label>
+                </>
+              )}
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Amount (PKR)</span>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                  value={recordForm.amount}
+                  onChange={(e) => setRecordForm((p) => ({ ...p, amount: e.target.value }))}
+                />
+              </label>
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )

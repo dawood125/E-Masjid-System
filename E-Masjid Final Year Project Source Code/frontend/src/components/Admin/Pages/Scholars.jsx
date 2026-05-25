@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockScholars } from '../../../mocks'
+import api from '../../../utils/api.js'
 
 const ASSIGNMENT_MOCKS = [
   { id: 'NKH-2025-0058', couple: 'Ahmad Ali & Fatima', date: 'June 25, 2025' },
@@ -15,7 +15,7 @@ function randomCompletedCount(seedIndex) {
 export default function Scholars() {
   const { showToast } = useUI()
 
-  const [scholars, setScholars] = useState(mockScholars)
+  const [scholars, setScholars] = useState([])
   const [assignments, setAssignments] = useState(ASSIGNMENT_MOCKS)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
@@ -34,6 +34,24 @@ export default function Scholars() {
     password: '',
     confirmPassword: '',
   })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await api.getScholars()
+        if (!mounted) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setScholars(list.map((item) => ({ ...item, id: item._id || item.id })))
+      } catch (err) {
+        showToast(err.message || 'Failed to load scholars.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
 
   const activeCount = scholars.filter((scholar) => scholar.isActive).length
 
@@ -45,7 +63,7 @@ export default function Scholars() {
     setIsResetModalOpen(true)
   }
 
-  const submitAddScholar = (event) => {
+  const submitAddScholar = async (event) => {
     event.preventDefault()
 
     if (newScholar.password.length < 6) {
@@ -58,26 +76,32 @@ export default function Scholars() {
       return
     }
 
-    const created = {
-      id: Date.now().toString(),
-      name: newScholar.name,
-      email: newScholar.email,
-      phone: newScholar.phone,
-      specialization: newScholar.specialization || 'Nikah Services',
-      isActive: true,
+    try {
+      const res = await api.createScholar({
+        name: newScholar.name,
+        email: newScholar.email,
+        phone: newScholar.phone,
+        specialization: newScholar.specialization || 'Nikah Services',
+      })
+      const created = { ...res.data, id: res.data._id || res.data.id, isActive: true }
+      setScholars((prev) => [created, ...prev])
+      setIsAddModalOpen(false)
+      setNewScholar({
+        name: '',
+        email: '',
+        phone: '',
+        specialization: '',
+        password: '',
+        confirmPassword: '',
+      })
+      if (res.tempPassword) {
+        showToast(`Scholar created. Temp password: ${res.tempPassword}`, 'success')
+      } else {
+        showToast('Scholar account created successfully.', 'success')
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to create scholar.', 'error')
     }
-
-    setScholars((prev) => [created, ...prev])
-    setIsAddModalOpen(false)
-    setNewScholar({
-      name: '',
-      email: '',
-      phone: '',
-      specialization: '',
-      password: '',
-      confirmPassword: '',
-    })
-    showToast('Scholar account created in demo mode.', 'success')
   }
 
   const submitResetPassword = (event) => {
@@ -94,7 +118,7 @@ export default function Scholars() {
     }
 
     setIsResetModalOpen(false)
-    showToast(`Password reset for ${selectedScholar?.name} (demo).`, 'success')
+    showToast('Password reset endpoint is not available yet.', 'warning')
   }
 
   const assignScholar = (bookingId, scholarId) => {
@@ -109,8 +133,17 @@ export default function Scholars() {
   }
 
   const deleteScholar = (scholar) => {
-    setScholars((prev) => prev.filter((item) => item.id !== scholar.id))
-    showToast(`${scholar.name} removed from demo list.`, 'warning')
+    ;(async () => {
+      try {
+        const res = await api.updateScholar(scholar.id, { isActive: false })
+        setScholars((prev) =>
+          prev.map((item) => (item.id === scholar.id ? { ...item, ...res.data, id: item.id, isActive: false } : item))
+        )
+        showToast(`${scholar.name} marked inactive.`, 'success')
+      } catch (err) {
+        showToast(err.message || 'Failed to update scholar.', 'error')
+      }
+    })()
   }
 
   return (
@@ -176,7 +209,7 @@ export default function Scholars() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {scholars.map((scholar, index) => (
+          {!loading && scholars.map((scholar, index) => (
             <article key={scholar.id} className="flex h-full flex-col rounded-xl border border-gray-200 p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
               <div className="mb-4 flex items-center justify-between">
                 <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary-100 text-primary-700">

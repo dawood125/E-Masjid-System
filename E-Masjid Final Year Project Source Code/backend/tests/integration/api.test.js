@@ -8,6 +8,7 @@ const User = require('../../models/User');
 const Mosque = require('../../models/Mosque');
 const Donation = require('../../models/Donation');
 const FundRequest = require('../../models/FundRequest');
+const NikahBooking = require('../../models/NikahBooking');
 
 jest.setTimeout(30000);
 
@@ -17,7 +18,9 @@ describe('E-Masjid API (integration)', () => {
   let adminToken;
   let committeeToken;
   let communityToken;
+  let scholarToken;
   let committeeUser;
+  let scholarUser;
 
   beforeAll(async () => {
     await mongoose.disconnect().catch(() => {});
@@ -36,11 +39,13 @@ describe('E-Masjid API (integration)', () => {
       Mosque.deleteMany({}),
       Donation.deleteMany({}),
       FundRequest.deleteMany({}),
+      NikahBooking.deleteMany({}),
     ]);
 
     const manager = await User.create({ name: 'Manager', email: 'm@test.com', password: 'pass1234', role: 'manager' });
     const admin = await User.create({ name: 'Admin', email: 'a@test.com', password: 'pass1234', role: 'admin' });
     committeeUser = await User.create({ name: 'Committee', email: 'c@test.com', password: 'pass1234', role: 'committee' });
+    scholarUser = await User.create({ name: 'Scholar', email: 's@test.com', password: 'pass1234', role: 'scholar' });
     const community = await User.create({ name: 'User', email: 'u@test.com', password: 'pass1234', role: 'community' });
 
     mosque = await Mosque.create({
@@ -53,7 +58,7 @@ describe('E-Masjid API (integration)', () => {
     });
 
     await User.updateMany(
-      { _id: { $in: [admin._id, committeeUser._id, community._id] } },
+      { _id: { $in: [admin._id, committeeUser._id, scholarUser._id, community._id] } },
       { mosqueId: mosque._id }
     );
 
@@ -64,6 +69,8 @@ describe('E-Masjid API (integration)', () => {
     committeeToken = loginCommittee.body.token;
     const loginUser = await request(app).post('/api/auth/login').send({ email: 'u@test.com', password: 'pass1234' });
     communityToken = loginUser.body.token;
+    const loginScholar = await request(app).post('/api/auth/login').send({ email: 's@test.com', password: 'pass1234' });
+    scholarToken = loginScholar.body.token;
   });
 
   afterAll(async () => {
@@ -138,6 +145,62 @@ describe('E-Masjid API (integration)', () => {
     expect(approve.status).toBe(200);
     expect(approve.body.data.status).toBe('approved');
     expect(approve.body.data.reviewedBy.name).toBe(committeeUser.name);
+  });
+
+  test('committee CRUD: admin can create, update and delete member', async () => {
+    const create = await request(app)
+      .post('/api/committee')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'New Committee', email: 'newcommittee@test.com', phone: '03001234567' });
+    expect(create.status).toBe(201);
+    expect(create.body.success).toBe(true);
+    const memberId = create.body.data.id;
+
+    const update = await request(app)
+      .put(`/api/committee/${memberId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: false });
+    expect(update.status).toBe(200);
+    expect(update.body.data.isActive).toBe(false);
+
+    const remove = await request(app)
+      .delete(`/api/committee/${memberId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(remove.status).toBe(200);
+    expect(remove.body.success).toBe(true);
+  });
+
+  test('nikah flow: community creates and scholar accepts booking', async () => {
+    const create = await request(app)
+      .post('/api/nikah-bookings')
+      .set('Authorization', `Bearer ${communityToken}`)
+      .send({
+        groomName: 'Imran',
+        brideName: 'Aisha',
+        preferredDate: new Date().toISOString(),
+        preferredTime: '16:00',
+        contact: '03009998877',
+      });
+    expect(create.status).toBe(201);
+    const bookingId = create.body.data._id;
+
+    const scholarList = await request(app)
+      .get('/api/nikah-bookings')
+      .set('Authorization', `Bearer ${scholarToken}`);
+    expect(scholarList.status).toBe(200);
+    expect(scholarList.body.data.some((b) => String(b._id) === String(bookingId))).toBe(true);
+
+    const accept = await request(app)
+      .put(`/api/nikah-bookings/${bookingId}`)
+      .set('Authorization', `Bearer ${scholarToken}`)
+      .send({
+        status: 'accepted',
+        confirmedDate: create.body.data.preferredDate,
+        confirmedTime: create.body.data.preferredTime,
+      });
+    expect(accept.status).toBe(200);
+    expect(accept.body.data.status).toBe('accepted');
+    expect(String(accept.body.data.scholarId)).toBe(String(scholarUser._id));
   });
 });
 

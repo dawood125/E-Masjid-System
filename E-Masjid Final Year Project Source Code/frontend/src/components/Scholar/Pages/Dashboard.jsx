@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
-import { mockNikahBookings } from '../../../mocks'
+import api from '../../../utils/api.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 
 function getDaysLeft(dateString) {
@@ -12,8 +12,26 @@ function getDaysLeft(dateString) {
 
 export default function ScholarDashboard() {
   const { showToast } = useUI()
-  const [bookings, setBookings] = useState(mockNikahBookings)
+  const [bookings, setBookings] = useState([])
   const [selectedBookingId, setSelectedBookingId] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await api.getNikahBookings()
+        if (!mounted) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setBookings(list.map((item) => ({ ...item, id: item._id || item.id })))
+      } catch (err) {
+        showToast(err.message || 'Failed to load Nikah requests.', 'error')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast])
 
   const todayLabel = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -34,37 +52,34 @@ export default function ScholarDashboard() {
 
   const selectedBooking = pendingBookings.find((booking) => booking.id === selectedBookingId) || null
 
-  const acceptRequest = (id) => {
-    setBookings((prev) =>
-      prev.map((booking) =>
-        booking.id === id
-          ? {
-              ...booking,
-              status: 'accepted',
-              confirmedDate: booking.preferredDate,
-              confirmedTime: booking.preferredTime,
-            }
-          : booking
-      )
-    )
-    showToast(`Booking ${id} accepted.`, 'success')
-    setSelectedBookingId(null)
+  const acceptRequest = async (id) => {
+    try {
+      const target = bookings.find((booking) => booking.id === id)
+      const res = await api.updateNikahBooking(id, {
+        status: 'accepted',
+        confirmedDate: target?.preferredDate,
+        confirmedTime: target?.preferredTime,
+      })
+      setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, ...res.data, id } : booking)))
+      showToast(`Booking ${String(id).slice(-6)} accepted.`, 'success')
+      setSelectedBookingId(null)
+    } catch (err) {
+      showToast(err.message || 'Failed to accept booking.', 'error')
+    }
   }
 
-  const rejectRequest = (id) => {
-    setBookings((prev) =>
-      prev.map((booking) =>
-        booking.id === id
-          ? {
-              ...booking,
-              status: 'rejected',
-              rejectionReason: 'Not available at requested slot',
-            }
-          : booking
-      )
-    )
-    showToast(`Booking ${id} rejected.`, 'warning')
-    setSelectedBookingId(null)
+  const rejectRequest = async (id) => {
+    try {
+      const res = await api.updateNikahBooking(id, {
+        status: 'rejected',
+        rejectionReason: 'Not available at requested slot',
+      })
+      setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, ...res.data, id } : booking)))
+      showToast(`Booking ${String(id).slice(-6)} rejected.`, 'warning')
+      setSelectedBookingId(null)
+    } catch (err) {
+      showToast(err.message || 'Failed to reject booking.', 'error')
+    }
   }
 
   return (
@@ -150,7 +165,7 @@ export default function ScholarDashboard() {
             <tbody className="divide-y divide-gray-100 text-sm">
               {pendingBookings.map((booking) => (
                 <tr key={booking.id}>
-                  <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-700">NKH-2025-{booking.id.padStart(4, '0')}</td>
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-700">NKH-{String(booking.id).slice(-6).toUpperCase()}</td>
                   <td className="px-4 py-3">
                     <p className="font-semibold text-gray-900">{booking.groomName}</p>
                     <p className="text-xs text-gray-500">Groom: {booking.groomName} & Bride: {booking.brideName}</p>
@@ -192,7 +207,7 @@ export default function ScholarDashboard() {
                 </tr>
               ))}
 
-              {!pendingBookings.length && (
+              {!loading && !pendingBookings.length && (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
                     No pending requests right now.
@@ -207,7 +222,7 @@ export default function ScholarDashboard() {
           {pendingBookings.map((booking) => (
             <article key={booking.id} className="rounded-lg border border-gray-200 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="font-mono text-xs font-semibold text-gray-700">NKH-2025-{booking.id.padStart(4, '0')}</span>
+                <span className="font-mono text-xs font-semibold text-gray-700">NKH-{String(booking.id).slice(-6).toUpperCase()}</span>
                 <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700">Pending</span>
               </div>
 
@@ -296,7 +311,7 @@ export default function ScholarDashboard() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 px-6 py-5 text-sm sm:grid-cols-2">
-              <div><span className="font-semibold text-gray-500">Booking ID:</span> NKH-2025-{selectedBooking.id.padStart(4, '0')}</div>
+              <div><span className="font-semibold text-gray-500">Booking ID:</span> NKH-{String(selectedBooking.id).slice(-6).toUpperCase()}</div>
               <div><span className="font-semibold text-gray-500">Applicant:</span> {selectedBooking.groomName}</div>
               <div><span className="font-semibold text-gray-500">Groom:</span> {selectedBooking.groomName}</div>
               <div><span className="font-semibold text-gray-500">Bride:</span> {selectedBooking.brideName}</div>

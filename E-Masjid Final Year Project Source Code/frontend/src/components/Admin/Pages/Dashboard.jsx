@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useUI } from '../../../hooks/useUI.js'
+import api from '../../../utils/api.js'
+import { useAuth } from '../../../hooks/useAuth.js'
 import {
-  mockFinancialSummary,
-  mockDonations,
-  mockExpenses,
-  mockEvents,
   mockNikahBookings,
 } from '../../../mocks'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
+import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const QUICK_ACTIONS = [
   {
@@ -49,6 +49,43 @@ const QUICK_ACTIONS = [
 ]
 
 export default function Dashboard() {
+  const { showToast } = useUI()
+  const { user } = useAuth()
+  const [donations, setDonations] = useState([])
+  const [expenses, setExpenses] = useState([])
+  const [events, setEvents] = useState([])
+  const [summary, setSummary] = useState({ totalDonations: 0, totalExpenses: 0, balance: 0 })
+
+  useEffect(() => {
+    let mounted = true
+    const mosqueId = getActiveMosqueId() || user?.mosqueId
+    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    ;(async () => {
+      try {
+        const [donationRes, expenseRes, eventsRes, donationSummaryRes, expenseSummaryRes] = await Promise.all([
+          api.getDonations(params),
+          api.getExpenses(params),
+          api.getEvents(params),
+          api.getDonationSummary(params),
+          api.getExpenseSummary(params),
+        ])
+        if (!mounted) return
+        const donationList = Array.isArray(donationRes.data) ? donationRes.data : []
+        const expenseList = Array.isArray(expenseRes.data) ? expenseRes.data : []
+        const eventList = Array.isArray(eventsRes.data) ? eventsRes.data : []
+        setDonations(donationList.map((d) => ({ ...d, id: d._id || d.id, date: d.createdAt || d.date })))
+        setExpenses(expenseList.map((e) => ({ ...e, id: e._id || e.id, date: e.createdAt || e.date })))
+        setEvents(eventList.map((e) => ({ ...e, id: e._id || e.id })))
+        const totalDonations = donationSummaryRes.data?.totalDonations || 0
+        const totalExpenses = expenseSummaryRes.data?.totalExpenses || 0
+        setSummary({ totalDonations, totalExpenses, balance: totalDonations - totalExpenses })
+      } catch (err) {
+        showToast(err.message || 'Failed to load dashboard data.', 'error')
+      }
+    })()
+    return () => { mounted = false }
+  }, [showToast, user?.mosqueId])
+
   const todayLabel = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -66,23 +103,23 @@ export default function Dashboard() {
     const nextWeek = new Date(now)
     nextWeek.setDate(now.getDate() + 7)
 
-    return mockEvents.filter((event) => {
+    return events.filter((event) => {
       const eventDate = new Date(event.date)
       return eventDate >= now && eventDate <= nextWeek
     }).length
-  }, [])
+  }, [events])
 
   const recentDonations = useMemo(
-    () => [...mockDonations].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3),
-    []
+    () => [...donations].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3),
+    [donations]
   )
 
   const recentExpenses = useMemo(
-    () => [...mockExpenses].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3),
-    []
+    () => [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3),
+    [expenses]
   )
 
-  const balanceTone = mockFinancialSummary.balance >= 0 ? 'text-success' : 'text-error'
+  const balanceTone = summary.balance >= 0 ? 'text-success' : 'text-error'
 
   return (
     <div className="space-y-8 animate-fade-in-up">
@@ -108,7 +145,7 @@ export default function Dashboard() {
             <i className="material-icons-round">volunteer_activism</i>
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Donations</p>
-          <h3 className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(mockFinancialSummary.totalDonations)}</h3>
+          <h3 className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(summary.totalDonations)}</h3>
           <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-success">
             <i className="material-icons-round text-base">trending_up</i>
             +12% this month
@@ -120,7 +157,7 @@ export default function Dashboard() {
             <i className="material-icons-round">payments</i>
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Expenses</p>
-          <h3 className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(mockFinancialSummary.totalExpenses)}</h3>
+          <h3 className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(summary.totalExpenses)}</h3>
           <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-gray-500">
             <i className="material-icons-round text-base">trending_flat</i>
             This month
@@ -250,19 +287,19 @@ export default function Dashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between rounded-lg bg-success-light/60 px-4 py-3">
             <p className="font-medium text-gray-800">Total Income</p>
-            <p className="text-xl font-bold text-success">{formatCurrency(mockFinancialSummary.totalDonations)}</p>
+            <p className="text-xl font-bold text-success">{formatCurrency(summary.totalDonations)}</p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg bg-error-light/60 px-4 py-3">
             <p className="font-medium text-gray-800">Total Expenses</p>
-            <p className="text-xl font-bold text-error">{formatCurrency(mockFinancialSummary.totalExpenses)}</p>
+            <p className="text-xl font-bold text-error">{formatCurrency(summary.totalExpenses)}</p>
           </div>
 
           <div className="h-px bg-gray-200" />
 
           <div className="flex items-center justify-between rounded-lg bg-primary-50 px-4 py-3">
             <p className="text-base font-semibold text-gray-900">Current Balance</p>
-            <p className={`text-2xl font-bold ${balanceTone}`}>{formatCurrency(mockFinancialSummary.balance)}</p>
+            <p className={`text-2xl font-bold ${balanceTone}`}>{formatCurrency(summary.balance)}</p>
           </div>
         </div>
       </section>
