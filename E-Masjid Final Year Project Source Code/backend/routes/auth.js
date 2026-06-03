@@ -1,16 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const { body, param } = require('express-validator');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const sendEmail = require('../utils/sendEmail');
+const { handleValidation, sanitizeString } = require('../middleware/validate');
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register', async (req, res, next) => {
+router.post(
+  '/register',
+  [
+    body('name').isString().trim().isLength({ min: 2, max: 80 }).withMessage('Name must be between 2 and 80 characters'),
+    body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+    body('password').isString().isLength({ min: 6, max: 64 }).withMessage('Password must be between 6 and 64 characters'),
+    body('phone').optional().isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be between 7 and 20 characters'),
+    handleValidation,
+  ],
+  async (req, res, next) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const name = sanitizeString(req.body.name);
+    const email = sanitizeString(req.body.email).toLowerCase();
+    const password = req.body.password;
+    const phone = sanitizeString(req.body.phone || '');
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -33,9 +47,17 @@ router.post('/register', async (req, res, next) => {
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
-router.post('/login', async (req, res, next) => {
+router.post(
+  '/login',
+  [
+    body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+    body('password').isString().isLength({ min: 1 }).withMessage('Password is required'),
+    handleValidation,
+  ],
+  async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const email = sanitizeString(req.body.email).toLowerCase();
+    const { password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
@@ -70,16 +92,23 @@ router.post('/login', async (req, res, next) => {
 // @route   POST /api/auth/forgot-password
 // @desc    Send password reset email
 // @access  Public
-router.post('/forgot-password', async (req, res, next) => {
+router.post(
+  '/forgot-password',
+  [
+    body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+    handleValidation,
+  ],
+  async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const email = sanitizeString(req.body.email).toLowerCase();
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: 'No account found with this email' });
+      return res.json({ success: true, message: 'If the email exists, a reset link has been sent' });
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 minutes
+    user.resetPasswordExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     await user.save();
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
@@ -99,7 +128,7 @@ router.post('/forgot-password', async (req, res, next) => {
 
     await sendEmail({ to: user.email, subject: 'E-Masjid Password Reset', html });
 
-    res.json({ success: true, message: 'Password reset email sent' });
+    res.json({ success: true, message: 'If the email exists, a reset link has been sent' });
   } catch (error) {
     next(error);
   }
@@ -108,7 +137,14 @@ router.post('/forgot-password', async (req, res, next) => {
 // @route   POST /api/auth/reset-password/:token
 // @desc    Reset password
 // @access  Public
-router.post('/reset-password/:token', async (req, res, next) => {
+router.post(
+  '/reset-password/:token',
+  [
+    param('token').isString().isLength({ min: 20, max: 128 }).withMessage('Invalid token'),
+    body('password').isString().isLength({ min: 6, max: 64 }).withMessage('Password must be between 6 and 64 characters'),
+    handleValidation,
+  ],
+  async (req, res, next) => {
   try {
     const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
     const user = await User.findOne({

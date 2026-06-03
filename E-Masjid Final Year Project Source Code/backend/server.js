@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { stripeWebhook } = require('./routes/stripeWebhook');
@@ -14,6 +16,9 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express();
 
 // ─── MIDDLEWARE ──────────────────────────────────────
+app.use(helmet());
+app.use(mongoSanitize());
+
 // CORS
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -30,8 +35,10 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiting on auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: 10,
   message: { success: false, message: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // ─── ROUTES ─────────────────────────────────────────
@@ -59,16 +66,14 @@ app.use(errorHandler);
 let server;
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 5000;
-  server = app.listen(PORT, () => {
-    console.log(`\n  🕌 E-Masjid API Server running on port ${PORT}`);
-    console.log(`  📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`  🔗 Health: http://localhost:${PORT}/api/health\n`);
-  });
+  server = app.listen(PORT);
 
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (err) => {
     console.error(`Unhandled Rejection: ${err.message}`);
-    server.close(() => process.exit(1));
+    if (server) {
+      server.close(() => {});
+    }
   });
 }
 

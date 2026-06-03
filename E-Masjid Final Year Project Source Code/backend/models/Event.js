@@ -12,6 +12,9 @@ const eventSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
+eventSchema.index({ mosqueId: 1, date: 1, isActive: 1 });
+eventSchema.index({ mosqueId: 1, createdAt: -1 });
+
 eventSchema.virtual('registeredCount').get(function () {
   return this.registeredUsers ? this.registeredUsers.length : 0;
 });

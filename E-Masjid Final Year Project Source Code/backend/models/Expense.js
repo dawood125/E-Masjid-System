@@ -12,4 +12,7 @@ const expenseSchema = new mongoose.Schema({
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
+expenseSchema.index({ mosqueId: 1, createdAt: -1 });
+expenseSchema.index({ mosqueId: 1, category: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Expense', expenseSchema);

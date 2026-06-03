@@ -17,4 +17,7 @@ const mosqueSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
+mosqueSchema.index({ managerId: 1, createdAt: -1 });
+mosqueSchema.index({ isActive: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Mosque', mosqueSchema);

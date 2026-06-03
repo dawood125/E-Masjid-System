@@ -64,7 +64,7 @@ export default function ManagerLayout() {
         <div className="px-4 my-4 border-t border-white/10" />
 
         <div className="p-4">
-          <Link to={ROUTES.HOME} onClick={() => { localStorage.removeItem('user'); closeSidebar() }} className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
+          <Link to={ROUTES.HOME} onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('authToken'); closeSidebar() }} className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
             <i className="material-icons-round">logout</i>
             <span className="font-medium">Logout</span>
           </Link>

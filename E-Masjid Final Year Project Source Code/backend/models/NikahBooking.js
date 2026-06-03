@@ -15,4 +15,8 @@ const nikahBookingSchema = new mongoose.Schema({
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
 }, { timestamps: true });
 
+nikahBookingSchema.index({ userId: 1, createdAt: -1 });
+nikahBookingSchema.index({ mosqueId: 1, status: 1, preferredDate: 1 });
+nikahBookingSchema.index({ scholarId: 1, status: 1, confirmedDate: 1 });
+
 module.exports = mongoose.model('NikahBooking', nikahBookingSchema);

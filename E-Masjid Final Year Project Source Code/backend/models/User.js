@@ -17,11 +17,14 @@ const userSchema = new mongoose.Schema({
     default: 'community',
   },
   phone: { type: String },
+  specialization: { type: String },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
   isActive: { type: Boolean, default: true },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
 }, { timestamps: true });
+
+userSchema.index({ role: 1, mosqueId: 1, isActive: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {

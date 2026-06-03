@@ -8,4 +8,7 @@ const announcementSchema = new mongoose.Schema({
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
 }, { timestamps: true });
 
+announcementSchema.index({ mosqueId: 1, createdAt: -1 });
+announcementSchema.index({ mosqueId: 1, isUrgent: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Announcement', announcementSchema);

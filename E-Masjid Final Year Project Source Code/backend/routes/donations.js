@@ -3,6 +3,8 @@ const router = express.Router();
 const Donation = require('../models/Donation');
 const { protect, authorize } = require('../middleware/auth');
 const stripeLib = require('stripe');
+const { body, query } = require('express-validator');
+const { handleValidation, isValidObjectId, sanitizeString } = require('../middleware/validate');
 
 // @route   GET /api/donations
 // @desc    Get all donations (public for transparency)
@@ -11,7 +13,12 @@ router.get('/', async (req, res, next) => {
   try {
     const { type, month, page = 1, limit = 10, mosqueId } = req.query;
     const query = {};
-    if (mosqueId) query.mosqueId = mosqueId;
+    if (mosqueId) {
+      if (!isValidObjectId(mosqueId)) {
+        return res.status(400).json({ success: false, message: 'Invalid mosqueId' });
+      }
+      query.mosqueId = mosqueId;
+    }
 
     if (type && type !== 'all') query.type = new RegExp(type, 'i');
     if (month && month !== 'all') {
@@ -49,6 +56,9 @@ router.get('/top-donors', async (req, res, next) => {
   try {
     const { mosqueId } = req.query;
     const mongoose = require('mongoose');
+    if (mosqueId && !isValidObjectId(mosqueId)) {
+      return res.status(400).json({ success: false, message: 'Invalid mosqueId' });
+    }
     const match = {
       isAnonymous: false,
       ...(mosqueId ? { mosqueId: mongoose.Types.ObjectId.createFromHexString(mosqueId) } : {}),
@@ -74,6 +84,9 @@ router.get('/top-donors', async (req, res, next) => {
 router.get('/summary', async (req, res, next) => {
   try {
     const { mosqueId } = req.query;
+    if (mosqueId && !isValidObjectId(mosqueId)) {
+      return res.status(400).json({ success: false, message: 'Invalid mosqueId' });
+    }
     const match = mosqueId ? { mosqueId: require('mongoose').Types.ObjectId.createFromHexString(mosqueId) } : {};
     const totalResult = await Donation.aggregate([
       { $match: match },
@@ -102,10 +115,22 @@ router.get('/summary', async (req, res, next) => {
 // @route   POST /api/donations
 // @desc    Add a donation (admin - cash donations)
 // @access  Private (admin)
-router.post('/', protect, authorize('admin'), async (req, res, next) => {
+router.post(
+  '/',
+  protect,
+  authorize('admin'),
+  [
+    body('donorName').isString().trim().isLength({ min: 1, max: 100 }).withMessage('Donor name is required'),
+    body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),
+    body('type').isIn(['Zakat', 'Sadaqah', 'Mosque Fund', 'Ramadan', 'Wedding']).withMessage('Invalid donation type'),
+    body('paymentMethod').optional().isIn(['Cash', 'Card', 'Online']).withMessage('Invalid payment method'),
+    handleValidation,
+  ],
+  async (req, res, next) => {
   try {
     const donation = await Donation.create({
       ...req.body,
+      donorName: sanitizeString(req.body.donorName),
       mosqueId: req.user.mosqueId,
     });
     res.status(201).json({ success: true, data: donation });
@@ -117,7 +142,18 @@ router.post('/', protect, authorize('admin'), async (req, res, next) => {
 // @route   POST /api/donations/online
 // @desc    Create an online donation (via Stripe)
 // @access  Public (user doesn't need to be logged in to donate)
-router.post('/online', async (req, res, next) => {
+router.post(
+  '/online',
+  [
+    body('donorName').optional().isString().trim().isLength({ min: 2, max: 100 }).withMessage('Invalid donor name'),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Invalid email'),
+    body('phone').optional({ nullable: true }).isString().trim().isLength({ min: 7, max: 20 }).withMessage('Invalid phone'),
+    body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),
+    body('type').optional().isIn(['Zakat', 'Sadaqah', 'Mosque Fund', 'Ramadan', 'Wedding']).withMessage('Invalid donation type'),
+    body('mosqueId').optional({ nullable: true, checkFalsy: true }).custom((v) => isValidObjectId(v)).withMessage('Invalid mosqueId'),
+    handleValidation,
+  ],
+  async (req, res, next) => {
   try {
     const { donorName, email, phone, amount, type, isAnonymous, mosqueId } = req.body;
 
@@ -128,10 +164,10 @@ router.post('/online', async (req, res, next) => {
     // Legacy fallback (non-stripe) if no Stripe key set
     if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('your_test_key_here')) {
       const donation = await Donation.create({
-        donorName: donorName || 'Online Donor',
-        email,
-        phone,
-        amount,
+        donorName: sanitizeString(donorName || 'Online Donor'),
+        email: sanitizeString(email || ''),
+        phone: sanitizeString(phone || ''),
+        amount: Number(amount),
         type: type || 'Mosque Fund',
         paymentMethod: 'Online',
         isAnonymous: isAnonymous || false,
@@ -165,9 +201,9 @@ router.post('/online', async (req, res, next) => {
       success_url: `${process.env.CLIENT_URL}/donate?success=1`,
       cancel_url: `${process.env.CLIENT_URL}/donate?canceled=1`,
       metadata: {
-        donorName: donorName || 'Online Donor',
-        email: email || '',
-        phone: phone || '',
+        donorName: sanitizeString(donorName || 'Online Donor'),
+        email: sanitizeString(email || ''),
+        phone: sanitizeString(phone || ''),
         amount: String(amount),
         type: type || 'Mosque Fund',
         isAnonymous: String(!!isAnonymous),

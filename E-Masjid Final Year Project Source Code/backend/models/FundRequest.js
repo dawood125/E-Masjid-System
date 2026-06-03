@@ -18,4 +18,7 @@ const fundRequestSchema = new mongoose.Schema({
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
 }, { timestamps: true });
 
+fundRequestSchema.index({ mosqueId: 1, status: 1, createdAt: -1 });
+fundRequestSchema.index({ userId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('FundRequest', fundRequestSchema);

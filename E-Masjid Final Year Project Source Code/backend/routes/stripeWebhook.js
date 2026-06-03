@@ -1,5 +1,6 @@
 const stripeLib = require('stripe');
 const Donation = require('../models/Donation');
+const { isValidObjectId } = require('../middleware/validate');
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -14,27 +15,38 @@ async function stripeWebhook(req, res) {
 
   let event;
   try {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(500).json({ success: false, message: 'Webhook secret is not configured' });
+    }
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    return res.status(400).json({ success: false, message: `Webhook Error: ${err.message}` });
   }
 
   try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const meta = session.metadata || {};
+      const amount = Number(meta.amount || 0);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid amount in webhook payload' });
+      }
 
-      await Donation.create({
+      await Donation.updateOne(
+        { stripePaymentId: session.payment_intent },
+        { $setOnInsert: {
         donorName: meta.donorName || 'Online Donor',
         email: meta.email || '',
         phone: meta.phone || '',
-        amount: Number(meta.amount || 0),
+        amount,
         type: meta.type || 'Mosque Fund',
         paymentMethod: 'Online',
         isAnonymous: meta.isAnonymous === 'true',
         stripePaymentId: session.payment_intent,
-        mosqueId: meta.mosqueId || undefined,
-      });
+        mosqueId: (meta.mosqueId && isValidObjectId(meta.mosqueId)) ? meta.mosqueId : undefined,
+        } },
+        { upsert: true }
+      );
     }
   } catch (err) {
     // If something fails, return 200 so Stripe doesn't retry forever
