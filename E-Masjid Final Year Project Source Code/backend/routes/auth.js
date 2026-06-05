@@ -175,4 +175,12 @@ router.get('/me', protect, async (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
+// @route   POST /api/auth/refresh-token
+// @desc    Refresh JWT token for active sessions
+// @access  Private
+router.post('/refresh-token', protect, async (req, res) => {
+  const token = generateToken(req.user._id, req.user.role);
+  res.json({ success: true, token });
+});
+
 module.exports = router;

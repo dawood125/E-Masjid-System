@@ -222,6 +222,38 @@ export default function PrayerTimes() {
         </div>
       </section>
 
+      {/* Special Prayer Timings (Eid) */}
+      {(todayTimes.eidUlFitr || todayTimes.eidUlAdha) && (
+        <section className="pb-14">
+          <div className="container">
+            <div className="mb-6 inline-flex items-center gap-2 text-[#064e3b]">
+              <i className="material-icons-round text-2xl">celebration</i>
+              <h2 className="font-primary text-2xl font-bold">Special Prayer Timings</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl">
+              {todayTimes.eidUlFitr && (
+                <div className="rounded-2xl border-2 border-[#d4af37] bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
+                  <div className="flex flex-col items-center text-center">
+                    <i className="material-icons-round text-4xl mb-2 text-[#d4af37]">celebration</i>
+                    <span className="font-semibold text-lg text-gray-700">Eid ul-Fitr</span>
+                    <div className="mt-3 font-primary text-3xl font-bold text-[#064e3b]">{formatTime(todayTimes.eidUlFitr)}</div>
+                  </div>
+                </div>
+              )}
+              {todayTimes.eidUlAdha && (
+                <div className="rounded-2xl border-2 border-[#d4af37] bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
+                  <div className="flex flex-col items-center text-center">
+                    <i className="material-icons-round text-4xl mb-2 text-[#d4af37]">celebration</i>
+                    <span className="font-semibold text-lg text-gray-700">Eid ul-Adha</span>
+                    <div className="mt-3 font-primary text-3xl font-bold text-[#064e3b]">{formatTime(todayTimes.eidUlAdha)}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Weekly Schedule Table */}
       <section className="bg-primary-50 py-16">
         <div className="container">

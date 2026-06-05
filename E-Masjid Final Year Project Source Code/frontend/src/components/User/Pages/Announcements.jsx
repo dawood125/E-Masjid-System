@@ -33,6 +33,7 @@ export default function Announcements() {
   const [page, setPage] = useState(1)
   const [announcements, setAnnouncements] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -115,7 +116,7 @@ export default function Announcements() {
                 <h3 className="mt-4 font-primary text-3xl font-bold text-gray-900">{urgent.title}</h3>
                 <p className="mt-3 text-gray-700 leading-relaxed text-lg max-w-4xl">{urgent.content}</p>
                 <div className="mt-6">
-                  <button type="button" className="btn btn-primary bg-[#047857]">
+                  <button type="button" onClick={() => setSelectedAnnouncement(urgent)} className="btn btn-primary bg-[#047857]">
                     <span>Read Full Details</span>
                     <i className="material-icons-round">arrow_forward</i>
                   </button>
@@ -198,7 +199,11 @@ export default function Announcements() {
                 </div>
                 <div className="mt-6 pt-5 border-t border-gray-50 flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">By {item.publishedBy || 'Admin'}</span>
-                  <button type="button" className="inline-flex items-center gap-1 font-bold text-[#047857] group-hover:text-[#d4af37] transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAnnouncement(item)}
+                    className="inline-flex items-center gap-1 font-bold text-[#047857] group-hover:text-[#d4af37] transition-colors"
+                  >
                     Read Details
                     <i className="material-icons-round text-base transition-transform group-hover:translate-x-1">arrow_forward</i>
                   </button>
@@ -254,6 +259,54 @@ export default function Announcements() {
           </div>
         </div>
       </section>
+
+      {selectedAnnouncement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-bold text-gray-900">Announcement Details</h3>
+              <button type="button" onClick={() => setSelectedAnnouncement(null)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${categoryTagClass(inferCategory(selectedAnnouncement))}`}>
+                  {inferCategory(selectedAnnouncement)}
+                </span>
+                {selectedAnnouncement.isUrgent && (
+                  <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold uppercase text-white">
+                    Urgent
+                  </span>
+                )}
+              </div>
+              <h2 className="font-primary text-2xl font-bold text-gray-900">{selectedAnnouncement.title}</h2>
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span className="inline-flex items-center gap-1">
+                  <i className="material-icons-round text-base">calendar_today</i>
+                  {formatDate(selectedAnnouncement.date)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <i className="material-icons-round text-base">person</i>
+                  {selectedAnnouncement.publishedBy || 'Admin'}
+                </span>
+              </div>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{selectedAnnouncement.content}</p>
+              </div>
+              <div className="flex justify-end border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAnnouncement(null)}
+                  className="rounded-lg bg-[#047857] px-5 py-2 text-sm font-semibold text-white hover:bg-[#065f46]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

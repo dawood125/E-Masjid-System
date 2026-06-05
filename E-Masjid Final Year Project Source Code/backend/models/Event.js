@@ -7,6 +7,8 @@ const eventSchema = new mongoose.Schema({
   time: { type: String },
   location: { type: String },
   maxParticipants: { type: Number, default: 0 },
+  requiresRegistration: { type: Boolean, default: true },
+  image: { type: String },
   registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
   isActive: { type: Boolean, default: true },

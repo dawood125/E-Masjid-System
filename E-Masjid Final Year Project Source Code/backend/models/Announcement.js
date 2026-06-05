@@ -5,6 +5,8 @@ const announcementSchema = new mongoose.Schema({
   content: { type: String, required: [true, 'Content is required'] },
   isUrgent: { type: Boolean, default: false },
   publishedBy: { type: String },
+  publishDate: { type: Date },
+  status: { type: String, enum: ['draft', 'published'], default: 'published' },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
 }, { timestamps: true });
 

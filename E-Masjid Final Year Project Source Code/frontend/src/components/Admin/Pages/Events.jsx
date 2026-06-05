@@ -76,6 +76,8 @@ export default function Events() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -140,33 +142,58 @@ export default function Events() {
   const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE))
   const visibleEvents = filteredEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const handleCreateEvent = async (event) => {
+  const openEditModal = (evt) => {
+    setEditingEvent(evt)
+    setNewEvent({
+      title: evt.title,
+      description: evt.description || '',
+      date: evt.date ? new Date(evt.date).toISOString().slice(0, 10) : '',
+      time: evt.time || '',
+      endTime: '',
+      location: evt.location || '',
+      maxParticipants: String(evt.maxParticipants || ''),
+      registrationRequired: evt.requiresRegistration === false ? 'no' : 'yes',
+    })
+    setImageFile(null)
+    setIsModalOpen(true)
+  }
+
+  const openCreateModal = () => {
+    setEditingEvent(null)
+    setNewEvent({ title: '', description: '', date: '', time: '', endTime: '', location: '', maxParticipants: '', registrationRequired: 'yes' })
+    setImageFile(null)
+    setIsModalOpen(true)
+  }
+
+  const handleSubmitEvent = async (event) => {
     event.preventDefault()
     try {
-      const payload = {
-        title: newEvent.title,
-        description: newEvent.description,
-        date: newEvent.date,
-        time: newEvent.time,
-        location: newEvent.location,
-        maxParticipants: Number(newEvent.maxParticipants || 0),
+      const fd = new FormData()
+      fd.append('title', newEvent.title)
+      fd.append('description', newEvent.description)
+      fd.append('date', newEvent.date)
+      fd.append('time', newEvent.time)
+      fd.append('location', newEvent.location)
+      fd.append('maxParticipants', String(Number(newEvent.maxParticipants || 0)))
+      fd.append('requiresRegistration', newEvent.registrationRequired === 'yes' ? 'true' : 'false')
+      if (imageFile) fd.append('image', imageFile)
+
+      let res
+      if (editingEvent) {
+        res = await api.updateEventWithImage(editingEvent.id, fd)
+        setEvents((prev) => prev.map((e) => ((e._id || e.id) === editingEvent.id ? res.data : e)))
+        showToast('Event updated successfully.', 'success')
+      } else {
+        res = await api.createEventWithImage(fd)
+        setEvents((prev) => [res.data, ...prev])
+        showToast('Event created successfully.', 'success')
       }
-      const res = await api.createEvent(payload)
-      setEvents((prev) => [res.data, ...prev])
       setIsModalOpen(false)
-      setNewEvent({
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        endTime: '',
-        location: '',
-        maxParticipants: '',
-        registrationRequired: 'yes',
-      })
-      showToast('Event created successfully.', 'success')
+      setEditingEvent(null)
+      setImageFile(null)
+      setNewEvent({ title: '', description: '', date: '', time: '', endTime: '', location: '', maxParticipants: '', registrationRequired: 'yes' })
     } catch (err) {
-      showToast(err.message || 'Failed to create event.', 'error')
+      showToast(err.message || 'Failed to save event.', 'error')
     }
   }
 
@@ -194,7 +221,7 @@ export default function Events() {
           </Link>
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-2 rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-primary-800"
           >
             <i className="material-icons-round text-base">add</i>
@@ -340,7 +367,7 @@ export default function Events() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => showToast('Edit event flow is mock-only for semester scope.', 'info')}
+                        onClick={() => openEditModal(event)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
                       >
                         <i className="material-icons-round text-base">edit</i>
@@ -399,15 +426,23 @@ export default function Events() {
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
-                <i className="material-icons-round text-primary-700">add_circle</i>
-                Create New Event
+                <i className="material-icons-round text-primary-700">{editingEvent ? 'edit' : 'add_circle'}</i>
+                {editingEvent ? 'Edit Event' : 'Create New Event'}
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setEditingEvent(null)
+                  setImageFile(null)
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <i className="material-icons-round">close</i>
               </button>
             </div>
 
-            <form onSubmit={handleCreateEvent} className="space-y-4 px-6 py-5">
+            <form onSubmit={handleSubmitEvent} className="space-y-4 px-6 py-5">
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-gray-700">Event Title *</span>
                 <input
@@ -490,6 +525,19 @@ export default function Events() {
                 </label>
               </div>
 
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Event Image</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                />
+                {editingEvent?.image && !imageFile && (
+                  <p className="text-xs text-gray-500">Current image will be kept unless you upload a new one.</p>
+                )}
+              </label>
+
               <div>
                 <p className="mb-2 text-sm font-medium text-gray-700">Registration Required?</p>
                 <div className="flex gap-4">
@@ -519,13 +567,17 @@ export default function Events() {
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setEditingEvent(null)
+                    setImageFile(null)
+                  }}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                 >
                   Cancel
                 </button>
                 <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
-                  Create Event
+                  {editingEvent ? 'Update Event' : 'Create Event'}
                 </button>
               </div>
             </form>

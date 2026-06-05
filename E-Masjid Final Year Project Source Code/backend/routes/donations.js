@@ -122,7 +122,7 @@ router.post(
   [
     body('donorName').isString().trim().isLength({ min: 1, max: 100 }).withMessage('Donor name is required'),
     body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),
-    body('type').isIn(['Zakat', 'Sadaqah', 'Mosque Fund', 'Ramadan', 'Wedding']).withMessage('Invalid donation type'),
+    body('type').isIn(['Sadaqah', 'Zakat', 'Masjid Fund']).withMessage('Invalid donation type'),
     body('paymentMethod').optional().isIn(['Cash', 'Card', 'Online']).withMessage('Invalid payment method'),
     handleValidation,
   ],
@@ -149,7 +149,7 @@ router.post(
     body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Invalid email'),
     body('phone').optional({ nullable: true }).isString().trim().isLength({ min: 7, max: 20 }).withMessage('Invalid phone'),
     body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),
-    body('type').optional().isIn(['Zakat', 'Sadaqah', 'Mosque Fund', 'Ramadan', 'Wedding']).withMessage('Invalid donation type'),
+    body('type').optional().isIn(['Sadaqah', 'Zakat', 'Masjid Fund']).withMessage('Invalid donation type'),
     body('mosqueId').optional({ nullable: true, checkFalsy: true }).custom((v) => isValidObjectId(v)).withMessage('Invalid mosqueId'),
     handleValidation,
   ],
@@ -168,7 +168,7 @@ router.post(
         email: sanitizeString(email || ''),
         phone: sanitizeString(phone || ''),
         amount: Number(amount),
-        type: type || 'Mosque Fund',
+        type: type || 'Masjid Fund',
         paymentMethod: 'Online',
         isAnonymous: isAnonymous || false,
         mosqueId,
@@ -190,7 +190,7 @@ router.post(
           price_data: {
             currency: 'pkr',
             product_data: {
-              name: `Donation (${type || 'Mosque Fund'})`,
+              name: `Donation (${type || 'Masjid Fund'})`,
               description: 'E-Masjid Online Donation',
             },
             unit_amount: Math.round(Number(amount) * 100),
@@ -205,7 +205,7 @@ router.post(
         email: sanitizeString(email || ''),
         phone: sanitizeString(phone || ''),
         amount: String(amount),
-        type: type || 'Mosque Fund',
+        type: type || 'Masjid Fund',
         isAnonymous: String(!!isAnonymous),
         mosqueId: mosqueId || '',
       },
@@ -215,6 +215,32 @@ router.post(
   } catch (error) {
     next(error);
   }
+});
+
+// @route   PUT /api/donations/:id
+// @desc    Update a donation
+// @access  Private (admin)
+router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
+  try {
+    const donation = await Donation.findOneAndUpdate(
+      { _id: req.params.id, mosqueId: req.user.mosqueId },
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!donation) return res.status(404).json({ success: false, message: 'Donation not found' });
+    res.json({ success: true, data: donation });
+  } catch (error) { next(error); }
+});
+
+// @route   DELETE /api/donations/:id
+// @desc    Delete a donation
+// @access  Private (admin)
+router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
+  try {
+    const donation = await Donation.findOneAndDelete({ _id: req.params.id, mosqueId: req.user.mosqueId });
+    if (!donation) return res.status(404).json({ success: false, message: 'Donation not found' });
+    res.json({ success: true, message: 'Donation deleted' });
+  } catch (error) { next(error); }
 });
 
 module.exports = router;

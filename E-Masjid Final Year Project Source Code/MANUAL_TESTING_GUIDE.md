@@ -19,11 +19,15 @@ Step 2: `cd frontend && npm install && npm run dev`
 Step 3: Open `http://localhost:5173`
 
 ### Test Accounts
-| Role    | Email              | Password   |
-|---------|-------------------|------------|
-| Admin   | admin@test.com    | Test@1234  |
-| User    | user@test.com     | Test@1234  |
-| Scholar | scholar@test.com  | Test@1234  |
+| Role      | Email                  | Password    |
+|-----------|------------------------|-------------|
+| Manager   | manager@emasjid.pk     | manager123  |
+| Admin     | admin@emasjid.pk       | admin123    |
+| Scholar   | scholar@emasjid.pk     | scholar123  |
+| Committee | committee@emasjid.pk   | committee123|
+| User      | user@emasjid.pk        | user123     |
+
+> Run `cd backend && node utils/seed.js` to reset the database with these accounts if needed.
 
 ---
 
@@ -64,7 +68,7 @@ Step 3: Open `http://localhost:5173`
 #### Feature: Manage Events
 - **URL:** `/admin/events`
 - **How to access:** Login as admin and open Events page.
-- **What to test:** Create event, view list, delete event.
+- **What to test:** Create event, edit event, upload image, toggle registration required, set max participants, view list, delete event.
 - **Expected result:** Event appears on user events page and can be removed.
 - **Test edge cases:**
   * Past date event creation → Expected: blocked with validation message.
@@ -228,7 +232,7 @@ Step 3: Open `http://localhost:5173`
 - **Auth required:** No | Role: Public
 - **Request body:**
   ```json
-  { "email": "admin@test.com", "password": "Test@1234" }
+  { "email": "admin@emasjid.pk", "password": "admin123" }
   ```
 - **Expected response (success):**
   ```json
@@ -248,7 +252,7 @@ Step 3: Open `http://localhost:5173`
 - **Auth required:** No | Role: Public
 - **Request body:**
   ```json
-  { "name": "User", "email": "user@test.com", "phone": "03001234567", "password": "Test@1234" }
+  { "name": "User", "email": "user@emasjid.pk", "phone": "03001234567", "password": "user123" }
   ```
 - **Expected response (success):**
   ```json

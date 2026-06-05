@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
+import { API_BASE_URL } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
 
@@ -30,6 +31,21 @@ function inferCategory(title) {
   if (t.includes('iftaar') || t.includes('service')) return 'community'
   if (t.includes('eid') || t.includes('ramadan')) return 'religious'
   return 'lecture'
+}
+
+function resolveEventImage(event, index) {
+  if (event.image) {
+    return event.image.startsWith('http') ? event.image : `${API_BASE_URL}${event.image}`
+  }
+  return eventImages[index % eventImages.length]
+}
+
+function canRegister(event) {
+  if (event.requiresRegistration === false) return false
+  const max = Number(event.maxParticipants) || 0
+  const count = event.registeredUsers?.length || event.registeredCount || 0
+  if (max > 0 && count >= max) return false
+  return true
 }
 
 function dateBadgeParts(dateString) {
@@ -75,7 +91,7 @@ export default function Events() {
         id: event._id || event.id,
         registeredCount: event.registeredUsers?.length || event.registeredCount || 0,
         category: inferCategory(event.title),
-        image: eventImages[index % eventImages.length],
+        image: resolveEventImage(event, index),
       })),
     [events]
   )
@@ -182,14 +198,22 @@ export default function Events() {
                     <p className="inline-flex items-center gap-2"><i className="material-icons-round text-base text-[#047857]">schedule</i>{formatTime(featuredEvent.time)}</p>
                     <p className="inline-flex items-center gap-2"><i className="material-icons-round text-base text-[#047857]">location_on</i>{featuredEvent.location}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => openModal(featuredEvent)}
-                    className="btn btn-lg mt-6 bg-[#d4af37] text-gray-900 hover:bg-[#b7791f]"
-                  >
-                    <i className="material-icons-round">how_to_reg</i>
-                    Register Now
-                  </button>
+                  {canRegister(featuredEvent) ? (
+                    <button
+                      type="button"
+                      onClick={() => openModal(featuredEvent)}
+                      className="btn btn-lg mt-6 bg-[#d4af37] text-gray-900 hover:bg-[#b7791f]"
+                    >
+                      <i className="material-icons-round">how_to_reg</i>
+                      Register Now
+                    </button>
+                  ) : (
+                    <p className="mt-6 text-sm font-medium text-gray-600">
+                      {featuredEvent.requiresRegistration === false
+                        ? 'Open event — no registration required'
+                        : 'Registration is full'}
+                    </p>
+                  )}
                 </div>
                 <div className="min-h-[320px]">
                   <img src={featuredEvent.image} alt={featuredEvent.title} className="h-full w-full object-cover" />
@@ -236,9 +260,15 @@ export default function Events() {
                     </div>
 
                     <div className="mt-5">
-                      <button type="button" onClick={() => openModal(event)} className="btn btn-primary w-full bg-[#047857] hover:bg-[#064e3b]">
-                        Register
-                      </button>
+                      {canRegister(event) ? (
+                        <button type="button" onClick={() => openModal(event)} className="btn btn-primary w-full bg-[#047857] hover:bg-[#064e3b]">
+                          Register
+                        </button>
+                      ) : (
+                        <p className="text-center text-sm font-medium text-gray-500">
+                          {event.requiresRegistration === false ? 'No registration needed' : 'Registration full'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </article>

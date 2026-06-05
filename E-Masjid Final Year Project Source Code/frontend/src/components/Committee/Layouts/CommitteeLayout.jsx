@@ -6,17 +6,19 @@ import { ROUTES } from '../../../utils/constants.js'
 import Toast from '../../Common/Toast'
 
 export default function CommitteeLayout() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading } = useAuth()
   const { sidebarOpen, toggleSidebar, closeSidebar } = useUI()
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
+    if (loading) return
     if (!isAuthenticated || user?.role !== 'committee') {
       navigate(ROUTES.COMMITTEE_LOGIN)
     }
-  }, [isAuthenticated, user, navigate])
+  }, [isAuthenticated, user, navigate, loading])
 
+  if (loading) return null
   if (!isAuthenticated || user?.role !== 'committee') return null
 
   const links = [

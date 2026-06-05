@@ -8,12 +8,9 @@ import { getActiveMosqueId } from '../../../utils/mosque.js'
 const FILTERS = ['all', 'published', 'urgent', 'draft']
 const PAGE_SIZE = 6
 
-function getAnnouncementStatus(item, index) {
-  if (item.isUrgent) {
-    return 'urgent'
-  }
-
-  return index % 5 === 0 ? 'draft' : 'published'
+function getAnnouncementStatus(item) {
+  if (item.isUrgent) return 'urgent'
+  return item.status || 'published'
 }
 
 export default function Announcements() {
@@ -25,6 +22,7 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null)
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
     content: '',
@@ -36,7 +34,7 @@ export default function Announcements() {
   useEffect(() => {
     let mounted = true
     const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const params = mosqueId ? `mosqueId=${mosqueId}&includeAll=true` : 'includeAll=true'
     ;(async () => {
       try {
         const res = await api.getAnnouncements(params)
@@ -52,8 +50,8 @@ export default function Announcements() {
   }, [showToast])
 
   const preparedAnnouncements = useMemo(() => {
-    return announcements.map((item, index) => {
-      const status = getAnnouncementStatus(item, index)
+    return announcements.map((item) => {
+      const status = getAnnouncementStatus(item)
       return {
         ...item,
         id: item._id || item.id,
@@ -80,28 +78,61 @@ export default function Announcements() {
   const visible = filtered.slice(0, page * PAGE_SIZE)
   const hasMore = visible.length < filtered.length
 
-  const createAnnouncement = async (event) => {
+  const todayStr = new Date().toISOString().slice(0, 10)
+
+  const openCreateModal = () => {
+    setEditingAnnouncement(null)
+    setNewAnnouncement({ title: '', content: '', publishDate: '', urgent: false, mode: 'publish' })
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (item) => {
+    setEditingAnnouncement(item)
+    setNewAnnouncement({
+      title: item.title,
+      content: item.content,
+      publishDate: item.publishDate ? new Date(item.publishDate).toISOString().slice(0, 10) : '',
+      urgent: item.isUrgent || false,
+      mode: item.status === 'draft' ? 'draft' : 'publish',
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleAnnouncementSubmit = async (event) => {
     event.preventDefault()
+
+    if (newAnnouncement.publishDate && newAnnouncement.publishDate < todayStr) {
+      showToast('Publication date cannot be in the past.', 'error')
+      return
+    }
+
     try {
       const payload = {
         title: newAnnouncement.title,
         content: newAnnouncement.content,
         isUrgent: newAnnouncement.urgent,
         publishedBy: 'Admin',
+        status: newAnnouncement.mode === 'draft' ? 'draft' : 'published',
       }
-      const res = await api.createAnnouncement(payload)
-      setAnnouncements((prev) => [res.data, ...prev])
+      if (newAnnouncement.publishDate) payload.publishDate = newAnnouncement.publishDate
+
+      if (editingAnnouncement) {
+        const res = await api.updateAnnouncement(editingAnnouncement.id, payload)
+        setAnnouncements((prev) =>
+          prev.map((a) => ((a._id || a.id) === editingAnnouncement.id ? res.data : a))
+        )
+        showToast('Announcement updated successfully.', 'success')
+      } else {
+        const res = await api.createAnnouncement(payload)
+        setAnnouncements((prev) => [res.data, ...prev])
+        showToast('Announcement created successfully.', 'success')
+      }
+
       setIsModalOpen(false)
-      setNewAnnouncement({
-        title: '',
-        content: '',
-        publishDate: '',
-        urgent: false,
-        mode: 'publish',
-      })
-      showToast('Announcement created successfully.', 'success')
+      setEditingAnnouncement(null)
+      setNewAnnouncement({ title: '', content: '', publishDate: '', urgent: false, mode: 'publish' })
     } catch (err) {
-      showToast(err.message || 'Failed to create announcement.', 'error')
+      showToast(err.message || 'Failed to save announcement.', 'error')
     }
   }
 
@@ -129,7 +160,7 @@ export default function Announcements() {
           </Link>
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-2 rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-primary-800"
           >
             <i className="material-icons-round text-base">add</i>
@@ -213,9 +244,6 @@ export default function Announcements() {
             <article key={item.id} className={`flex h-full flex-col rounded-xl border p-5 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${cardStyle}`}>
               <div className="mb-3 flex items-start justify-between gap-3">
                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${badgeStyle}`}>
-                  <i className="material-icons-round text-sm">
-                    {item.status === 'urgent' ? 'priority_high' : item.status === 'draft' ? 'edit_note' : 'check_circle'}
-                  </i>
                   {item.status}
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs text-gray-500">
@@ -258,7 +286,7 @@ export default function Announcements() {
 
                   <button
                     type="button"
-                    onClick={() => showToast('Edit announcement flow is mock-only.', 'info')}
+                    onClick={() => openEditModal(item)}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
                   >
                     <i className="material-icons-round text-base">edit</i>
@@ -306,15 +334,15 @@ export default function Announcements() {
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
-                <i className="material-icons-round text-primary-700">add_circle</i>
-                Create New Announcement
+                <i className="material-icons-round text-primary-700">{editingAnnouncement ? 'edit' : 'add_circle'}</i>
+                {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <button type="button" onClick={() => { setIsModalOpen(false); setEditingAnnouncement(null) }} className="text-gray-500 hover:text-gray-700">
                 <i className="material-icons-round">close</i>
               </button>
             </div>
 
-            <form onSubmit={createAnnouncement} className="space-y-4 px-6 py-5">
+            <form onSubmit={handleAnnouncementSubmit} className="space-y-4 px-6 py-5">
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-gray-700">Announcement Title *</span>
                 <input
@@ -343,6 +371,7 @@ export default function Announcements() {
                   <input
                     type="date"
                     value={newAnnouncement.publishDate}
+                    min={todayStr}
                     onChange={(event) => setNewAnnouncement((prev) => ({ ...prev, publishDate: event.target.value }))}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
                   />
@@ -387,13 +416,13 @@ export default function Announcements() {
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingAnnouncement(null) }}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                 >
                   Cancel
                 </button>
                 <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
-                  Create Announcement
+                  {editingAnnouncement ? 'Update Announcement' : 'Create Announcement'}
                 </button>
               </div>
             </form>

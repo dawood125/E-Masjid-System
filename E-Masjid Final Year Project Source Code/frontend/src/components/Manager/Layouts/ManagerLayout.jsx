@@ -12,17 +12,19 @@ const managerLinks = [
 ]
 
 export default function ManagerLayout() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading } = useAuth()
   const { sidebarOpen, toggleSidebar, closeSidebar } = useUI()
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
+    if (loading) return
     if (!isAuthenticated || user?.role !== 'manager') {
       navigate(ROUTES.MANAGER_LOGIN)
     }
-  }, [isAuthenticated, user, navigate])
+  }, [isAuthenticated, user, navigate, loading])
 
+  if (loading) return null
   if (!isAuthenticated || user?.role !== 'manager') return null
 
   return (

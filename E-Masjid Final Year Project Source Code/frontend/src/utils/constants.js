@@ -31,11 +31,9 @@ export const USER_ROLES = {
 
 // Donation Types
 export const DONATION_TYPES = {
-  ZAKAT: 'Zakat',
   SADAQAH: 'Sadaqah',
-  MOSQUE_FUND: 'Mosque Fund',
-  RAMADAN: 'Ramadan',
-  WEDDING: 'Wedding',
+  ZAKAT: 'Zakat',
+  MASJID_FUND: 'Masjid Fund',
 }
 
 // Prayer Names

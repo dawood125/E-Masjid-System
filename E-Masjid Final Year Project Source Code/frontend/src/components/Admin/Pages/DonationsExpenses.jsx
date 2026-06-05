@@ -10,13 +10,13 @@ const DATE_FILTER_OPTIONS = [
   { value: 'last-month', label: 'Last Month' },
   { value: 'last-3-months', label: 'Last 3 Months' },
   { value: 'this-year', label: 'This Year' },
+  { value: 'last-year', label: 'Last Year' },
 ]
 
 const DONATION_TYPE_COLORS = {
   zakat: 'bg-emerald-100 text-emerald-700',
   sadaqah: 'bg-sky-100 text-sky-700',
-  'mosque fund': 'bg-amber-100 text-amber-700',
-  jummah: 'bg-purple-100 text-purple-700',
+  'masjid fund': 'bg-amber-100 text-amber-700',
   default: 'bg-gray-100 text-gray-700',
 }
 
@@ -38,22 +38,21 @@ function isWithinRange(dateString, range) {
   if (range === 'this-month') {
     return target.getFullYear() === now.getFullYear() && target.getMonth() === now.getMonth()
   }
-
   if (range === 'last-month') {
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    return target.getFullYear() === lastMonth.getFullYear() && target.getMonth() === lastMonth.getMonth()
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+    return target >= d && target <= lastDay
   }
-
   if (range === 'last-3-months') {
-    const threeMonthsBack = new Date(now)
-    threeMonthsBack.setMonth(now.getMonth() - 3)
-    return target >= threeMonthsBack && target <= now
+    const d = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+    return target >= d && target <= now
   }
-
   if (range === 'this-year') {
     return target.getFullYear() === now.getFullYear()
   }
-
+  if (range === 'last-year') {
+    return target.getFullYear() === now.getFullYear() - 1
+  }
   return true
 }
 
@@ -63,11 +62,13 @@ export default function DonationsExpenses() {
   const [expenses, setExpenses] = useState([])
   const [loading, setLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [editingDonation, setEditingDonation] = useState(null)
   const [recordForm, setRecordForm] = useState({
     donorName: '',
     amount: '',
-    type: 'Zakat',
+    type: 'Sadaqah',
     paymentMethod: 'Cash',
+    isAnonymous: false,
     description: '',
     category: 'Utilities',
   })
@@ -141,6 +142,30 @@ export default function DonationsExpenses() {
   }
 
   const onAddRecord = () => {
+    setEditingDonation(null)
+    setRecordForm({
+      donorName: '',
+      amount: '',
+      type: 'Sadaqah',
+      paymentMethod: 'Cash',
+      isAnonymous: false,
+      description: '',
+      category: 'Utilities',
+    })
+    setIsCreateOpen(true)
+  }
+
+  const onEditDonation = (donation) => {
+    setEditingDonation(donation)
+    setRecordForm({
+      donorName: donation.donorName || '',
+      amount: String(donation.amount || ''),
+      type: donation.type || 'Sadaqah',
+      paymentMethod: donation.paymentMethod || 'Cash',
+      isAnonymous: donation.isAnonymous || false,
+      description: '',
+      category: 'Utilities',
+    })
     setIsCreateOpen(true)
   }
 
@@ -149,30 +174,50 @@ export default function DonationsExpenses() {
     try {
       if (activeTab === 'donations') {
         const payload = {
-          donorName: recordForm.donorName || 'Walk-in Donor',
+          donorName: recordForm.isAnonymous ? 'Anonymous' : (recordForm.donorName || 'Walk-in Donor'),
           amount: Number(recordForm.amount),
           type: recordForm.type,
           paymentMethod: recordForm.paymentMethod,
+          isAnonymous: recordForm.isAnonymous,
         }
-        const res = await api.createDonation(payload)
-        setDonations((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
-        showToast('Donation added successfully.', 'success')
+
+        if (editingDonation) {
+          const res = await api.updateDonation(editingDonation.id, payload)
+          setDonations((prev) =>
+            prev.map((d) => (d.id === editingDonation.id ? { ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date } : d))
+          )
+          showToast('Donation updated successfully.', 'success')
+        } else {
+          const res = await api.createDonation(payload)
+          setDonations((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
+          showToast('Donation added successfully.', 'success')
+        }
       } else {
         const payload = {
           description: recordForm.description,
           amount: Number(recordForm.amount),
           category: recordForm.category,
         }
-        const res = await api.createExpense(payload)
-        setExpenses((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
-        showToast('Expense added successfully.', 'success')
+        if (recordForm._editExpenseId) {
+          const res = await api.updateExpense(recordForm._editExpenseId, payload)
+          setExpenses((prev) =>
+            prev.map((e) => (e.id === recordForm._editExpenseId ? { ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date } : e))
+          )
+          showToast('Expense updated successfully.', 'success')
+        } else {
+          const res = await api.createExpense(payload)
+          setExpenses((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
+          showToast('Expense added successfully.', 'success')
+        }
       }
       setIsCreateOpen(false)
+      setEditingDonation(null)
       setRecordForm({
         donorName: '',
         amount: '',
-        type: 'Zakat',
+        type: 'Sadaqah',
         paymentMethod: 'Cash',
+        isAnonymous: false,
         description: '',
         category: 'Utilities',
       })
@@ -358,14 +403,22 @@ export default function DonationsExpenses() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => showToast('Edit donation flow will be connected to backend.', 'info')}
+                            onClick={() => onEditDonation(donation)}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 transition-all duration-150 hover:bg-gray-100"
                           >
                             <i className="material-icons-round text-base">edit</i>
                           </button>
                           <button
                             type="button"
-                            onClick={() => showToast('Donation delete endpoint is not available yet.', 'warning')}
+                            onClick={async () => {
+                              try {
+                                await api.deleteDonation(donation.id)
+                                setDonations((prev) => prev.filter((item) => item.id !== donation.id))
+                                showToast('Donation deleted successfully.', 'success')
+                              } catch (err) {
+                                showToast(err.message || 'Failed to delete donation.', 'error')
+                              }
+                            }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 transition-all duration-150 hover:bg-red-50"
                           >
                             <i className="material-icons-round text-base">delete</i>
@@ -447,7 +500,20 @@ export default function DonationsExpenses() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => showToast('Edit expense flow will be connected to backend.', 'info')}
+                            onClick={() => {
+                              setRecordForm({
+                                donorName: '',
+                                amount: String(expense.amount),
+                                type: 'Sadaqah',
+                                paymentMethod: 'Cash',
+                                isAnonymous: false,
+                                description: expense.description || '',
+                                category: expense.category || 'Utilities',
+                                _editExpenseId: expense.id,
+                              })
+                              setActiveTab('expenses')
+                              setIsCreateOpen(true)
+                            }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 transition-all duration-150 hover:bg-gray-100"
                           >
                             <i className="material-icons-round text-base">edit</i>
@@ -516,23 +582,34 @@ export default function DonationsExpenses() {
           <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-bold text-gray-900">
-                {activeTab === 'donations' ? 'Add Donation' : 'Add Expense'}
+                {activeTab === 'donations' ? (editingDonation ? 'Edit Donation' : 'Add Donation') : 'Add Expense'}
               </h3>
-              <button type="button" onClick={() => setIsCreateOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <button type="button" onClick={() => { setIsCreateOpen(false); setEditingDonation(null) }} className="text-gray-500 hover:text-gray-700">
                 <i className="material-icons-round">close</i>
               </button>
             </div>
             <form onSubmit={handleCreateRecord} className="space-y-4 px-6 py-5">
               {activeTab === 'donations' ? (
                 <>
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Donor Name</span>
+                  <label className="flex items-center gap-3 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2.5">
                     <input
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                      value={recordForm.donorName}
-                      onChange={(e) => setRecordForm((p) => ({ ...p, donorName: e.target.value }))}
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-primary-700 focus:ring-primary-500"
+                      checked={recordForm.isAnonymous}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, isAnonymous: e.target.checked, ...(e.target.checked ? { donorName: '' } : {}) }))}
                     />
+                    <span className="text-sm font-medium text-gray-700">Anonymous Donor</span>
                   </label>
+                  {!recordForm.isAnonymous && (
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-gray-700">Donor Name</span>
+                      <input
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        value={recordForm.donorName}
+                        onChange={(e) => setRecordForm((p) => ({ ...p, donorName: e.target.value }))}
+                      />
+                    </label>
+                  )}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label className="space-y-2">
                       <span className="text-sm font-medium text-gray-700">Type</span>
@@ -541,11 +618,9 @@ export default function DonationsExpenses() {
                         value={recordForm.type}
                         onChange={(e) => setRecordForm((p) => ({ ...p, type: e.target.value }))}
                       >
-                        <option>Zakat</option>
                         <option>Sadaqah</option>
-                        <option>Mosque Fund</option>
-                        <option>Ramadan</option>
-                        <option>Wedding</option>
+                        <option>Zakat</option>
+                        <option>Masjid Fund</option>
                       </select>
                     </label>
                     <label className="space-y-2">
@@ -554,10 +629,9 @@ export default function DonationsExpenses() {
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
                         value={recordForm.paymentMethod}
                         onChange={(e) => setRecordForm((p) => ({ ...p, paymentMethod: e.target.value }))}
+                        disabled
                       >
                         <option>Cash</option>
-                        <option>Card</option>
-                        <option>Online</option>
                       </select>
                     </label>
                   </div>
@@ -607,7 +681,7 @@ export default function DonationsExpenses() {
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={() => { setIsCreateOpen(false); setEditingDonation(null) }}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                 >
                   Cancel

@@ -22,6 +22,8 @@ function getInitialTimes() {
     maghrib: '18:25',
     isha: '19:45',
     jummah: '13:00',
+    eidUlFitr: '',
+    eidUlAdha: '',
   }
 }
 
@@ -30,13 +32,7 @@ export default function PrayerTimes() {
 
   const [times, setTimes] = useState(getInitialTimes)
   const [loading, setLoading] = useState(true)
-  const [specialEnabled, setSpecialEnabled] = useState(false)
-  const [specialTimes, setSpecialTimes] = useState({
-    occasion: '',
-    taraweeh: '21:30',
-    suhoor: '04:45',
-    iftar: '18:25',
-  })
+  const [eidEnabled, setEidEnabled] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
 
   useEffect(() => {
@@ -57,8 +53,10 @@ export default function PrayerTimes() {
             maghrib: today.maghrib || prev.maghrib,
             isha: today.isha || prev.isha,
             jummah: today.jummah || prev.jummah,
+            eidUlFitr: today.eidUlFitr || '',
+            eidUlAdha: today.eidUlAdha || '',
           }))
-          setSpecialTimes((prev) => ({ ...prev, iftar: today.maghrib || prev.iftar }))
+          if (today.eidUlFitr || today.eidUlAdha) setEidEnabled(true)
           if (today.updatedAt) setLastUpdated(new Date(today.updatedAt))
         }
       } catch (err) {
@@ -86,15 +84,11 @@ export default function PrayerTimes() {
     setTimes((prev) => ({ ...prev, [field]: value }))
   }
 
-  const updateSpecialTime = (field, value) => {
-    setSpecialTimes((prev) => ({ ...prev, [field]: value }))
-  }
-
   const handleSubmit = async (event) => {
     event.preventDefault()
     try {
       const today = new Date().toISOString().slice(0, 10)
-      const res = await api.updatePrayerTimes({
+      const payload = {
         date: today,
         fajr: times.fajr,
         zuhr: times.zuhr,
@@ -102,7 +96,10 @@ export default function PrayerTimes() {
         maghrib: times.maghrib,
         isha: times.isha,
         jummah: times.jummah,
-      })
+      }
+      if (times.eidUlFitr) payload.eidUlFitr = times.eidUlFitr
+      if (times.eidUlAdha) payload.eidUlAdha = times.eidUlAdha
+      const res = await api.updatePrayerTimes(payload)
       setLastUpdated(new Date(res.data?.updatedAt || Date.now()))
       showToast('Prayer times updated successfully!', 'success')
     } catch (err) {
@@ -112,13 +109,7 @@ export default function PrayerTimes() {
 
   const resetForm = () => {
     setTimes(getInitialTimes())
-    setSpecialEnabled(false)
-    setSpecialTimes({
-      occasion: '',
-      taraweeh: '21:30',
-      suhoor: '04:45',
-      iftar: times.maghrib,
-    })
+    setEidEnabled(false)
     showToast('Form has been reset to defaults.', 'info')
   }
 
@@ -278,69 +269,51 @@ export default function PrayerTimes() {
             <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Special Timings (Ramadan/Eid)</h3>
-                <p className="mt-1 text-sm text-gray-500">Enable to show Taraweeh, Suhoor and Iftar timings.</p>
+                <h3 className="text-base font-semibold text-gray-900">Eid Prayer Timings</h3>
+                <p className="mt-1 text-sm text-gray-500">Enable to set Eid ul-Fitr and Eid ul-Adha prayer times.</p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setSpecialEnabled((prev) => !prev)}
+                onClick={() => setEidEnabled((prev) => !prev)}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-150 ${
-                  specialEnabled ? 'bg-primary-700' : 'bg-gray-300'
+                  eidEnabled ? 'bg-primary-700' : 'bg-gray-300'
                 }`}
-                aria-pressed={specialEnabled}
-                aria-label="Toggle special timings"
+                aria-pressed={eidEnabled}
+                aria-label="Toggle Eid prayer timings"
               >
                 <span
                   className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-150 ${
-                    specialEnabled ? 'translate-x-6' : 'translate-x-1'
+                    eidEnabled ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
             </div>
 
-            {specialEnabled && (
+            {eidEnabled && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Special Occasion</span>
-                  <select
-                    value={specialTimes.occasion}
-                    onChange={(event) => updateSpecialTime('occasion', event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  >
-                    <option value="">Select occasion</option>
-                    <option value="ramadan">Ramadan</option>
-                    <option value="eid-ul-fitr">Eid ul-Fitr</option>
-                    <option value="eid-ul-adha">Eid ul-Adha</option>
-                  </select>
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Taraweeh Time (Ramadan)</span>
+                  <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <i className="material-icons-round text-base text-primary-700">celebration</i>
+                    Eid-ul-Fitr Prayer Time
+                  </span>
                   <input
                     type="time"
-                    value={specialTimes.taraweeh}
-                    onChange={(event) => updateSpecialTime('taraweeh', event.target.value)}
+                    value={times.eidUlFitr}
+                    onChange={(event) => updateTime('eidUlFitr', event.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
                   />
                 </label>
 
                 <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Suhoor Ends</span>
+                  <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <i className="material-icons-round text-base text-primary-700">celebration</i>
+                    Eid-ul-Adha Prayer Time
+                  </span>
                   <input
                     type="time"
-                    value={specialTimes.suhoor}
-                    onChange={(event) => updateSpecialTime('suhoor', event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  />
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Iftar Time</span>
-                  <input
-                    type="time"
-                    value={specialTimes.iftar}
-                    onChange={(event) => updateSpecialTime('iftar', event.target.value)}
+                    value={times.eidUlAdha}
+                    onChange={(event) => updateTime('eidUlAdha', event.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
                   />
                 </label>
@@ -379,7 +352,7 @@ export default function PrayerTimes() {
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-blue-800">
               <li>Update timings regularly as sunrise and sunset shift across the year.</li>
               <li>Maghrib should reflect local sunset and can vary by location.</li>
-              <li>Enable special timings during Ramadan for Suhoor, Iftar and Taraweeh.</li>
+              <li>Enable Eid timings to display Eid ul-Fitr and Eid ul-Adha prayer times.</li>
               <li>Changes apply immediately to the public prayer times page.</li>
             </ul>
           </div>

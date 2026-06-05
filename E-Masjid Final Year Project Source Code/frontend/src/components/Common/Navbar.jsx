@@ -154,10 +154,10 @@ export default function Navbar() {
 
         {/* Mosque Selector */}
         {mosques.length > 0 && (
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Mosque</span>
+          <div className="hidden md:flex items-center gap-2 shrink-0 relative">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Mosque</span>
             <select
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="max-w-[200px] truncate rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               value={activeMosqueId || ''}
               onChange={(e) => {
                 setActiveMosqueId(e.target.value)

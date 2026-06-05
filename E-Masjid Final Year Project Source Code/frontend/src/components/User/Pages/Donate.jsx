@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency } from '../../../utils/formatters.js'
@@ -7,29 +7,42 @@ import api from '../../../utils/api.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const donationTypes = [
-  { value: 'mosque-fund', label: 'Mosque Fund', icon: 'mosque' },
-  { value: 'zakat', label: 'Zakat', icon: 'handshake' },
   { value: 'sadaqah', label: 'Sadaqah', icon: 'favorite' },
+  { value: 'zakat', label: 'Zakat', icon: 'handshake' },
+  { value: 'masjid-fund', label: 'Masjid Fund', icon: 'mosque' },
 ]
 
 const presetAmounts = [500, 1000, 5000, 10000]
 
 export default function Donate() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { showToast } = useUI()
+
+  useEffect(() => {
+    if (searchParams.get('success') === '1') {
+      setShowSuccess(true)
+      setTransactionId('Stripe Payment Completed')
+      showToast('Donation processed successfully. JazakAllah Khair!', 'success')
+      setSearchParams({}, { replace: true })
+    } else if (searchParams.get('canceled') === '1') {
+      showToast('Donation was canceled. You were not charged.', 'warning')
+      setSearchParams({}, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [donationData, setDonationData] = useState({
     amount: 1000,
     customAmount: '',
-    type: 'mosque-fund',
+    type: 'sadaqah',
     donorName: '',
     email: '',
     phone: '',
-    cardNumber: '',
-    cardExpiry: '',
-    cardCvc: '',
+    isAnonymous: false,
   })
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [transactionId, setTransactionId] = useState('')
-  const { showToast } = useUI()
 
   const effectiveAmount = useMemo(() => {
     if (donationData.customAmount && Number(donationData.customAmount) > 0) {
@@ -72,9 +85,9 @@ export default function Donate() {
     try {
       const backendType = donationData.type === 'zakat'
         ? 'Zakat'
-        : donationData.type === 'sadaqah'
-          ? 'Sadaqah'
-          : 'Mosque Fund'
+        : donationData.type === 'masjid-fund'
+          ? 'Masjid Fund'
+          : 'Sadaqah'
 
       const res = await api.createOnlineDonation({
         donorName: donationData.donorName,
@@ -106,13 +119,11 @@ export default function Donate() {
     setDonationData({
       amount: 1000,
       customAmount: '',
-      type: 'mosque-fund',
+      type: 'sadaqah',
       donorName: '',
       email: '',
       phone: '',
-      cardNumber: '',
-      cardExpiry: '',
-      cardCvc: '',
+      isAnonymous: false,
     })
   }
 
@@ -258,47 +269,24 @@ export default function Donate() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="inline-flex items-center gap-2 font-primary text-lg font-bold text-gray-900">
-                  <i className="material-icons-round text-[#047857]">credit_card</i>
-                  Payment Details
-                </h3>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3">
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Card Number (1234 5678 9012 3456)"
-                    value={donationData.cardNumber}
-                    onChange={(e) => setDonationData((prev) => ({ ...prev, cardNumber: e.target.value }))}
-                    required
-                  />
-                  <input
-                    type="text"
-                    className="form-input sm:w-24"
-                    placeholder="MM/YY"
-                    value={donationData.cardExpiry}
-                    onChange={(e) => setDonationData((prev) => ({ ...prev, cardExpiry: e.target.value }))}
-                    required
-                  />
-                  <input
-                    type="text"
-                    className="form-input sm:w-24"
-                    placeholder="CVC"
-                    value={donationData.cardCvc}
-                    onChange={(e) => setDonationData((prev) => ({ ...prev, cardCvc: e.target.value }))}
-                    required
-                  />
+              <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+                <div className="flex items-start gap-3">
+                  <i className="material-icons-round text-blue-600 mt-0.5">info</i>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">Secure Payment via Stripe</p>
+                    <p className="text-xs text-blue-700 mt-1">You will be redirected to Stripe&apos;s secure checkout page to enter your card details. We never see or store your card information.</p>
+                  </div>
                 </div>
               </div>
 
               <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 bg-[#047857] hover:bg-[#064e3b]">
                 <i className="material-icons-round">volunteer_activism</i>
-                {loading ? 'Processing...' : 'Donate Now'}
+                {loading ? 'Redirecting to Stripe...' : `Donate ${effectiveAmount >= 100 ? 'PKR ' + effectiveAmount.toLocaleString() : 'Now'}`}
               </button>
 
               <div className="space-y-2 text-center text-xs text-gray-500">
-                <p className="inline-flex items-center gap-1"><i className="material-icons-round text-sm">verified_user</i>Secure 256-bit SSL Encrypted Payment</p>
-                <p>VISA | MasterCard | EasyPaisa | JazzCash</p>
+                <p className="inline-flex items-center gap-1"><i className="material-icons-round text-sm">verified_user</i>Secure 256-bit SSL Encrypted Payment via Stripe</p>
+                <p>VISA | MasterCard | All major cards accepted</p>
               </div>
             </form>
           </div>

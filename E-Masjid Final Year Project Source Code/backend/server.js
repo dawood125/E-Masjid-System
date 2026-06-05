@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
@@ -16,8 +17,11 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express();
 
 // ─── MIDDLEWARE ──────────────────────────────────────
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(mongoSanitize());
+
+// Static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // CORS
 app.use(cors({

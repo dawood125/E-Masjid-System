@@ -5,7 +5,7 @@ const donationSchema = new mongoose.Schema({
   email: { type: String, lowercase: true, trim: true, match: [/^\S+@\S+\.\S+$/, 'Invalid email format'] },
   phone: { type: String },
   amount: { type: Number, required: [true, 'Amount is required'], min: 1 },
-  type: { type: String, enum: ['Zakat', 'Sadaqah', 'Mosque Fund', 'Ramadan', 'Wedding'], required: true },
+  type: { type: String, enum: ['Sadaqah', 'Zakat', 'Masjid Fund'], required: true },
   paymentMethod: { type: String, enum: ['Cash', 'Card', 'Online'], default: 'Cash' },
   isAnonymous: { type: Boolean, default: false },
   stripePaymentId: { type: String, unique: true, sparse: true },

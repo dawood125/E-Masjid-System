@@ -27,6 +27,20 @@ class ApiService {
     const response = await fetch(`${this.baseURL}${endpoint}`, options)
     const data = await response.json()
 
+    if (response.status === 401 && endpoint !== '/api/auth/login') {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('user')
+
+      const path = window.location.pathname
+      let redirectPath = '/login'
+      if (path.startsWith('/admin')) redirectPath = '/admin/login'
+      else if (path.startsWith('/manager')) redirectPath = '/manager/login'
+      else if (path.startsWith('/committee')) redirectPath = '/committee/login'
+
+      window.location.href = redirectPath
+      throw new Error(data.message || 'Session expired')
+    }
+
     if (!response.ok) {
       throw new Error(data.message || 'Request failed')
     }
@@ -39,12 +53,15 @@ class ApiService {
   forgotPassword(email) { return this.request('POST', '/api/auth/forgot-password', { email }) }
   resetPassword(token, password) { return this.request('POST', `/api/auth/reset-password/${token}`, { password }) }
   getMe() { return this.request('GET', '/api/auth/me') }
+  refreshToken() { return this.request('POST', '/api/auth/refresh-token') }
 
   // Donations
   getDonations(params = '') { return this.request('GET', `/api/donations${params ? '?' + params : ''}`) }
   getTopDonors(params = '') { return this.request('GET', `/api/donations/top-donors${params ? '?' + params : ''}`) }
   getDonationSummary(params = '') { return this.request('GET', `/api/donations/summary${params ? '?' + params : ''}`) }
   createDonation(data) { return this.request('POST', '/api/donations', data) }
+  updateDonation(id, data) { return this.request('PUT', `/api/donations/${id}`, data) }
+  deleteDonation(id) { return this.request('DELETE', `/api/donations/${id}`) }
   createOnlineDonation(data) { return this.request('POST', '/api/donations/online', data) }
 
   // Expenses
@@ -54,11 +71,38 @@ class ApiService {
   updateExpense(id, data) { return this.request('PUT', `/api/expenses/${id}`, data) }
   deleteExpense(id) { return this.request('DELETE', `/api/expenses/${id}`) }
 
+  async uploadRequest(method, endpoint, formData) {
+    const options = {
+      method,
+      headers: {},
+      body: formData,
+    }
+    const token = this.getToken()
+    if (token) options.headers['Authorization'] = `Bearer ${token}`
+    const response = await fetch(`${this.baseURL}${endpoint}`, options)
+    const data = await response.json()
+    if (response.status === 401 && endpoint !== '/api/auth/login') {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('user')
+      const path = window.location.pathname
+      let redirectPath = '/login'
+      if (path.startsWith('/admin')) redirectPath = '/admin/login'
+      else if (path.startsWith('/manager')) redirectPath = '/manager/login'
+      else if (path.startsWith('/committee')) redirectPath = '/committee/login'
+      window.location.href = redirectPath
+      throw new Error(data.message || 'Session expired')
+    }
+    if (!response.ok) throw new Error(data.message || 'Request failed')
+    return data
+  }
+
   // Events
   getEvents(params = '') { return this.request('GET', `/api/events${params ? '?' + params : ''}`) }
   getEvent(id) { return this.request('GET', `/api/events/${id}`) }
   createEvent(data) { return this.request('POST', '/api/events', data) }
+  createEventWithImage(formData) { return this.uploadRequest('POST', '/api/events', formData) }
   updateEvent(id, data) { return this.request('PUT', `/api/events/${id}`, data) }
+  updateEventWithImage(id, formData) { return this.uploadRequest('PUT', `/api/events/${id}`, formData) }
   deleteEvent(id) { return this.request('DELETE', `/api/events/${id}`) }
   registerForEvent(id) { return this.request('POST', `/api/events/${id}/register`) }
 

@@ -39,7 +39,7 @@ async function stripeWebhook(req, res) {
         email: meta.email || '',
         phone: meta.phone || '',
         amount,
-        type: meta.type || 'Mosque Fund',
+        type: meta.type || 'Masjid Fund',
         paymentMethod: 'Online',
         isAnonymous: meta.isAnonymous === 'true',
         stripePaymentId: session.payment_intent,

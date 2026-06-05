@@ -7,17 +7,18 @@ import Toast from '../../Common/Toast'
 import { ROUTES } from '../../../utils/constants.js'
 
 export default function AdminLayout() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading } = useAuth()
   const { toggleSidebar } = useUI()
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Check if user is admin
+    if (loading) return
     if (!isAuthenticated || user?.role !== 'admin') {
-      navigate(ROUTES.LOGIN)
+      navigate(ROUTES.ADMIN_LOGIN)
     }
-  }, [isAuthenticated, user, navigate])
+  }, [isAuthenticated, user, navigate, loading])
 
+  if (loading) return null
   if (!isAuthenticated || user?.role !== 'admin') {
     return null
   }
@@ -41,13 +42,8 @@ export default function AdminLayout() {
 
             <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
 
-            <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <i className="material-icons-round">notifications</i>
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <i className="material-icons-round">settings</i>
-              </button>
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:inline text-sm text-gray-500">{user?.name || 'Admin'}</span>
             </div>
           </div>
         </header>

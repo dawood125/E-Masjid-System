@@ -29,7 +29,7 @@ router.get('/', async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        today: todayPrayer || { fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45', jummah: '13:00' },
+        today: todayPrayer || { fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45', jummah: '13:00', eidUlFitr: '', eidUlAdha: '' },
         week: weekPrayers,
       },
     });
@@ -49,17 +49,19 @@ router.put(
     body('maghrib').isString().trim().isLength({ min: 3, max: 10 }).withMessage('Valid maghrib time is required'),
     body('isha').isString().trim().isLength({ min: 3, max: 10 }).withMessage('Valid isha time is required'),
     body('jummah').optional().isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid jummah time'),
+    body('eidUlFitr').optional().isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid Eid ul-Fitr time'),
+    body('eidUlAdha').optional().isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid Eid ul-Adha time'),
     handleValidation,
   ],
   async (req, res, next) => {
   try {
-    const { date, fajr, zuhr, asr, maghrib, isha, jummah } = req.body;
+    const { date, fajr, zuhr, asr, maghrib, isha, jummah, eidUlFitr, eidUlAdha } = req.body;
     const targetDate = new Date(date);
     targetDate.setHours(0, 0, 0, 0);
 
     const prayerTime = await PrayerTime.findOneAndUpdate(
       { date: targetDate, mosqueId: req.user.mosqueId },
-      { date: targetDate, fajr, zuhr, asr, maghrib, isha, jummah, mosqueId: req.user.mosqueId },
+      { date: targetDate, fajr, zuhr, asr, maghrib, isha, jummah, eidUlFitr, eidUlAdha, mosqueId: req.user.mosqueId },
       { new: true, upsert: true, runValidators: true }
     );
 
