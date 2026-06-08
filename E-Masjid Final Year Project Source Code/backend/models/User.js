@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Invalid email format'],
   },
-  password: { type: String, required: [true, 'Password is required'], minlength: 6, select: false },
+  password: { type: String, required: [true, 'Password is required'], minlength: 8, select: false },
   role: {
     type: String,
     enum: ['community', 'admin', 'scholar', 'manager', 'committee'],

@@ -37,7 +37,7 @@ const seedDB = async () => {
       name: 'Haji Muhammad Arif', email: 'committee@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444444',
     });
     const user1 = await User.create({
-      name: 'Abdullah Ahmed', email: 'user@emasjid.pk', password: 'user123', role: 'community', phone: '0300-5555555',
+      name: 'Abdullah Ahmed', email: 'user@emasjid.pk', password: 'user1234', role: 'community', phone: '0300-5555555',
     });
 
     // Create mosque
@@ -58,7 +58,7 @@ const seedDB = async () => {
     const donations = [
       { donorName: 'Abdullah Ahmed', email: 'abdullah@example.com', amount: 5000, type: 'Zakat', paymentMethod: 'Cash', mosqueId: mosque._id },
       { donorName: 'Fatima Khan', email: 'fatima@example.com', amount: 2500, type: 'Sadaqah', paymentMethod: 'Card', mosqueId: mosque._id },
-      { donorName: 'Muhammad Hassan', email: 'hassan@example.com', amount: 10000, type: 'Mosque Fund', paymentMethod: 'Cash', mosqueId: mosque._id },
+      { donorName: 'Muhammad Hassan', email: 'hassan@example.com', amount: 10000, type: 'Masjid Fund', paymentMethod: 'Cash', mosqueId: mosque._id },
       { donorName: 'Anonymous', email: '', amount: 7500, type: 'Zakat', paymentMethod: 'Online', isAnonymous: true, mosqueId: mosque._id },
       { donorName: 'Ibrahim Rahman', email: 'ibrahim@example.com', amount: 3000, type: 'Sadaqah', paymentMethod: 'Cash', mosqueId: mosque._id },
     ];
@@ -161,7 +161,7 @@ const seedDB = async () => {
     console.log('  Admin:     admin@emasjid.pk / admin123');
     console.log('  Scholar:   scholar@emasjid.pk / scholar123');
     console.log('  Committee: committee@emasjid.pk / committee123');
-    console.log('  User:      user@emasjid.pk / user123\n');
+    console.log('  User:      user@emasjid.pk / user1234\n');
 
     process.exit(0);
   } catch (error) {

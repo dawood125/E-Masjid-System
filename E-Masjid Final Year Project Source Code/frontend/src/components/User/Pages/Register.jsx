@@ -29,8 +29,6 @@ export default function Register() {
     setLoading(true)
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
       await register(formData.email, formData.password, formData.name, formData.phone)
       showToast('Account created successfully!', 'success')
       navigate(ROUTES.HOME)
@@ -43,7 +41,7 @@ export default function Register() {
 
   const passwordScore = Math.min(
     4,
-    Number(formData.password.length >= 6) +
+    Number(formData.password.length >= 8) +
       Number(/[A-Z]/.test(formData.password)) +
       Number(/[0-9]/.test(formData.password)) +
       Number(/[^A-Za-z0-9]/.test(formData.password))

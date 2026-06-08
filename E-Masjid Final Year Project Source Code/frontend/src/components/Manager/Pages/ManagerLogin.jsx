@@ -24,7 +24,6 @@ export default function ManagerLogin() {
     setLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500))
       await login(formData.email, formData.password, 'manager')
       showToast('Manager logged in successfully.', 'success')
       navigate(ROUTES.MANAGER)

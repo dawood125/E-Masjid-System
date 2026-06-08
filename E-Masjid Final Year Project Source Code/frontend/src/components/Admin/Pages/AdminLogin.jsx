@@ -24,7 +24,6 @@ export default function AdminLogin() {
     setLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500))
       await login(formData.email, formData.password, 'admin')
       showToast('Admin logged in successfully.', 'success')
       navigate(ROUTES.ADMIN)

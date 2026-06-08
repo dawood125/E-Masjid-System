@@ -7,6 +7,12 @@ const generateToken = require('../utils/generateToken');
 const sendEmail = require('../utils/sendEmail');
 const { handleValidation, sanitizeString } = require('../middleware/validate');
 
+const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/;
+const passwordValidation = body('password')
+  .isString()
+  .matches(PASSWORD_RULE)
+  .withMessage('Password must be at least 8 characters and include at least one letter and one number');
+
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
@@ -15,7 +21,7 @@ router.post(
   [
     body('name').isString().trim().isLength({ min: 2, max: 80 }).withMessage('Name must be between 2 and 80 characters'),
     body('email').isString().trim().isEmail().withMessage('Valid email is required'),
-    body('password').isString().isLength({ min: 6, max: 64 }).withMessage('Password must be between 6 and 64 characters'),
+    passwordValidation,
     body('phone').optional().isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be between 7 and 20 characters'),
     handleValidation,
   ],
@@ -141,7 +147,7 @@ router.post(
   '/reset-password/:token',
   [
     param('token').isString().isLength({ min: 20, max: 128 }).withMessage('Invalid token'),
-    body('password').isString().isLength({ min: 6, max: 64 }).withMessage('Password must be between 6 and 64 characters'),
+    passwordValidation,
     handleValidation,
   ],
   async (req, res, next) => {
