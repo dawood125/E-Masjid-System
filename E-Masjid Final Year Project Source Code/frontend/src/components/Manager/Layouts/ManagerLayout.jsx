@@ -12,7 +12,7 @@ const managerLinks = [
 ]
 
 export default function ManagerLayout() {
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, loading, logout } = useAuth()
   const { sidebarOpen, toggleSidebar, closeSidebar } = useUI()
   const navigate = useNavigate()
   const location = useLocation()
@@ -66,10 +66,10 @@ export default function ManagerLayout() {
         <div className="px-4 my-4 border-t border-white/10" />
 
         <div className="p-4">
-          <Link to={ROUTES.HOME} onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('authToken'); closeSidebar() }} className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
+          <button type="button" onClick={() => { closeSidebar(); const path = logout(); if (path) navigate(path) }} className="w-full flex items-center gap-3 rounded-lg px-4 py-3 text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
             <i className="material-icons-round">logout</i>
             <span className="font-medium">Logout</span>
-          </Link>
+          </button>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-[#0f0f23]">

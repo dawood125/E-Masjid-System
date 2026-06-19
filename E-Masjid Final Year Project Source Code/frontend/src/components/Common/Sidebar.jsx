@@ -1,9 +1,12 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUI } from '../../hooks/useUI.js'
+import { useAuth } from '../../hooks/useAuth.js'
 import { ROUTES } from '../../utils/constants.js'
 
 export default function Sidebar({ role = 'admin' }) {
   const { sidebarOpen, closeSidebar } = useUI()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
   const location = useLocation()
 
   const adminLinks = [
@@ -86,17 +89,18 @@ export default function Sidebar({ role = 'admin' }) {
 
         {/* Logout */}
         <div className="p-4">
-          <Link
-            to={ROUTES.HOME}
+          <button
+            type="button"
             onClick={() => {
-              localStorage.removeItem('user')
               closeSidebar()
+              const redirectPath = logout()
+              if (redirectPath) navigate(redirectPath)
             }}
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-primary-100 transition-colors duration-150 hover:bg-primary-700"
+            className="w-full flex items-center gap-3 rounded-lg px-4 py-3 text-primary-100 transition-colors duration-150 hover:bg-primary-700"
           >
             <i className="material-icons-round">logout</i>
             <span className="font-medium">Logout</span>
-          </Link>
+          </button>
         </div>
 
         {/* Footer */}
