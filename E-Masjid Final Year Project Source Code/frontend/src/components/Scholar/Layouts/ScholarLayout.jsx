@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import Sidebar from '../../Common/Sidebar'
-import Toast from '../../Common/Toast'
 import { ROUTES } from '../../../utils/constants.js'
 
 export default function ScholarLayout() {
@@ -55,8 +54,6 @@ export default function ScholarLayout() {
           </div>
         </main>
       </div>
-
-      <Toast />
     </div>
   )
 }

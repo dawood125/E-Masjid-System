@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { ROUTES } from '../../../utils/constants.js'
-import Toast from '../../Common/Toast'
 
 export default function CommitteeLayout() {
   const { user, isAuthenticated, loading, logout } = useAuth()
@@ -95,7 +94,6 @@ export default function CommitteeLayout() {
           </div>
         </main>
       </div>
-      <Toast />
     </div>
   )
 }

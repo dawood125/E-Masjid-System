@@ -48,12 +48,14 @@ import AdminLayout from './components/Admin/Layouts/AdminLayout'
 import ScholarLayout from './components/Scholar/Layouts/ScholarLayout'
 import ManagerLayout from './components/Manager/Layouts/ManagerLayout'
 import CommitteeLayout from './components/Committee/Layouts/CommitteeLayout'
+import Toast from './components/Common/Toast'
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <UIProvider>
+          <Toast />
           <Routes>
             {/* User Routes */}
             <Route element={<UserLayout />}>

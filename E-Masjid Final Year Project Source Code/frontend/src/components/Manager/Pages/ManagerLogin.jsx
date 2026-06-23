@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useForceLogoutOnMount } from '../../../hooks/useForceLogoutOnMount.js'
 import { ROUTES } from '../../../utils/constants.js'
 
 export default function ManagerLogin() {
   const { isAuthenticated, user, login } = useAuth()
   const { showToast } = useUI()
   const navigate = useNavigate()
+  useForceLogoutOnMount()
 
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)

@@ -4,7 +4,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { ROUTES } from '../../../utils/constants.js'
-import Toast from '../../Common/Toast'
 
 const managerLinks = [
   { label: 'Dashboard', path: ROUTES.MANAGER_DASHBOARD, icon: 'dashboard' },
@@ -108,8 +107,6 @@ export default function ManagerLayout() {
           </div>
         </main>
       </div>
-
-      <Toast />
     </div>
   )
 }

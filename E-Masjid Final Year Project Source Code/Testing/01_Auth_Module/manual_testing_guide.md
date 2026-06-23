@@ -189,11 +189,61 @@ Wrong password shows an error but does NOT block you.
 
 ---
 
+## Test 9: Admin Sidebar — All Navigation Links Visible & Scrollable
+
+### What You're Testing
+The admin sidebar must show all 8 navigation links and they should all be reachable. Footer should stay pinned to the bottom.
+
+### Steps to Follow
+1. Login as Admin (Test 3)
+2. Look at the left sidebar — you should see, in order: Dashboard, Donations & Expenses, Prayer Times, Events, Announcements, Manage Scholars, Committee Members, Fund Requests
+3. If all 8 don't fit at once, the middle section of the sidebar should scroll
+4. Header "E-Masjid / Admin Panel" should stay at the top
+5. Footer "Haji Ahmad — Administrator" should stay pinned at the bottom
+
+### What Should Happen
+✅ All 8 navigation links are visible OR reachable by scrolling the sidebar middle area  
+✅ Header stays anchored at the top  
+✅ Footer stays anchored at the bottom  
+✅ Clicking any link navigates to the correct page
+
+### Mark Result
+☐ PASS ☐ FAIL — Notes: _______________
+
+---
+
+## Test 10: Cross-Role Login (Force Logout Previous Session)
+
+### What You're Testing
+If you are logged in as one role and visit another role's login page, the system should automatically sign you out of the previous role and show a toast.
+
+### Steps to Follow
+1. Login as Admin (Test 3) — you should be on `/admin`
+2. Without clicking Logout, open `/manager/login` (same browser tab or new tab)
+3. A blue info toast should appear: "Signed out from your previous Admin session. Please sign in below."
+4. The Manager login form should be visible and empty
+5. Login as Manager (`manager@emasjid.pk / manager123`)
+6. You should land on `/manager` dashboard
+7. (Optional) Try any other pair: Manager → `/admin/login`, Committee → `/login`, etc.
+
+### What Should Happen
+✅ Info toast appears on every cross-role login attempt (bottom-right of screen)  
+✅ Previous session is fully cleared (no leftover Logout button)  
+✅ New login form is ready to use immediately  
+✅ After logging in as the new role, only that role's dashboard is accessible
+
+### Mark Result
+☐ PASS ☐ FAIL — Notes: _______________
+
+---
+
 ## Final Checklist
-☐ All 8 tests passed  
+☐ All 10 tests passed  
 ☐ No "Too many requests" errors  
 ☐ Login felt fast (not stuck loading)  
-☐ Logout worked  
+☐ Logout worked for all 5 roles (User, Admin, Manager, Committee, Scholar)  
+☐ All 8 admin sidebar links are visible/scrollable  
+☐ Cross-role login shows toast and clears previous session
 
 ## What To Send Back
 1. List of tests that PASSED
