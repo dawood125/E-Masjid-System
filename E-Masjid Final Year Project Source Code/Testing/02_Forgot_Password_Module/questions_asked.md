@@ -49,10 +49,10 @@ We removed rate limiting in Phase 1 (FYP requirement for ease of testing). Shoul
 
 ---
 
-## Client Answers (to be filled in by Dawood)
+## Client Answers (filled 2026-06-23 by Dawood)
 
-1.
-2.
-3.
-4.
-5.
+1. **C — Both** (Mailtrap for dev tests, Gmail for real; MAIL_* overrides EMAIL_* per existing code)
+2. **A — Fix the typo, keep 24 hours** (email body currently says "30 minutes", should say "24 hours" to match docs and UI)
+3. **A — Use `CLIENT_URL` from .env** (`http://localhost:5173` for now; change when deployed)
+4. **A — Keep rate limiting removed** (FYP testing priority; re-add before production)
+5. **C — Both** (automated API check + manual partner test in Mailtrap/Gmail inbox)

@@ -8,6 +8,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
   const { showToast } = useUI()
 
   const handleSubmit = async (e) => {
@@ -117,16 +118,20 @@ export default function ForgotPassword() {
                     <button
                       type="button"
                       className="font-semibold text-[#047857] hover:text-[#065f46]"
+                      disabled={resendLoading}
                       onClick={async () => {
+                        setResendLoading(true)
                         try {
                           await api.forgotPassword(email)
                           showToast('Reset link sent again', 'success')
                         } catch (err) {
                           showToast(err.message || 'Failed to resend reset link', 'error')
+                        } finally {
+                          setResendLoading(false)
                         }
                       }}
                     >
-                      Resend
+                      {resendLoading ? 'Sending...' : 'Resend'}
                     </button>
                   </p>
 

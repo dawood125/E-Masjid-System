@@ -117,6 +117,8 @@ router.post(
     user.resetPasswordExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     await user.save();
 
+    // NOTE: In production, ensure CLIENT_URL is set to https://... for secure links.
+    // For local dev, http://localhost:5173 is fine.
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -127,7 +129,7 @@ router.post(
           <h2>Password Reset Request</h2>
           <p>You requested a password reset. Click the button below to reset your password:</p>
           <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #047857; color: white; text-decoration: none; border-radius: 8px; margin: 16px 0;">Reset Password</a>
-          <p style="color: #666; font-size: 14px;">This link expires in 30 minutes. If you didn't request this, please ignore.</p>
+          <p style="color: #666; font-size: 14px;">This link expires in 24 hours. If you didn't request this, please ignore.</p>
         </div>
       </div>
     `;
@@ -148,6 +150,12 @@ router.post(
   [
     param('token').isString().isLength({ min: 20, max: 128 }).withMessage('Invalid token'),
     passwordValidation,
+    body('confirmPassword').optional().isString().custom((value, { req }) => {
+      if (value !== undefined && value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    }),
     handleValidation,
   ],
   async (req, res, next) => {
@@ -160,6 +168,10 @@ router.post(
 
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    if (req.body.confirmPassword !== undefined && req.body.confirmPassword !== req.body.password) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match' });
     }
 
     user.password = req.body.password;

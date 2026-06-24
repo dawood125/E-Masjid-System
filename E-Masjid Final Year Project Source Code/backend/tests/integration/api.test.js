@@ -202,5 +202,98 @@ describe('E-Masjid API (integration)', () => {
     expect(accept.body.data.status).toBe('accepted');
     expect(String(accept.body.data.scholarId)).toBe(String(scholarUser._id));
   });
+
+  // ─── Forgot / Reset Password flow (FR-9) ─────────────────────────
+  const TEST_COMMUNITY_EMAIL = 'u@test.com'
+
+  test('forgot-password returns neutral message for unknown email (no enumeration)', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'nonexistent@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toMatch(/if the email exists/i);
+  });
+
+  test('forgot-password returns neutral message for known email and stores hashed token + 24h expiry', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: TEST_COMMUNITY_EMAIL });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toMatch(/if the email exists/i);
+
+    const stored = await User.findOne({ email: TEST_COMMUNITY_EMAIL }).select('+resetPasswordToken +resetPasswordExpire');
+    expect(stored).toBeTruthy();
+    expect(stored.resetPasswordToken).toBeTruthy();
+    expect(stored.resetPasswordToken).toMatch(/^[a-f0-9]{64}$/); // sha256 hex
+    const expiresIn = stored.resetPasswordExpire.getTime() - Date.now();
+    // Should be ~24 hours (allow a 60-second window for test execution time)
+    expect(expiresIn).toBeGreaterThan(24 * 60 * 60 * 1000 - 60_000);
+    expect(expiresIn).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
+  });
+
+  test('reset-password: wrong/missing token rejected; one-time use; matches new password rules', async () => {
+    const crypto = require('crypto');
+    // Set a known token + expiry on the community test user
+    const rawToken = crypto.randomBytes(20).toString('hex');
+    const hashed = crypto.createHash('sha256').update(rawToken).digest('hex');
+    await User.updateOne(
+      { email: TEST_COMMUNITY_EMAIL },
+      { resetPasswordToken: hashed, resetPasswordExpire: new Date(Date.now() + 24 * 60 * 60 * 1000) }
+    );
+
+    // Invalid token -> 400
+    const badToken = await request(app)
+      .post(`/api/auth/reset-password/${'a'.repeat(40)}`)
+      .send({ password: 'NewPass1234' });
+    expect(badToken.status).toBe(400);
+    expect(badToken.body.success).toBe(false);
+
+    // Weak password -> 400 (PASSWORD_RULE) - server returns { message: 'Validation failed', errors: [{ field, message }] }
+    const weak = await request(app)
+      .post(`/api/auth/reset-password/${rawToken}`)
+      .send({ password: 'short' });
+    expect(weak.status).toBe(400);
+    expect(weak.body.message).toBe('Validation failed');
+    expect(Array.isArray(weak.body.errors)).toBe(true);
+    const passwordErr = weak.body.errors.find((e) => e.field === 'password');
+    expect(passwordErr).toBeTruthy();
+    expect(passwordErr.message).toMatch(/at least 8 characters/i);
+
+    // Mismatched confirmPassword -> 400 (server-side defense in depth)
+    const mismatch = await request(app)
+      .post(`/api/auth/reset-password/${rawToken}`)
+      .send({ password: 'NewPass1234', confirmPassword: 'DifferentPass1234' });
+    expect(mismatch.status).toBe(400);
+    expect(mismatch.body.success).toBe(false);
+    // The custom validator's error message is surfaced via errors[] (handleValidation uses generic message)
+    const confirmErr = (mismatch.body.errors || []).find((e) => e.field === 'confirmPassword' || /passwords do not match/i.test(e.message));
+    expect(confirmErr).toBeTruthy();
+    expect(confirmErr.message).toMatch(/passwords do not match/i);
+
+    // Valid -> 200, token cleared, login works with new password
+    const ok = await request(app)
+      .post(`/api/auth/reset-password/${rawToken}`)
+      .send({ password: 'NewPass1234', confirmPassword: 'NewPass1234' });
+    expect(ok.status).toBe(200);
+    expect(ok.body.success).toBe(true);
+
+    const cleared = await User.findOne({ email: TEST_COMMUNITY_EMAIL }).select('+resetPasswordToken +resetPasswordExpire');
+    expect(cleared.resetPasswordToken).toBeUndefined();
+    expect(cleared.resetPasswordExpire).toBeUndefined();
+
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: TEST_COMMUNITY_EMAIL, password: 'NewPass1234' });
+    expect(login.status).toBe(200);
+    expect(login.body.token).toBeTruthy();
+
+    // One-time use: same token again -> 400
+    const replay = await request(app)
+      .post(`/api/auth/reset-password/${rawToken}`)
+      .send({ password: 'AnotherPass1234', confirmPassword: 'AnotherPass1234' });
+    expect(replay.status).toBe(400);
+  });
 });
 

@@ -18,7 +18,7 @@
 | Phase | Folder | Module | Status |
 |-------|--------|--------|--------|
 | 1 | `01_Auth_Module` | Login/Register/Logout/Session/RBAC (all 5 roles) | ✅ Complete |
-| 2 | `02_Forgot_Password_Module` | Forgot/Reset password + email-service failure | 🔄 Starting |
+| 2 | `02_Forgot_Password_Module` | Forgot/Reset password + email-service failure | ✅ Complete (10/10 backend tests, awaiting partner manual) |
 | 3 | `03_Navbar_Masjid_Selection` | Navbar + multi-mosque dropdown | ⏸ Pending |
 | 4 | `04_Homepage_Module` | Public homepage (prayer/announcement/event + carousel + top donors) | ⏸ Pending |
 | 5 | `05_Prayer_Timings_Module` | Public view + admin manage + Jummah + Ramadan | ⏸ Pending |

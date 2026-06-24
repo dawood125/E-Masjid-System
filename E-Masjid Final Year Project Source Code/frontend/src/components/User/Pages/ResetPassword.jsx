@@ -14,10 +14,12 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
+  const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (password.length < 6) {
-      showToast('Password must be at least 6 characters.', 'warning')
+    if (!PASSWORD_RULE.test(password)) {
+      showToast('Password must be at least 8 characters and include at least one letter and one number.', 'warning')
       return
     }
     if (password !== confirmPassword) {
@@ -31,7 +33,7 @@ export default function ResetPassword() {
 
     setLoading(true)
     try {
-      await api.resetPassword(token, password)
+      await api.resetPassword(token, { password, confirmPassword })
       setDone(true)
       showToast('Password reset successful. Please login.', 'success')
       setTimeout(() => navigate(ROUTES.LOGIN), 1200)

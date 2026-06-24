@@ -3,6 +3,7 @@ import { API_BASE_URL } from './constants.js'
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL
+    this.NO_REDIRECT_ENDPOINTS = ['/api/auth/login', '/api/auth/forgot-password']
   }
 
   getToken() {
@@ -27,7 +28,8 @@ class ApiService {
     const response = await fetch(`${this.baseURL}${endpoint}`, options)
     const data = await response.json()
 
-    if (response.status === 401 && endpoint !== '/api/auth/login') {
+    // (we keep /api/auth/reset-password/:token below — handled per-call)
+    if (response.status === 401 && !this.NO_REDIRECT_ENDPOINTS.includes(endpoint) && !endpoint.startsWith('/api/auth/reset-password/')) {
       localStorage.removeItem('authToken')
       localStorage.removeItem('user')
 
@@ -51,7 +53,7 @@ class ApiService {
   login(email, password) { return this.request('POST', '/api/auth/login', { email, password }) }
   register(data) { return this.request('POST', '/api/auth/register', data) }
   forgotPassword(email) { return this.request('POST', '/api/auth/forgot-password', { email }) }
-  resetPassword(token, password) { return this.request('POST', `/api/auth/reset-password/${token}`, { password }) }
+  resetPassword(token, data) { return this.request('POST', `/api/auth/reset-password/${token}`, data) }
   getMe() { return this.request('GET', '/api/auth/me') }
   refreshToken() { return this.request('POST', '/api/auth/refresh-token') }
 
@@ -81,7 +83,7 @@ class ApiService {
     if (token) options.headers['Authorization'] = `Bearer ${token}`
     const response = await fetch(`${this.baseURL}${endpoint}`, options)
     const data = await response.json()
-    if (response.status === 401 && endpoint !== '/api/auth/login') {
+    if (response.status === 401 && !this.NO_REDIRECT_ENDPOINTS.includes(endpoint) && !endpoint.startsWith('/api/auth/reset-password/')) {
       localStorage.removeItem('authToken')
       localStorage.removeItem('user')
       const path = window.location.pathname
