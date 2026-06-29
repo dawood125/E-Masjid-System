@@ -63,7 +63,7 @@ That a real community user can request a password-reset link, and the website sh
 - The email text says the link is valid for 24 hours
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes:  Fail_______________
 
 ---
 
