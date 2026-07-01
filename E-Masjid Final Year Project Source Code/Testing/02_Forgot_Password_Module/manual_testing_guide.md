@@ -28,7 +28,9 @@ npm run dev
 
 **Step 4:** Open your browser to `http://localhost:5173`
 
-**Step 5:** You will need to see the password-reset emails. Open Mailtrap in a second browser tab: `https://mailtrap.io` (the inbox is configured in `backend/.env`). Every "Send Reset Link" click should appear there within a few seconds.
+**Step 5:** You will need to see the password-reset emails. The app now uses **SendGrid** (real Gmail delivery, no sandbox). Open your real Gmail inbox in a second browser tab: `https://mail.google.com` and log in as `dawood.bhatti8812@gmail.com`. Every "Send Reset Link" click for any of the test emails (e.g. `user@emasjid.pk`) should arrive there within 5-10 seconds. Sender: `E-Masjid System`. Subject: `E-Masjid Password Reset`.
+
+> If you ever want to test without sending real email, set `EMAIL_PROVIDER=smtp` in `backend/.env` and the app will fall back to Mailtrap (sandbox). Default is SendGrid.
 
 ---
 
@@ -58,12 +60,12 @@ That a real community user can request a password-reset link, and the website sh
 - The page changes to a "Check Your Email" screen with a green envelope icon
 - It shows the email address you entered
 - A green toast appears briefly: "Reset link sent to your email!"
-- The same email arrives in your Mailtrap inbox within a few seconds
-- The email has the subject "E-Masjid Password Reset" and a green "Reset Password" button
-- The email text says the link is valid for 24 hours
+- The same email arrives in your **real Gmail inbox** (https://mail.google.com) within 5-10 seconds — sender is `E-Masjid System <dawood.bhatti8812@gmail.com>`, subject is `E-Masjid Password Reset`
+- The email has a green "Reset Password" button
+- The email text says the link is valid for **24 hours**
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes:  Fail_______________
+☐ PASS  ☐ FAIL — Notes: _______Pass________
 
 ---
 
@@ -84,7 +86,7 @@ That the website does NOT tell a stranger whether an email is registered. (This 
 - No email is actually sent (you can confirm by checking Mailtrap — there should be no new message)
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______Pass________
 
 ---
 
@@ -94,8 +96,8 @@ That the website does NOT tell a stranger whether an email is registered. (This 
 That the reset link in the email actually opens the Reset Password form, and the form looks normal.
 
 ### Steps to Follow
-1. Go back to Mailtrap
-2. Open the email from Test 1 (the one sent to `user@emasjid.pk`)
+1. Go back to your **Gmail inbox** (https://mail.google.com)
+2. Open the email from Test 1 (the one sent to `user@emasjid.pk` by `E-Masjid System`)
 3. Click the green **Reset Password** button (or copy the link and paste it into your browser)
 4. A new page opens at `http://localhost:5173/reset-password/<long-random-string>`
 
@@ -108,7 +110,7 @@ That the reset link in the email actually opens the Reset Password form, and the
 - An eye icon lets you show/hide the password you type
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______pass________
 
 ---
 
@@ -130,7 +132,7 @@ That a strong new password is accepted and the user is sent back to the login pa
 - No red error toast appears
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______Pass________
 
 ---
 
@@ -152,7 +154,7 @@ That a weak password is rejected by the website before any email/save happens.
 - The password is NOT changed (you can verify by trying the OLD password `user1234` in Test 9 — it should still work)
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______Pass________
 
 ---
 
@@ -174,7 +176,7 @@ That two different passwords in the two fields are rejected before any save.
 - The password is NOT changed
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______Pass________
 
 ---
 
@@ -199,7 +201,7 @@ That a reset link can only be used one time. Clicking it again should not let yo
 - The first password `FirstReset1` should still let you log in (Test 8 will confirm)
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ______pass_________
 
 ---
 
@@ -221,7 +223,7 @@ That the new password set in Test 4 (or Test 7's `FirstReset1`) actually works f
 - Your name "Abdullah Ahmed" appears in the top-right area
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ____________pass___
 
 ---
 
@@ -243,7 +245,7 @@ That the OLD password no longer works after a successful reset.
 - You stay on the login page
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______pass________
 
 ---
 
@@ -267,7 +269,7 @@ That requesting a fresh reset link cancels any old link that was never used.
 - This second attempt succeeds and you are redirected to `/login`
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _____pass__________
 
 ---
 
@@ -290,7 +292,7 @@ That the "Resend" button works without errors and cannot be double-clicked.
 - A second email appears in Mailtrap
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _________pass______
 
 ---
 

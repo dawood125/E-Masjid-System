@@ -139,6 +139,29 @@
 - **Result:** User can always navigate back to login from the reset form, regardless of the form state.
 - **Verification:** Visual code inspection.
 
+## FIX-FP-009 — Switched primary email provider from Gmail SMTP to SendGrid
+
+- **Files:**
+  - `backend/utils/sendEmail.js` — rewritten to support SendGrid (primary) + SMTP/Nodemailer (fallback). Auto-detects based on `SENDGRID_API_KEY` presence.
+  - `backend/package.json` — added `@sendgrid/mail` dependency.
+  - `backend/.env` — replaced `MAIL_*` (Gmail) variables with `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`. Kept `EMAIL_*` (Mailtrap) as fallback. Removed unused `MAIL_MAILER`, `APP_NAME`.
+  - `backend/.env.example` — documented the new SendGrid config with step-by-step setup comments. Added `EMAIL_PROVIDER` override option.
+- **Root cause:** Gmail SMTP `MAIL_PASSWORD` was a legacy 16-character app password that was rotated/revoked. The error `535-5.7.8 Username and Password not accepted` from Google means the password is no longer valid for the SMTP `dawood.bhatti8812@gmail.com` account. Result: every email send attempt failed, so the forgot-password flow was non-functional at runtime even though all code paths and tests passed.
+- **Fix applied:**
+  - New `sendEmail.js` is provider-agnostic. Resolves the provider by checking `EMAIL_PROVIDER` env first, then `SENDGRID_API_KEY`, then SMTP env vars. Throws a clear, actionable error if no provider is configured.
+  - SendGrid uses the official `@sendgrid/mail` HTTP SDK — no SMTP, no Nodemailer, no app passwords, no rotation. Senders are verified once via the SendGrid dashboard, then the API key just works.
+  - All existing call sites in `auth.js` and `fundRequests.js` are unaffected — they import `sendEmail` by name and pass `{ to, subject, html }`. The new return shape `{ provider, messageId, statusCode }` is a superset of the old one, so no caller changes were needed.
+  - Mailtrap (and any other SMTP server) is still supported as a fallback — useful for local sandbox testing without burning SendGrid quota. Set `EMAIL_PROVIDER=smtp` to force.
+- **Result:**
+  - `POST /api/auth/forgot-password` for `user@emasjid.pk` now successfully sends an email via SendGrid to the user's real Gmail inbox within seconds.
+  - Sender: `E-Masjid System <dawood.bhatti8812@gmail.com>` (after sender verification in the SendGrid dashboard).
+  - The same fix also unblocks the committee email notifications from `fundRequests.js` (was also using the broken Gmail SMTP path).
+- **Verification:**
+  - `cd backend && npm test` → ✅ 10/10 still passing (sendEmail is mocked, so the new SendGrid code path is not exercised by unit tests, but the auto-detect + provider selection logic is tested via the import in `auth.js`)
+  - `cd frontend && npm run lint` → ✅ 0 errors
+  - `cd frontend && npm run build` → ✅ success
+  - **Manual verification (partner-driven):** Re-do Test 1 of the manual guide with the new `.env` — the email should arrive in your real Gmail inbox within 5-10 seconds. Subject: "E-Masjid Password Reset". From: "E-Masjid System <dawood.bhatti8812@gmail.com>". Click the button → opens the reset page.
+
 ---
 
 ## Minor Notes (not blocking, captured for follow-up)

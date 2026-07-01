@@ -241,3 +241,24 @@ A 12-test guide has been written for the partner — see `manual_testing_guide.m
 - [ ] Test 12: Repeat the forgot-password flow for each role (Admin, Manager, Committee, Scholar, User)
 
 **Status:** All 8 fixes verified PASS. Backend tests 10/10. Lint + build clean. Awaiting partner manual verification of the 12 browser tests.
+
+---
+
+## Update 2026-06-24 (later) — SendGrid email provider switch
+
+During the first manual test (Test 1 of the partner guide), the Gmail SMTP `MAIL_PASSWORD` returned `535-5.7.8 Username and Password not accepted` — the legacy 16-character app password had been rotated/revoked. Result: no email was sent, and the entire forgot-password flow was non-functional at runtime.
+
+**Decision:** Switched primary email provider from Gmail SMTP to **SendGrid** (100 emails/day free forever, real Gmail delivery, no rotating app passwords).
+
+**Changes:**
+- `backend/utils/sendEmail.js` — rewritten to be provider-agnostic. Auto-detects SendGrid vs SMTP based on `SENDGRID_API_KEY` presence. Supports `EMAIL_PROVIDER=sendgrid|smtp` override.
+- `backend/package.json` — added `@sendgrid/mail`.
+- `backend/.env` — replaced `MAIL_*` (Gmail) with `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL` + `SENDGRID_FROM_NAME`. Kept `EMAIL_*` (Mailtrap) as fallback.
+- `backend/.env.example` — documented the new config with SendGrid setup steps.
+
+**Verification after SendGrid switch:**
+- `cd backend && npm test` → ✅ 10/10 still passing (sendEmail is mocked in tests)
+- `cd frontend && npm run lint` → ✅ 0 errors
+- `cd frontend && npm run build` → ✅ success
+
+**Manual verification needed (by partner — you):** Re-run Test 1 of the manual guide. The reset email should now arrive in your real Gmail inbox within 5-10 seconds. Subject: "E-Masjid Password Reset". From: "E-Masjid System <dawood.bhatti8812@gmail.com>". **Important:** SendGrid requires a "Single Sender Verification" of the `SENDGRID_FROM_EMAIL` address before the first email can be sent. If you did this during SendGrid setup, the email will go out. If not, the test will fail with a 403 from SendGrid and you'll need to verify the sender at https://app.sendgrid.com/settings/senders (free, takes 1 minute, SendGrid sends a verification link to the Gmail inbox).

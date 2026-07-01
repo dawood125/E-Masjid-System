@@ -4,6 +4,7 @@
 > Verification done on 2026-06-24 against the current `main` branch.
 > Verification source: cross-agent adversarial report (see `my_test_results.md`) + independent re-read of the source.
 > **Update 2026-06-24:** BUG-FP-001b (api.resetPassword signature mismatch) is now FIXED. All 8 bugs resolved. Integration test count went 7 → 10.
+> **Update 2026-06-24 (later):** BUG-FP-009 (Gmail SMTP auth failure) found during partner's first manual test. FIXED by switching primary email provider to SendGrid.
 
 ---
 
@@ -115,3 +116,17 @@
 - IP-based throttling
 - Reset link sent in plain-text body (the email is HTML only; a plain-text alternative is not generated)
 - Audit log of password reset events (no `AuditLog` collection)
+
+## BUG-FP-009 — Gmail SMTP authentication failure blocks the entire forgot-password flow
+
+- **Severity:** Critical (the entire feature is non-functional at runtime)
+- **Location:** `backend/utils/sendEmail.js` (provider selection) + `backend/.env` (`MAIL_PASSWORD`)
+- **Steps to Reproduce (from partner's Test 1 on 2026-06-24):**
+  1. Start the backend with the existing `.env`
+  2. Open `/forgot-password`, enter `user@emasjid.pk`, click "Send Reset Link"
+  3. Check the backend logs / Mailtrap inbox
+- **Expected:** Email is sent (or silently caught in dev); user sees the "Check Your Email" screen
+- **Actual:** Server logs show `Invalid login: 535-5.7.8 Username and Password not accepted` from `gmail-smtp-msa.l.google.com`. The Gmail SMTP `MAIL_PASSWORD` is the legacy 16-character app password that was rotated/revoked (you had announced earlier in the session that you'd rotate the password after it was shared in chat). Result: **no email is sent, the feature is fully broken at runtime.** Backend tests still pass because they mock `sendEmail`.
+- **Status:** FIXED (2026-06-24, BUG-FP-009 follow-up). Switched primary email provider from Gmail SMTP to **SendGrid** (100 emails/day free forever, real Gmail delivery, no rotating app password). Mailtrap is kept as a fallback if SendGrid is not configured. See FIX-FP-009 in `bugs_fixed.md`.
+
+---
