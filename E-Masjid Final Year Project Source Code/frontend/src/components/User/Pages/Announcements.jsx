@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate } from '../../../utils/formatters.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const filters = ['all', 'news', 'important', 'event', 'community']
 
@@ -28,6 +28,7 @@ function categoryTagClass(category) {
 
 export default function Announcements() {
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
   const [page, setPage] = useState(1)
@@ -37,8 +38,7 @@ export default function Announcements() {
 
   useEffect(() => {
     let mounted = true
-    const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const params = activeMosqueId ? `mosqueId=${activeMosqueId}` : ''
     ;(async () => {
       try {
         const res = await api.getAnnouncements(params)
@@ -59,7 +59,7 @@ export default function Announcements() {
       }
     })()
     return () => { mounted = false }
-  }, [showToast])
+  }, [showToast, activeMosqueId])
 
   const enriched = useMemo(
     () =>

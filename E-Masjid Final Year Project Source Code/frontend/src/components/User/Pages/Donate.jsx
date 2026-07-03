@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency } from '../../../utils/formatters.js'
 import api from '../../../utils/api.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const donationTypes = [
   { value: 'sadaqah', label: 'Sadaqah', icon: 'favorite' },
@@ -17,6 +17,7 @@ const presetAmounts = [500, 1000, 5000, 10000]
 export default function Donate() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
 
   useEffect(() => {
     if (searchParams.get('success') === '1') {
@@ -74,7 +75,7 @@ export default function Donate() {
       return
     }
 
-    const mosqueId = getActiveMosqueId()
+    const mosqueId = activeMosqueId
     if (!mosqueId) {
       showToast('Please select a mosque from the navbar first', 'warning')
       return

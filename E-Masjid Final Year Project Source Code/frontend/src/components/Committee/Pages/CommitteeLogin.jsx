@@ -149,6 +149,12 @@ export default function CommitteeLogin() {
                   {loading ? 'Signing in...' : 'Sign In to Committee Panel'}
                 </button>
               </form>
+
+              <div className="mt-4 text-center">
+                <Link to={ROUTES.FORGOT_PASSWORD} className="font-semibold text-sm text-[#047857] hover:text-[#065f46]">
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
           </div>
         </div>

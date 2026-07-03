@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../utils/constants.js'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const CATEGORIES = ['Medical', 'Education', 'Housing', 'Food', 'Clothing', 'Debt', 'Other']
 
 export default function FundRequest() {
   const { isAuthenticated } = useAuth()
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,7 +42,7 @@ export default function FundRequest() {
     if (!formData.reason.trim()) errs.reason = 'Please explain why you need assistance'
     else if (formData.reason.trim().length < 30) errs.reason = 'Please provide more detail (at least 30 characters)'
     if (!formData.agreeTerms) errs.agreeTerms = 'You must agree to the terms'
-    if (!getActiveMosqueId()) errs.mosqueId = 'Please select a mosque before submitting a request'
+    if (!activeMosqueId) errs.mosqueId = 'Please select a mosque before submitting a request'
     return errs
   }
 
@@ -61,7 +62,7 @@ export default function FundRequest() {
 
     setSubmitting(true)
     try {
-      const mosqueId = getActiveMosqueId()
+      const mosqueId = activeMosqueId
       await api.createFundRequest({
         requesterName: formData.name,
         requesterEmail: formData.email,

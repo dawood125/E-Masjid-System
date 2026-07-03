@@ -150,12 +150,17 @@ export default function AdminLogin() {
                 </button>
               </form>
 
-              <p className="mt-6 text-center text-sm text-gray-600">
-                Scholar or community member?{' '}
-                <Link to={ROUTES.LOGIN} className="font-semibold text-[#047857] hover:text-[#065f46]">
-                  Use standard login
+              <div className="mt-4 flex flex-col items-center gap-2 text-sm">
+                <Link to={ROUTES.FORGOT_PASSWORD} className="font-semibold text-[#047857] hover:text-[#065f46]">
+                  Forgot Password?
                 </Link>
-              </p>
+                <p className="text-gray-600">
+                  Scholar or community member?{' '}
+                  <Link to={ROUTES.LOGIN} className="font-semibold text-[#047857] hover:text-[#065f46]">
+                    Use standard login
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>

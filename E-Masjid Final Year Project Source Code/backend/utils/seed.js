@@ -40,17 +40,54 @@ const seedDB = async () => {
       name: 'Abdullah Ahmed', email: 'user@emasjid.pk', password: 'user1234', role: 'community', phone: '0300-5555555',
     });
 
+    // Real-email accounts (added 2026-06-24 for cross-role manual testing)
+    // These are the developer's personal Gmail accounts used to receive real password-reset emails.
+    // NOTE: these are TEST accounts only — replace with the team's real accounts before any production deployment.
+    const realEmailAdmin = await User.create({
+      name: 'Admin User (Real Email)', email: 'dawood.bhatti8812@gmail.com', password: 'admin123', role: 'admin', phone: '0300-6666666',
+    });
+    const realEmailManager = await User.create({
+      name: 'Manager User (Real Email)', email: 'pa672189@gmail.com', password: 'manager123', role: 'manager', phone: '0300-7777777',
+    });
+    const realEmailScholar = await User.create({
+      name: 'Scholar User (Real Email)', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888',
+    });
+    const realEmailCommittee = await User.create({
+      name: 'Committee User (Real Email)', email: 'wb494929@gmail.com', password: 'committee123', role: 'committee', phone: '0300-9999999',
+    });
+
     // Create mosque
     const mosque = await Mosque.create({
       name: 'Masjid Al-Noor', address: 'Near Civil Lines, Main GT Road', city: 'Sheikhupura',
       phone: '0321-5551234', email: 'info@masjidalnoor.pk',
       enabledModules: ['donations', 'expenses', 'events', 'nikah', 'announcements', 'prayerTimes', 'fundRequests'],
       managerId: manager._id, admins: [admin._id], isActive: true,
+    })
+
+    // Create a second mosque (for multi-mosque dropdown testing — added 2026-06-24)
+    const manager2 = await User.create({
+      name: 'Haji Raza Manager 2', email: 'manager2@emasjid.pk', password: 'manager123', role: 'manager', phone: '0300-1212121',
     });
+    const admin2 = await User.create({
+      name: 'Qari Imran', email: 'admin2@emasjid.pk', password: 'admin123', role: 'admin', phone: '0300-1313131',
+    });
+    const mosque2 = await Mosque.create({
+      name: 'Masjid Al-Rahman', address: '15-A Model Town', city: 'Lahore',
+      phone: '0321-6669988', email: 'info@masjidalrahman.pk',
+      enabledModules: ['donations', 'expenses', 'events', 'nikah', 'announcements', 'prayerTimes', 'fundRequests'],
+      managerId: manager2._id, admins: [admin2._id], isActive: true,
+    });
+
+    // Reassign pa672189@gmail.com (the real-email manager from Phase 2) to Masjid Al-Rahman
+    // so the multi-mosque test exercises a real email per mosque
+    await User.updateOne(
+      { email: 'pa672189@gmail.com' },
+      { mosqueId: mosque2._id, role: 'manager' }
+    );;
 
     // Update users with mosque reference
     await User.updateMany(
-      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id] } },
+      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailManager._id, realEmailScholar._id, realEmailCommittee._id] } },
       { mosqueId: mosque._id }
     );
 
@@ -156,12 +193,21 @@ const seedDB = async () => {
     ]);
 
     console.log('\n✅ Database seeded successfully!');
-    console.log('\n📧 Login Credentials:');
+    console.log('\n📧 Login Credentials (primary — for module features):');
     console.log('  Manager:   manager@emasjid.pk / manager123');
     console.log('  Admin:     admin@emasjid.pk / admin123');
     console.log('  Scholar:   scholar@emasjid.pk / scholar123');
     console.log('  Committee: committee@emasjid.pk / committee123');
-    console.log('  User:      user@emasjid.pk / user1234\n');
+    console.log('  User:      user@emasjid.pk / user1234');
+    console.log('\n📧 Real-email accounts (for forgot-password cross-role testing — receive real Gmail):');
+    console.log('  Admin:     dawood.bhatti8812@gmail.com / admin123');
+    console.log('  Manager:   pa672189@gmail.com / manager123   (assigned to Masjid Al-Rahman, Lahore)');
+    console.log('  Scholar:   dawoodah85@gmail.com / scholar123');
+    console.log('  Committee: wb494929@gmail.com / committee123');
+    console.log('\n🕌 Seeded mosques (visible in the navbar dropdown):');
+    console.log('  - Masjid Al-Noor (Sheikhupura) — manager: manager@emasjid.pk');
+    console.log('  - Masjid Al-Rahman (Lahore)      — manager: pa672189@gmail.com (real Gmail)');
+    console.log('  Admin2 for Masjid Al-Rahman:     admin2@emasjid.pk / admin123\n');
 
     process.exit(0);
   } catch (error) {

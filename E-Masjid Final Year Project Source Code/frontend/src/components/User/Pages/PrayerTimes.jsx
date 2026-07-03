@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { formatTime } from '../../../utils/formatters.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const prayersConfig = [
   { key: 'fajr', name: 'Fajr', icon: 'wb_twilight' },
@@ -64,6 +64,7 @@ function nextPrayerCountdown(todaySchedule) {
 
 export default function PrayerTimes() {
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const defaultToday = useMemo(
     () => ({ fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45', jummah: '13:00' }),
     []
@@ -80,8 +81,7 @@ export default function PrayerTimes() {
 
   useEffect(() => {
     let mounted = true
-    const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const params = activeMosqueId ? `mosqueId=${activeMosqueId}` : ''
     ;(async () => {
       try {
         const res = await api.getPrayerTimes(params)
@@ -97,7 +97,7 @@ export default function PrayerTimes() {
       }
     })()
     return () => { mounted = false }
-  }, [defaultToday, showToast])
+  }, [defaultToday, showToast, activeMosqueId])
 
   useEffect(() => {
     const t = setInterval(() => {

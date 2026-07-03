@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 function donationTypeClass(type) {
   const key = type.toLowerCase()
@@ -28,6 +28,7 @@ function monthKey(dateString) {
 }
 
 export default function Transparency() {
+  const { activeMosqueId } = useMosque()
   const [monthFilter, setMonthFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [donationPage, setDonationPage] = useState(1)
@@ -53,7 +54,7 @@ export default function Transparency() {
     let mounted = true
 
     async function load() {
-      const mosqueId = getActiveMosqueId()
+      const mosqueId = activeMosqueId
       if (!mosqueId) {
         setLoading(false)
         return
@@ -96,7 +97,7 @@ export default function Transparency() {
 
     load()
     return () => { mounted = false }
-  }, [showToast, monthFilter, typeFilter, donationSafePage, expenseSafePage])
+  }, [showToast, monthFilter, typeFilter, donationSafePage, expenseSafePage, activeMosqueId])
 
   const totalDonations = summary.totalDonations
   const totalExpenses = summary.totalExpenses

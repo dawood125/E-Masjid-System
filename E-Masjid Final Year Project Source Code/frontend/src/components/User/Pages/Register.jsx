@@ -9,12 +9,14 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
   const {register} = useAuth()
   const { showToast } = useUI()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setFieldErrors({})
 
     if (formData.password !== formData.confirmPassword) {
       showToast('Passwords do not match', 'error')
@@ -33,11 +35,34 @@ export default function Register() {
       showToast('Account created successfully!', 'success')
       navigate(ROUTES.HOME)
     } catch (err) {
-      showToast(err.message || 'Registration failed. Please try again.', 'error')
+      // If the server returned per-field validation errors, render them inline
+      // under each input. Otherwise, fall back to the toast.
+      if (err.errors && Array.isArray(err.errors) && err.errors.length > 0) {
+        const next = {}
+        for (const e of err.errors) {
+          if (e && e.field) next[e.field] = e.message
+        }
+        setFieldErrors(next)
+        const summary = err.errors.map((e) => e.message).filter(Boolean).join(' • ')
+        showToast(summary || err.message || 'Please fix the errors below.', 'error')
+      } else {
+        showToast(err.message || 'Registration failed. Please try again.', 'error')
+      }
     } finally {
       setLoading(false)
     }
   }
+
+  const FieldError = ({ name }) =>
+    fieldErrors[name] ? (
+      <p className="mt-1.5 text-xs text-red-600 inline-flex items-center gap-1">
+        <i className="material-icons-round text-sm">error_outline</i>
+        {fieldErrors[name]}
+      </p>
+    ) : null
+
+  const inputClass = (name) =>
+    `form-input pl-12${fieldErrors[name] ? ' border-red-400 focus:ring-red-200' : ''}`
 
   const passwordScore = Math.min(
     4,
@@ -119,7 +144,7 @@ export default function Register() {
                     <input
                       id="name"
                       type="text"
-                      className="form-input pl-12"
+                      className={inputClass('name')}
                       placeholder="Enter your full name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -127,6 +152,7 @@ export default function Register() {
                       required
                     />
                   </div>
+                  <FieldError name="name" />
                 </div>
 
                 <div>
@@ -136,7 +162,7 @@ export default function Register() {
                     <input
                       id="email"
                       type="email"
-                      className="form-input pl-12"
+                      className={inputClass('email')}
                       placeholder="Enter your email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -144,6 +170,7 @@ export default function Register() {
                       required
                     />
                   </div>
+                  <FieldError name="email" />
                 </div>
 
                 <div>
@@ -153,7 +180,7 @@ export default function Register() {
                     <input
                       id="phone"
                       type="tel"
-                      className="form-input pl-12"
+                      className={inputClass('phone')}
                       placeholder="03XX-XXXXXXX"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -161,6 +188,7 @@ export default function Register() {
                       required
                     />
                   </div>
+                  <FieldError name="phone" />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,7 +199,7 @@ export default function Register() {
                       <input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
-                        className="form-input pl-12 pr-12"
+                        className={inputClass('password').replace('pl-12', 'pl-12 pr-12')}
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -197,8 +225,9 @@ export default function Register() {
                     </div>
                     <p className="mt-2 text-xs text-gray-500 inline-flex items-center gap-1">
                       <i className="material-icons-round text-sm">info</i>
-                      At least 6 characters
+                      At least 8 characters, with 1 letter and 1 number
                     </p>
+                    <FieldError name="password" />
                   </div>
 
                   <div>
@@ -208,7 +237,7 @@ export default function Register() {
                       <input
                         id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
-                        className="form-input pl-12 pr-12"
+                        className={inputClass('confirmPassword').replace('pl-12', 'pl-12 pr-12')}
                         placeholder="••••••••"
                         value={formData.confirmPassword}
                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -224,6 +253,7 @@ export default function Register() {
                         <i className="material-icons-round">{showConfirmPassword ? 'visibility_off' : 'visibility'}</i>
                       </button>
                     </div>
+                    <FieldError name="confirmPassword" />
                   </div>
                 </div>
 

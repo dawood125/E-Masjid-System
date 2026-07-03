@@ -162,6 +162,83 @@
   - `cd frontend && npm run build` → ✅ success
   - **Manual verification (partner-driven):** Re-do Test 1 of the manual guide with the new `.env` — the email should arrive in your real Gmail inbox within 5-10 seconds. Subject: "E-Masjid Password Reset". From: "E-Masjid System <dawood.bhatti8812@gmail.com>". Click the button → opens the reset page.
 
+## FIX-FP-010 — Added 4 real-email accounts to seed.js for cross-role forgot-password testing
+
+- **File:** `backend/utils/seed.js`
+- **Root cause:** The original seed only had 5 users on the `@emasjid.pk` domain. The partner's manual Test 12 needs real Gmail accounts (one per non-community role) so the reset email actually lands in the partner's real inbox and they can click the link from their actual email client.
+- **Fix applied:** Added 4 new `User.create()` calls inside the seed script for the partner's real Gmail accounts, generic names, partner-chosen passwords, and `mosqueId` linked to `Masjid Al-Noor`. Also updated the `User.updateMany` query to include the 4 new users so they receive the `mosqueId` reference. Updated the trailing credentials summary in the seed's stdout to print both lists clearly.
+
+  New accounts (test-only, replace before any production deploy):
+
+  | Role     | Email                          | Password      |
+  |----------|--------------------------------|---------------|
+  | Admin    | `dawood.bhatti8812@gmail.com`  | `admin123`    |
+  | Manager  | `pa672189@gmail.com`          | `manager123`  |
+  | Scholar  | `dawoodah85@gmail.com`        | `scholar123`  |
+  | Committee| `wb494929@gmail.com`          | `committee123`|
+
+  **Security note:** these are test-only accounts that the developer will need to remove from the production database before any deployment. The seed script prints a clear warning comment in the source.
+- **Result:**
+  - After re-seeding, the partner can run forgot-password for each non-community role and the reset email will land in the corresponding real Gmail inbox (each is monitored by the partner in a different browser tab / different Chrome profile).
+  - All 4 new accounts can log in to their respective role dashboards and exercise their role-specific features end-to-end.
+- **Verification:**
+  - `cd backend && npm test` → ✅ 10/10 still passing (seed isn't run during the test suite; tests create their own users)
+  - Manual: `cd backend && node utils/seed.js` → output now prints both credential lists, no errors
+  - **Partner action:** re-seed, then run Test 12 of the manual guide using the 4 new accounts.
+
+## FIX-FP-011 — Register page now displays per-field validation errors
+
+- **Files:**
+  - `frontend/src/utils/api.js` — `request()` and `uploadRequest()` now attach `err.errors` (the `data.errors[]` array from `handleValidation`) and `err.status` to the thrown `Error` object.
+  - `frontend/src/components/User/Pages/Register.jsx` — new `fieldErrors` state, new `FieldError` and `inputClass` helpers. Each input's `className` switches to include a red border when there's a server error for that field. The error message renders inline below the field with a small `error_outline` icon. The catch block also shows a combined summary in the toast (joined with ` • `).
+- **Root cause:** `api.request()` was throwing `new Error(data.message || 'Request failed')` — which only carried the top-level `message` and silently dropped the per-field `errors[]` array that `handleValidation` produces. The Register page only had `showToast(err.message || ...)` in its catch block, so the user saw a generic toast and had to open DevTools to find the actual reason.
+- **Fix applied:**
+  - `api.request()` and `api.uploadRequest()` now throw an Error that has `err.errors` (an array of `{ field, message }` objects) and `err.status` (the HTTP status code) attached as properties. Existing call sites that only read `err.message` are unaffected (the new properties are additive).
+  - `Register.jsx` adds a `fieldErrors` state object and a `FieldError` component that renders the message below the relevant input with a small red border on the field. The catch block in `handleSubmit` does:
+    ```js
+    if (err.errors && err.errors.length > 0) {
+      const next = {};
+      for (const e of err.errors) {
+        if (e.field) next[e.field] = e.message;
+      }
+      setFieldErrors(next);
+      const summary = err.errors.map(e => e.message).join(' • ');
+      showToast(summary, 'error');
+    } else {
+      showToast(err.message, 'error');
+    }
+    ```
+  - Also updated the inline password-hint text from "At least 6 characters" to "At least 8 characters, with 1 letter and 1 number" so it matches the actual server-side rule.
+- **Result:** User submits a registration with a weak password. Server returns 400 with `errors: [{ field: "password", message: "Password must be at least 8 characters..." }]`. Page shows:
+  - Red border around the password input
+  - Inline error text below it: "Password must be at least 8 characters and include at least one letter and one number"
+  - Red toast: "Password must be at least 8 characters and include at least one letter and one number"
+  - No more "Validation failed" mystery text.
+- **Verification:**
+  - `cd frontend && npm run lint` → ✅ 0 errors
+  - `cd frontend && npm run build` → ✅ success (489.76 kB)
+  - `cd backend && npm test` → ✅ 10/10 still passing
+  - **Partner action:** try registering a new user with a weak password (e.g. `abc`). You should now see the specific per-field error inline and in the toast. The "At least 8 characters, with 1 letter and 1 number" hint is also visible below the password field by default.
+
+## FIX-FP-012 — Added "Forgot Password?" link to Admin, Manager, Committee login pages
+
+- **Files:**
+  - `frontend/src/components/Admin/Pages/AdminLogin.jsx` — added the link above the existing "Use standard login" link
+  - `frontend/src/components/Manager/Pages/ManagerLogin.jsx` — added the link after the `<form>` closing
+  - `frontend/src/components/Committee/Pages/CommitteeLogin.jsx` — added the link after the `<form>` closing
+- **Root cause:** When the staff login pages were first built, only the public `/login` page had a "Forgot Password?" link. The 3 staff pages either had no link at all (Manager, Committee) or only had "Use standard login" (Admin — which navigates to `/login`, not `/forgot-password`). Users who forgot their staff password had no in-page way to start the reset flow; they had to know the public `/forgot-password` URL.
+- **Fix applied:**
+  - All 3 staff pages now include a `<Link to={ROUTES.FORGOT_PASSWORD}>` styled with the same green-on-hover treatment as the public login page link (`text-[#047857] hover:text-[#065f46]`).
+  - AdminLogin groups the new link + the existing "Use standard login" link in a single flex column so the page doesn't get visually cluttered.
+  - ManagerLogin and CommitteeLogin add the link in its own centered `<div>` after the form.
+  - All 3 pages already imported `Link` and `ROUTES`, so no new imports were needed.
+- **Result:** Every login page in the app now offers a "Forgot Password?" link right where the user needs it. Partner can start Test 12 of the manual guide from each role's actual login page.
+- **Verification:**
+  - `cd frontend && npm run lint` → ✅ 0 errors
+  - `cd frontend && npm run build` → ✅ success (490.30 kB, was 489.76, +0.5 kB)
+  - `cd backend && npm test` → ✅ 10/10 still passing
+  - **Partner action:** open `/admin/login`, `/manager/login`, `/committee/login` and confirm the "Forgot Password?" link is visible below the form. Click it — should land on `/forgot-password`. Submit any of the 4 new real-email accounts → reset email arrives in the corresponding Gmail inbox.
+
 ---
 
 ## Minor Notes (not blocking, captured for follow-up)

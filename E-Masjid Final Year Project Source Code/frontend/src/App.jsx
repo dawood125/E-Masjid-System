@@ -49,12 +49,14 @@ import ScholarLayout from './components/Scholar/Layouts/ScholarLayout'
 import ManagerLayout from './components/Manager/Layouts/ManagerLayout'
 import CommitteeLayout from './components/Committee/Layouts/CommitteeLayout'
 import Toast from './components/Common/Toast'
+import { MosqueProvider } from './context/MosqueContext.jsx'
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <UIProvider>
+          <MosqueProvider>
           <Toast />
           <Routes>
             {/* User Routes */}
@@ -109,6 +111,7 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </MosqueProvider>
         </UIProvider>
       </AuthProvider>
     </Router>

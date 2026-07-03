@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { API_BASE_URL } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const categories = ['all', 'lecture', 'religious', 'education', 'community', 'youth']
 const categoryLabel = {
@@ -58,6 +58,7 @@ function dateBadgeParts(dateString) {
 
 export default function Events() {
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [visibleCount, setVisibleCount] = useState(6)
@@ -68,8 +69,7 @@ export default function Events() {
 
   useEffect(() => {
     let mounted = true
-    const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const params = activeMosqueId ? `mosqueId=${activeMosqueId}` : ''
     ;(async () => {
       try {
         const res = await api.getEvents(params)
@@ -82,7 +82,7 @@ export default function Events() {
       }
     })()
     return () => { mounted = false }
-  }, [showToast])
+  }, [showToast, activeMosqueId])
 
   const enrichedEvents = useMemo(
     () =>

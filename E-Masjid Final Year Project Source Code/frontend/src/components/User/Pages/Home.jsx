@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { mockPromotionalContent } from '../../../mocks/index.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const prayerOrder = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha']
 
@@ -54,6 +54,7 @@ function getCountdown(dateStr) {
 
 export default function Home() {
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const [today, setToday] = useState({
     fajr: '05:30',
     zuhr: '12:45',
@@ -91,8 +92,7 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true
-    const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const params = activeMosqueId ? `mosqueId=${activeMosqueId}` : ''
     ;(async () => {
       try {
         const [prayerRes, eventsRes, announcementsRes] = await Promise.all([
@@ -125,7 +125,7 @@ export default function Home() {
     })()
     return () => { mounted = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showToast])
+  }, [showToast, activeMosqueId])
 
   // Countdown for next event
   const [countdown, setCountdown] = useState(() => topEvents[0] ? getCountdown(topEvents[0].date) : null)

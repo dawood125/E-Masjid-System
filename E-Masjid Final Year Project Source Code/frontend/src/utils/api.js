@@ -44,7 +44,12 @@ class ApiService {
     }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Request failed')
+      // Attach the full response data to the error so pages can show
+      // per-field validation messages (data.errors from express-validator).
+      const err = new Error(data.message || 'Request failed')
+      err.errors = Array.isArray(data.errors) ? data.errors : null
+      err.status = response.status
+      throw err
     }
     return data
   }
@@ -94,7 +99,12 @@ class ApiService {
       window.location.href = redirectPath
       throw new Error(data.message || 'Session expired')
     }
-    if (!response.ok) throw new Error(data.message || 'Request failed')
+    if (!response.ok) {
+      const err = new Error(data.message || 'Request failed')
+      err.errors = Array.isArray(data.errors) ? data.errors : null
+      err.status = response.status
+      throw err
+    }
     return data
   }
 

@@ -36,6 +36,8 @@ npm run dev
 
 ## Test Accounts (use these exact details)
 
+**Primary accounts** (for module-feature testing — all share the same inbox):
+
 | Role | Login Page URL | Email | Password |
 |------|----------------|-------|----------|
 | Community User | `/login` | `user@emasjid.pk` | `user1234` |
@@ -43,6 +45,15 @@ npm run dev
 | Admin | `/admin/login` | `admin@emasjid.pk` | `admin123` |
 | Manager | `/manager/login` | `manager@emasjid.pk` | `manager123` |
 | Committee | `/committee/login` | `committee@emasjid.pk` | `committee123` |
+
+**Real-email accounts** (for cross-role forgot-password testing — emails land in different inboxes; needed for Test 12):
+
+| Role | Login Page URL | Email | Password | Inbox |
+|------|----------------|-------|----------|-------|
+| Admin | `/admin/login` | `dawood.bhatti8812@gmail.com` | `admin123` | dawood.bhatti8812@gmail.com |
+| Manager | `/manager/login` | `pa672189@gmail.com` | `manager123` | pa672189@gmail.com |
+| Scholar | `/login` (select Scholar) | `dawoodah85@gmail.com` | `scholar123` | dawoodah85@gmail.com |
+| Committee | `/committee/login` | `wb494929@gmail.com` | `committee123` | wb494929@gmail.com |
 
 ---
 
@@ -296,34 +307,36 @@ That the "Resend" button works without errors and cannot be double-clicked.
 
 ---
 
-## Test 12: Admin / Manager / Committee forgot-password flow
+## Test 12: Admin / Manager / Committee / Scholar forgot-password flow (cross-role)
 
 ### What You're Testing
-That the forgot-password flow works for every role, not just the community user. (Each role has its own login page, but they all use the same `/forgot-password` URL — the website doesn't ask you which role you are at the forgot step.)
+That the forgot-password flow works for every non-community role. (Each role has its own login page, but they all use the same `/forgot-password` URL — the website doesn't ask you which role you are at the forgot step.)
 
 ### Steps to Follow
-Repeat this short block for EACH of the 4 remaining roles:
+Use the **real-email accounts** (second table at the top of this guide) so each reset email lands in a different inbox you control. Repeat this short block for EACH of the 4 remaining roles:
 
-1. Go to `/forgot-password`
-2. Type the role's email (from the table at the top of this guide)
-3. Click **Send Reset Link**
-4. Open the email in Mailtrap
-5. Click **Reset Password** in the email
-6. Type a new strong password (e.g. `RolePass2024`) and confirm
-7. Click **Reset Password** on the form
-8. After success, go to that role's login page and sign in with the new password
-9. Then try the OLD password — it should fail
+1. Go to the role's login page (e.g. `/admin/login`)
+2. Click the green **Forgot Password?** link below the login form
+3. Type the role's real email (from the real-email accounts table above)
+4. Click **Send Reset Link**
+5. Open the email in the corresponding Gmail inbox
+6. Click **Reset Password** in the email
+7. Type a new strong password (e.g. `RolePass2024`) and confirm
+8. Click **Reset Password** on the form
+9. After success, go to that role's login page and sign in with the new password
+10. Then try the OLD password — it should fail
 
 Run this block for:
-- [ ] Admin (`admin@emasjid.pk`) — login at `/admin/login`
-- [ ] Manager (`manager@emasjid.pk`) — login at `/manager/login`
-- [ ] Committee (`committee@emasjid.pk`) — login at `/committee/login`
-- [ ] Scholar (`scholar@emasjid.pk`) — login at `/login` (select Scholar)
+- [ ] Admin (`dawood.bhatti8812@gmail.com`) — login at `/admin/login`
+- [ ] Manager (`pa672189@gmail.com`) — login at `/manager/login`
+- [ ] Committee (`wb494929@gmail.com`) — login at `/committee/login`
+- [ ] Scholar (`dawoodah85@gmail.com`) — login at `/login` (select Scholar)
 
 ### What Should Happen (per role)
 - The forgot-password request returns the "Check Your Email" screen
-- The reset email arrives in Mailtrap and the link works
-- The new password `RolePass2024` logs the user in
+- The reset email arrives in the role's real Gmail inbox within 5-10 seconds
+- The link in the email opens the reset form
+- The new password `RolePass2024` logs the user in to the role's dashboard
 - The old password no longer works
 
 ### Mark Result (one per role)

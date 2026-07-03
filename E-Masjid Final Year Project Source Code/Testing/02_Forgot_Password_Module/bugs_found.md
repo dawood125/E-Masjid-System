@@ -5,6 +5,7 @@
 > Verification source: cross-agent adversarial report (see `my_test_results.md`) + independent re-read of the source.
 > **Update 2026-06-24:** BUG-FP-001b (api.resetPassword signature mismatch) is now FIXED. All 8 bugs resolved. Integration test count went 7 → 10.
 > **Update 2026-06-24 (later):** BUG-FP-009 (Gmail SMTP auth failure) found during partner's first manual test. FIXED by switching primary email provider to SendGrid.
+> **Update 2026-06-24 (latest):** BUG-FP-010 (only 5 seeded users, no real emails for Test 12) FIXED. BUG-FP-011 (Register page shows generic "Validation failed" instead of per-field errors) FIXED.
 
 ---
 
@@ -128,5 +129,48 @@
 - **Expected:** Email is sent (or silently caught in dev); user sees the "Check Your Email" screen
 - **Actual:** Server logs show `Invalid login: 535-5.7.8 Username and Password not accepted` from `gmail-smtp-msa.l.google.com`. The Gmail SMTP `MAIL_PASSWORD` is the legacy 16-character app password that was rotated/revoked (you had announced earlier in the session that you'd rotate the password after it was shared in chat). Result: **no email is sent, the feature is fully broken at runtime.** Backend tests still pass because they mock `sendEmail`.
 - **Status:** FIXED (2026-06-24, BUG-FP-009 follow-up). Switched primary email provider from Gmail SMTP to **SendGrid** (100 emails/day free forever, real Gmail delivery, no rotating app password). Mailtrap is kept as a fallback if SendGrid is not configured. See FIX-FP-009 in `bugs_fixed.md`.
+
+## BUG-FP-010 — Only 5 seeded users; no real Gmail accounts for cross-role forgot-password testing
+
+- **Severity:** Medium (blocks Test 12 of the manual guide)
+- **Location:** `backend/utils/seed.js`
+- **Steps to Reproduce:**
+  1. Try to test forgot-password for `admin@emasjid.pk` (passes)
+  2. Try to test forgot-password for any non-`@emasjid.pk` email (e.g. a real Gmail you own) → no such user → neutral message
+  3. Test 12 of the manual guide asks for the forgot-password flow to be run for all 5 roles using the partner's real email accounts
+- **Expected:** Seed includes the partner's real Gmail accounts (one per non-community role) so reset emails actually land in the partner's real inbox
+- **Actual:** Seed only has 5 users on the `@emasjid.pk` domain, all of which route to the same inbox. The partner can't run a true cross-role test from a single browser session.
+- **Status:** FIXED (2026-06-24, BUG-FP-010). Added 4 new real-email accounts to the seed with mosqueId linked, generic names, and the partner's chosen passwords. See FIX-FP-010 in `bugs_fixed.md` for the full list.
+
+## BUG-FP-011 — Register page shows generic "Validation failed" instead of per-field errors
+
+- **Severity:** High (bad UX, user has to guess what's wrong)
+- **Location:** `frontend/src/components/User/Pages/Register.jsx` (handleSubmit catch block) + `frontend/src/utils/api.js` (request method)
+- **Steps to Reproduce:**
+  1. Go to `/register`
+  2. Fill the form with a weak password (e.g. `abc`)
+  3. Accept terms and click "Create Account"
+  4. Server returns `400 { success: false, message: "Validation failed", errors: [{ field: "password", message: "Password must be at least 8 characters and include at least one letter and one number" }] }`
+- **Expected:** A red error message inline below the password field says "Password must be at least 8 characters...". The user knows exactly what to fix.
+- **Actual:** Only a generic "Validation failed" red toast is shown in the bottom-right corner. The per-field `errors[]` array from the backend is silently discarded. User has to open DevTools → Network → response to see the actual reason.
+- **Status:** FIXED (2026-06-24, BUG-FP-011). Updated `api.js` to attach `err.errors[]` and `err.status` to every thrown Error. Updated `Register.jsx` to render inline per-field error messages below each input (with a small red border on the invalid input), and to show a summary in the toast as well. Also updated the password-hint text from "At least 6 characters" to the real rule "At least 8 characters, with 1 letter and 1 number". See FIX-FP-011 in `bugs_fixed.md`.
+
+## BUG-FP-012 — No "Forgot Password?" link on Admin, Manager, or Committee login pages
+
+- **Severity:** High (blocks Test 12 of the manual guide — partner can't trigger forgot-password for the non-community roles from their login pages)
+- **Location:**
+  - `frontend/src/components/Admin/Pages/AdminLogin.jsx` (lines 153-158 in the original — the "Use standard login" `<p>` block was the last element)
+  - `frontend/src/components/Manager/Pages/ManagerLogin.jsx` (line 151 in the original — the `<form>` closing was the last element)
+  - `frontend/src/components/Committee/Pages/CommitteeLogin.jsx` (line 151 in the original — the `<form>` closing was the last element)
+- **Steps to Reproduce:**
+  1. Open `/admin/login` → no link to `/forgot-password` (only a "Use standard login" link to `/login`)
+  2. Open `/manager/login` → no link to `/forgot-password` at all
+  3. Open `/committee/login` → no link to `/forgot-password` at all
+  4. (Compare to `/login` which correctly has a "Forgot Password?" link next to the "Remember me" checkbox)
+- **Expected:** Every login page that requires a password has a clearly visible "Forgot Password?" link, so users who forget the temp password given to them by the admin can recover their account without having to find the public `/forgot-password` URL themselves
+- **Actual:** The 3 staff login pages either have no "Forgot Password?" link (Manager, Committee) or only mention "Use standard login" (Admin — which sends the user to `/login`, not `/forgot-password`)
+- **Status:** FIXED (2026-06-24, BUG-FP-012). Added a "Forgot Password?" link to each of the 3 staff login pages, styled to match the existing one on `/login` (green text, hover darker green, links to `ROUTES.FORGOT_PASSWORD`). See FIX-FP-012 in `bugs_fixed.md`.
+
+---
 
 ---
