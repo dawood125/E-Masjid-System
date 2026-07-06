@@ -111,7 +111,7 @@ export default function Navbar() {
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-40 border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`}>
-      <div className="container h-20 flex items-center gap-3 lg:gap-5">
+      <div className="container h-20 flex items-center gap-2 lg:gap-4">
         {/* Logo */}
         <Link to={ROUTES.HOME} className="flex items-center gap-3 shrink-0 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#047857] to-[#064e3b] shadow-md">
@@ -128,12 +128,12 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation — shown at lg+ (1024px) */}
-        <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center">
+        <nav className="hidden lg:flex items-center gap-1 flex-1 min-w-0 justify-end">
           {primaryLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className={`relative whitespace-nowrap rounded-md px-3 py-2 font-primary text-[0.95rem] font-medium transition-all duration-150 ${
+              className={`relative whitespace-nowrap rounded-md px-2 xl:px-3 py-2 font-primary text-[0.9rem] xl:text-[0.95rem] font-medium transition-all duration-150 ${
                 isActive(link.path)
                   ? 'bg-primary-50 text-[#047857]'
                   : 'text-gray-700 hover:bg-primary-50 hover:text-[#047857]'
@@ -163,12 +163,12 @@ export default function Navbar() {
           />
         </nav>
 
-        {/* Mosque Selector — pushed to the right at md+ */}
+        {/* Mosque Selector — hidden below xl, shows at xl+ only (to keep room for nav links at lg) */}
         {mosques.length > 0 && (
-          <div className="hidden md:flex items-center gap-2 shrink-0 relative">
+          <div className="hidden xl:flex items-center gap-2 shrink min-w-0 relative">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Mosque</span>
             <select
-              className="max-w-[240px] truncate rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="min-w-0 w-32 2xl:w-44 truncate rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               value={activeMosqueId || ''}
               onChange={handleMosqueChange}
               title={activeMosque ? `${activeMosque.name} (${activeMosque.city})` : 'Select a mosque'}
@@ -182,11 +182,11 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Auth Buttons — always visible, no shrink */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Auth Buttons — always visible at sm+, never shrink */}
+        <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
-              <span className="hidden sm:inline text-sm font-medium text-gray-700 whitespace-nowrap">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="hidden xl:inline text-sm font-medium text-gray-700 whitespace-nowrap">
                 {user?.name || 'User'}
               </span>
               <button
@@ -199,12 +199,12 @@ export default function Navbar() {
                 Logout
               </button>
               {user?.role === 'admin' && (
-                <Link to={ROUTES.ADMIN} className="btn btn-primary btn-sm">
+                <Link to={ROUTES.ADMIN} className="hidden sm:inline-flex btn btn-primary btn-sm">
                   Admin
                 </Link>
               )}
               {user?.role === 'scholar' && (
-                <Link to={ROUTES.SCHOLAR} className="btn btn-primary btn-sm">
+                <Link to={ROUTES.SCHOLAR} className="hidden sm:inline-flex btn btn-primary btn-sm">
                   Dashboard
                 </Link>
               )}
@@ -223,7 +223,7 @@ export default function Navbar() {
           {/* Mobile Menu Toggle — shown below lg */}
           <button
             onClick={toggleMobileMenu}
-            className="lg:hidden flex h-11 w-11 items-center justify-center rounded-md bg-primary-50 text-[#047857] transition-colors duration-150 hover:bg-primary-100"
+            className="lg:hidden shrink-0 flex h-11 w-11 items-center justify-center rounded-md bg-primary-50 text-[#047857] transition-colors duration-150 hover:bg-primary-100"
             aria-label="Toggle menu"
           >
             <i className="material-icons-round">

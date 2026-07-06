@@ -80,7 +80,7 @@ All nav items fit on a single line; nothing is clipped, nothing wraps, the mosqu
 - Nothing is clipped or wrapped
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______failed________
 
 ---
 
@@ -99,7 +99,7 @@ At tablet widths, the nav still works — either the desktop nav shrinks or the 
 - The logo, mosque selector, and hamburger are visible
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______failed________
 
 ---
 

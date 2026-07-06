@@ -65,3 +65,37 @@
   - `Masjid Al-Noor (Sheikhupura)` — manager: `manager@emasjid.pk`
   - `Masjid Al-Rahman (Lahore)` — manager: `pa672189@gmail.com` (real Gmail)
 - **Verification:** `npm run lint` ✅, `npm run build` ✅, `npm test` (backend) ✅ 10/10
+
+---
+
+## FIX-NAV-005 — Real-browser-tested Navbar layout fix (resolves BUG-NAV-005/006/007/008/009)
+
+- **File:** `frontend/src/components/Common/Navbar.jsx`
+- **Root cause:** After the first round of Phase 3 fixes, the partner ran the manual tests and reported the navbar still had layout issues at common desktop widths. I then ran a real Playwright-based visual test (using Chromium at 5 viewport widths + both logged-out and logged-in states) and captured actual screenshots. The issues found by the browser:
+  - At 1280px: "Register" button was **completely missing** (clipped off the right edge)
+  - At 1440px: "Register" was **clipped** — only "Registe" letters visible
+  - At 900px: the 4 main nav links + 2 dropdowns were **hidden** (the `lg:flex` breakpoint + the mosque selector at `md:flex` left a huge empty middle)
+  - At 768px: the **hamburger was missing** (pushed off the right edge)
+  - The "MOSQUE" label was wrapping at certain widths
+- **Fix applied (only to Navbar.jsx — no other files touched):**
+  1. Changed the mosque selector breakpoint from `md:flex` (≥768px) to `xl:flex` (≥1280px) so it only appears when there's guaranteed horizontal room. At 1024-1279px, the navbar shows the center nav (4 links + 2 dropdowns) without competing for room.
+  2. Added `ml-auto lg:ml-0` to the auth-buttons block so on mobile it's pushed to the right edge (away from the logo) and on desktop it returns to natural flow.
+  3. Made the hamburger `shrink-0` so it can never be pushed off the right edge.
+  4. Set the center nav's `flex-1 min-w-0 justify-end` so it shrinks gracefully (rather than pushing the right group off) and is justified to the right of the logo (looks better when not centered because the logo already has visual weight on the left).
+  5. Reduced nav-link padding at `lg` from `px-3` to `px-2` (returns to `px-3` at `xl`) so the 6 links take ~25% less room at the lg breakpoint.
+  6. Hid the user-name span at `<xl` (`hidden xl:inline`) so the "Abdullah Ahmed" label doesn't crowd the layout at 1024-1279px.
+  7. Added `hidden sm:inline-flex` to the Admin/Dashboard buttons so they don't push the Login/Register off at very narrow widths (sm+ but below the breakpoint where the center nav is visible).
+  8. The mosque selector's `<select>` was made `min-w-0 w-32 2xl:w-44` so it can shrink and the right group is never pushed off.
+- **Result (verified by re-running the visual test):** All 10 captured viewports (5 widths × 2 auth states) report **0 overflowing elements**. Specific verification:
+  - `screenshots/desktop-1280-loggedout-navbar.png` — Logo | 4 main links + 2 dropdowns | MOSQUE + dropdown | Login + Register — all visible, no clipping
+  - `screenshots/desktop-1440-loggedout-navbar.png` — same layout, more breathing room, Register fully visible
+  - `screenshots/tablet-900-loggedout-navbar.png` — Logo | Login + Register + hamburger — clean mobile-style layout
+  - `screenshots/mobile-425-loggedout-navbar.png` — Logo + hamburger only
+  - `screenshots/mobile-425-hamburger-open.png` — full vertical menu with mosque selector, main links, Services section, Community section
+  - `screenshots/desktop-1280-loggedin-navbar.png` — Logo | 4 links + 2 dropdowns | MOSQUE + dropdown | "Abdullah Ahmed" + Logout — all visible
+- **Verification:**
+  - `npm run lint` ✅ 0 errors
+  - `npm run build` ✅ Built in 8.74s, 84 modules, 491.25 kB
+  - `npm test` (backend) ✅ 10/10
+  - **Real browser test** (Playwright + Chromium) ✅ all 10 viewports show 0 overflowing elements
+- **Note for the partner:** the visual test script (`Testing/03_Navbar_Masjid_Selection/visual_test.js`) and 12 screenshots are saved to the `screenshots/` subfolder. To re-run anytime, execute `node Testing/03_Navbar_Masjid_Selection/visual_test.js` from the project root.

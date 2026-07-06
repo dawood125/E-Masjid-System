@@ -34,8 +34,28 @@ No new backend tests added in this phase (the changes are mostly frontend; the b
 | Check | Command | Result |
 |-------|---------|--------|
 | Frontend lint | `cd frontend && npm run lint` | ✅ 0 errors |
-| Frontend build | `cd frontend && npm run build` | ✅ Built in 4.48s, 84 modules, 491.13 kB bundle |
+| Frontend build | `cd frontend && npm run build` | ✅ Built in 8.74s, 84 modules, 491.25 kB bundle |
 | Backend tests | `cd backend && npm test` | ✅ 10/10 passing |
+| **Real browser visual test (Playwright + Chromium)** | `node Testing/03_Navbar_Masjid_Selection/visual_test.js` | ✅ 10/10 viewports show 0 overflowing elements — 12 screenshots saved to `Testing/03_Navbar_Masjid_Selection/screenshots/` |
+
+## Real Browser Test (after Phase 3 fix iteration)
+
+After the partner reported the layout was still broken at common desktop widths, I ran a real Chromium-based visual test that captured screenshots at 5 viewport widths (425 / 768 / 900 / 1280 / 1440) in both logged-out and logged-in states, plus a mobile-hamburger-open state. The first run revealed 5 visual issues (BUG-NAV-005 to 009) which were all fixed. The re-run confirms all 10 viewports now have **zero overflowing elements**.
+
+| Viewport | State | Overflow count | Screenshot |
+|----------|-------|----------------|------------|
+| 425px (mobile) | loggedout | 0 | `screenshots/mobile-425-loggedout.png` |
+| 768px (tablet) | loggedout | 0 | `screenshots/tablet-768-loggedout.png` |
+| 900px (tablet) | loggedout | 0 | `screenshots/tablet-900-loggedout.png` |
+| 1280px (desktop) | loggedout | 0 | `screenshots/desktop-1280-loggedout.png` |
+| 1440px (desktop) | loggedout | 0 | `screenshots/desktop-1440-loggedout.png` |
+| 425px | loggedin | 0 | `screenshots/mobile-425-loggedin.png` |
+| 768px | loggedin | 0 | `screenshots/tablet-768-loggedin.png` |
+| 900px | loggedin | 0 | `screenshots/tablet-900-loggedin.png` |
+| 1280px | loggedin | 0 | `screenshots/desktop-1280-loggedin.png` |
+| 1440px | loggedin | 0 | `screenshots/desktop-1440-loggedin.png` |
+| 425px (hamburger open) | loggedout | 0 | `screenshots/mobile-425-hamburger-open.png` |
+| 425px (hamburger open, full page) | loggedout | 0 | `screenshots/mobile-425-hamburger-open-fullpage.png` |
 
 ## Files Changed in Phase 3
 
