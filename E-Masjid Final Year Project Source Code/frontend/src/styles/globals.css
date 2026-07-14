@@ -16,6 +16,11 @@
 
 html {
   scroll-behavior: smooth;
+  /* Prevent the page from being wider than the viewport on mobile. Some
+     decorative elements (e.g. absolute circles at -right-6) push the body
+     past 100vw. The header (position: fixed; left:0; right:0;) would then
+     match the body's scroll width and overflow on the right. */
+  overflow-x: hidden;
 }
 
 body {
@@ -24,6 +29,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
   color: #1f2937;
+  /* Prevent decorative elements (e.g. the gold circles in Home.jsx that use
+     `absolute -right-6` for visual interest) from causing horizontal scroll
+     on narrow mobile viewports. Phase 3 visual test caught this. */
+  overflow-x: hidden;
 }
 
 .material-icons-round {

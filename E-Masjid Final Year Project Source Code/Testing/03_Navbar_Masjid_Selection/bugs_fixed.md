@@ -99,3 +99,50 @@
   - `npm test` (backend) ✅ 10/10
   - **Real browser test** (Playwright + Chromium) ✅ all 10 viewports show 0 overflowing elements
 - **Note for the partner:** the visual test script (`Testing/03_Navbar_Masjid_Selection/visual_test.js`) and 12 screenshots are saved to the `screenshots/` subfolder. To re-run anytime, execute `node Testing/03_Navbar_Masjid_Selection/visual_test.js` from the project root.
+
+---
+
+## FIX-NAV-010 — Mobile overflow: `html { overflow-x: hidden }` + header `overflow-x-hidden`
+
+- **Files:**
+  - `frontend/src/styles/globals.css` — added `html { overflow-x: hidden }` and `body { overflow-x: hidden }` (defense in depth). The root cause was the fixed `<header>` was matching the body's actual scroll width (440px on a 320px viewport) instead of 100vw.
+  - `frontend/src/components/Common/Navbar.jsx` — added `overflow-x-hidden` to the fixed header as a belt-and-braces measure.
+- **Root cause:** Two compounding issues:
+  1. The `html` element had no `overflow-x: hidden`, so a decorative gold circle in Home.jsx (`absolute -top-6 -right-6 h-32 w-32 rounded-full bg-[#d4af37]/10`) extended past the right edge and forced the body to be wider than the viewport.
+  2. The fixed `<header>` had `left-0 right-0` but no `overflow-x: hidden`, so it followed the body's actual scroll width (440px) instead of being 100vw.
+- **Fix applied:**
+  - `html { overflow-x: hidden }` — prevents the body from being wider than the viewport (decorative elements that extend past the edge are simply clipped, no horizontal scroll)
+  - `body { overflow-x: hidden }` — same protection
+  - `<header class="... overflow-x-hidden">` — same protection for the fixed header
+- **Result (verified by re-running `mobile_overflow_test.js`):**
+  - iPhone SE (320px): `scrollWidth=320, overflow=0px` ✅
+  - Android (360px): `scrollWidth=360, overflow=0px` ✅
+  - iPhone 12 (390px): `scrollWidth=390, overflow=0px` ✅
+  - Android large (412px): `scrollWidth=412, overflow=0px` ✅
+  - Tablet portrait (768px): `scrollWidth=768, overflow=0px` ✅
+- **Verification:**
+  - Screenshots saved to `screenshots/mobile/*.png`
+  - 12 screenshots in `screenshots/hero-reactive/` show the hero updates on dropdown change
+  - `npm run lint` ✅ 0 errors
+  - `npm run build` ✅ success
+  - `npm test` (backend) ✅ 10/10
+
+---
+
+## FIX-NAV-011 — Hero heading is now reactive to the mosque dropdown
+
+- **File:** `frontend/src/components/User/Pages/Home.jsx`
+- **Root cause:** Lines 167 and 251 had hardcoded "Masjid Al-Noor" instead of pulling from the `useMosque()` context. The Phase 3 refactor updated the data-loading `useEffect` to depend on `activeMosqueId`, but missed the heading strings.
+- **Fix applied:**
+  - Line 167 (hero heading): `Welcome to <span ...>{activeMosque?.name || 'E-Masjid'}</span>`
+  - Line 251 (gallery heading): `Life at {activeMosque?.name || 'E-Masjid'}`
+  - Also updated the component to destructure `activeMosque` from `useMosque()`: `const { activeMosqueId, activeMosque } = useMosque()`
+- **Result (verified by `verify_hero_reactive.js`):**
+  - Before switch: hero reads "Welcome to Masjid Al-Rahman"
+  - After switching to Al-Noor: hero reads "Welcome to Masjid Al-Noor" (instantly, no page refresh)
+  - After switching back to Al-Rahman: hero reads "Welcome to Masjid Al-Rahman" (instantly)
+  - 3 screenshots saved to `screenshots/hero-reactive/`
+- **Verification:**
+  - `npm run lint` ✅ 0 errors
+  - `npm run build` ✅ success
+  - `npm test` (backend) ✅ 10/10

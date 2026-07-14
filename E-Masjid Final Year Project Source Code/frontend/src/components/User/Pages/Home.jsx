@@ -54,7 +54,7 @@ function getCountdown(dateStr) {
 
 export default function Home() {
   const { showToast } = useUI()
-  const { activeMosqueId } = useMosque()
+  const { activeMosqueId, activeMosque } = useMosque()
   const [today, setToday] = useState({
     fajr: '05:30',
     zuhr: '12:45',
@@ -164,7 +164,7 @@ export default function Home() {
           </div>
 
           <h1 className="font-primary text-white text-4xl md:text-6xl font-bold leading-tight">
-            Welcome to <span className="text-[#d4af37]">Masjid Al-Noor</span>
+            Welcome to <span className="text-[#d4af37]">{activeMosque?.name || 'E-Masjid'}</span>
           </h1>
 
           <p className="mt-5 mx-auto max-w-3xl text-lg md:text-xl text-white/90 leading-relaxed">
@@ -248,7 +248,7 @@ export default function Home() {
               <i className="material-icons-round text-base">auto_awesome</i>
               Discover Our Mosque
             </span>
-            <h2 className="mt-4 font-primary text-4xl font-bold text-[#064e3b]">Life at Masjid Al-Noor</h2>
+            <h2 className="mt-4 font-primary text-4xl font-bold text-[#064e3b]">Life at {activeMosque?.name || 'E-Masjid'}</h2>
             <div className="mx-auto mt-3 h-1 w-16 rounded-full bg-[#d4af37]" />
           </div>
 
@@ -361,7 +361,7 @@ export default function Home() {
             </div>
             <Link to={ROUTES.ANNOUNCEMENTS} className="btn btn-secondary btn-sm">
               View All
-              <i className="material-icons-round">arrow_forward</i>
+              <i className="material-icons-round hidden sm:inline">arrow_forward</i>
             </Link>
           </div>
 

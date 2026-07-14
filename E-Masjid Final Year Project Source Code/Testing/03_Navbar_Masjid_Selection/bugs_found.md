@@ -114,3 +114,37 @@
 - **Found via:** Earlier screenshot (this was the "MASQUE" in the original partner screenshot — the label was wrapping because of the cramped layout)
 - **Actual:** At 1024-1279px (lg but not xl), the navbar has the center nav + mosque selector fighting for room, causing the "MOSQUE" label to wrap.
 - **Status:** FIXED (FIX-NAV-005, 2026-06-24). The mosque selector is now `xl:flex` so the label doesn't appear until 1280px where there's guaranteed room.
+
+---
+
+## BUG-NAV-010 — Mobile overflow on iPhone SE / Android small / iPhone 12 / Android large (320-412px)
+
+- **Severity:** High (visible to all mobile visitors)
+- **Location:** `frontend/src/components/Common/Navbar.jsx` (the fixed header) + `frontend/src/styles/globals.css` (missing `html` overflow rule)
+- **Found via:** Real mobile-device visual test (`mobile_overflow_test.js`) + diagnostic script (`find_440px_source.js`)
+- **Steps to Reproduce (verified by partner on real iPhone 12 + Android phone via Netlify):**
+  1. Open `http://localhost:5173` on a mobile phone or in DevTools at <420px wide
+  2. Look at the navbar — the hamburger button is pushed off the right edge of the viewport
+  3. Try to scroll horizontally — the page is 440px wide on a 320px viewport
+- **Expected:** Page is exactly 320px wide on a 320px viewport. All navbar items visible. No horizontal scroll.
+- **Actual (before fix):** Page scrollWidth = 440px on a 320px viewport. The fixed header follows the body's scroll width, pushing the hamburger to x=380 (off-screen).
+- **Root cause:** Two compounding issues:
+  1. The fixed `<header>` has `left-0 right-0` but no `overflow-x-hidden`, so it matches the body's actual scroll width (440px) instead of 100vw.
+  2. The `<html>` element has no `overflow-x: hidden`, so a decorative gold circle in Home.jsx (`absolute -top-6 -right-6 h-32 w-32 rounded-full bg-[#d4af37]/10`) extends past the right edge and forces the body to 440px wide.
+- **Status:** FIXED (FIX-NAV-010, 2026-06-24). See `bugs_fixed.md`. Verified by re-running `mobile_overflow_test.js`: all 5 mobile widths now show `scrollWidth = clientWidth` (0 overflow).
+
+---
+
+## BUG-NAV-011 — Hero "Welcome to Masjid Al-Noor" heading is hardcoded (doesn't update when mosque dropdown changes)
+
+- **Severity:** High (data correctness — same mosque name appears regardless of which mosque the user selected)
+- **Location:** `frontend/src/components/User/Pages/Home.jsx:167` (and line 251 in the gallery section)
+- **Found via:** Partner's manual test of Test 5 in the Phase 3 manual guide
+- **Steps to Reproduce:**
+  1. Open `http://localhost:5173` on the homepage
+  2. Note the heading says "Welcome to Masjid Al-Noor"
+  3. Change the mosque dropdown to "Masjid Al-Rahman (Lahore)"
+  4. The navbar logo updates correctly, but the hero heading STILL says "Welcome to Masjid Al-Noor"
+- **Expected:** Hero heading updates to "Welcome to Masjid Al-Rahman" when the dropdown is changed
+- **Actual:** Hero heading stays at the hardcoded "Masjid Al-Noor" because the original Home.jsx hero used a literal string instead of the dynamic `activeMosque?.name`. Same bug in the gallery section ("Life at Masjid Al-Noor" heading).
+- **Status:** FIXED (FIX-NAV-011, 2026-06-24). Verified by `verify_hero_reactive.js` — captured 3 screenshots showing the hero updates from "Masjid Al-Rahman" to "Masjid Al-Noor" on dropdown change. See `bugs_fixed.md`.

@@ -80,7 +80,7 @@ All nav items fit on a single line; nothing is clipped, nothing wraps, the mosqu
 - Nothing is clipped or wrapped
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______failed________
+☐ PASS  ☐ FAIL — Notes: _______pass________
 
 ---
 
@@ -99,7 +99,7 @@ At tablet widths, the nav still works — either the desktop nav shrinks or the 
 - The logo, mosque selector, and hamburger are visible
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______failed________
+☐ PASS  ☐ FAIL — Notes: _______pass________
 
 ---
 
@@ -120,7 +120,7 @@ On mobile, the hamburger menu opens and shows all the nav links.
 - Clicking any link closes the menu and navigates
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _______fail________
 
 ---
 
@@ -140,7 +140,7 @@ After re-seeding, the dropdown should show 2 options (Masjid Al-Noor, Masjid Al-
 - Currently selected one is highlighted
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: __________pass_____
 
 ---
 
@@ -161,7 +161,7 @@ When you change the mosque dropdown while on the homepage, the displayed prayer 
 - No page reload, no flash of white screen
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ______fail_________
 
 ---
 
@@ -181,7 +181,7 @@ Same as Test 5 but on the `/prayer-times` page.
 - If both mosques have the same default times, the page just stays the same — that's OK, the important thing is no error
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ______pass_________
 
 ---
 
@@ -202,7 +202,7 @@ Same as Test 5 but on the `/events` page.
 - If no events for the new mosque, the empty state ("No events yet") appears
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: _____pass__________
 
 ---
 
@@ -221,7 +221,7 @@ Same as Test 5 but on the `/announcements` page.
 - Announcements list updates without a page refresh
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ___________pass____
 
 ---
 
@@ -241,7 +241,7 @@ Same as Test 5 but on the `/transparency` page.
 - The "Top Donors" section updates to the new mosque's donors
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ______pass_________
 
 ---
 
@@ -262,7 +262,7 @@ On mobile, the mosque dropdown inside the hamburger menu also updates the data.
 - The page (e.g. homepage behind the menu) shows the new mosque's data
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ___pass____________
 
 ---
 
@@ -293,7 +293,7 @@ For each role, after clicking Logout:
 - [ ] Admin → redirects to `/admin/login`, Logout button gone
 - [ ] Manager → redirects to `/manager/login`, Logout button gone
 - [ ] Committee → redirects to `/committee/login`, Logout button gone
-
+passed 
 ---
 
 ## Test 12: Navbar persistence — refresh keeps the selected mosque
@@ -314,7 +314,7 @@ After selecting a mosque and refreshing the page, the same mosque should still b
 - The selection is persisted via `localStorage`
 
 ### Mark Result
-☐ PASS  ☐ FAIL — Notes: _______________
+☐ PASS  ☐ FAIL — Notes: ______pass_________
 
 ---
 

@@ -110,7 +110,7 @@ export default function Navbar() {
   const isMoreActive = moreItems.some((item) => isActive(item.path))
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-40 border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`}>
+    <header className={`fixed top-0 left-0 right-0 z-40 border-b border-gray-200 transition-all duration-300 overflow-x-hidden ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`}>
       <div className="container h-20 flex items-center gap-2 lg:gap-4">
         {/* Logo */}
         <Link to={ROUTES.HOME} className="flex items-center gap-3 shrink-0 min-w-0">
@@ -185,7 +185,7 @@ export default function Navbar() {
         {/* Auth Buttons — always visible at sm+, never shrink */}
         <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
           {isAuthenticated ? (
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden lg:flex items-center gap-2">
               <span className="hidden xl:inline text-sm font-medium text-gray-700 whitespace-nowrap">
                 {user?.name || 'User'}
               </span>
@@ -199,18 +199,18 @@ export default function Navbar() {
                 Logout
               </button>
               {user?.role === 'admin' && (
-                <Link to={ROUTES.ADMIN} className="hidden sm:inline-flex btn btn-primary btn-sm">
+                <Link to={ROUTES.ADMIN} className="btn btn-primary btn-sm">
                   Admin
                 </Link>
               )}
               {user?.role === 'scholar' && (
-                <Link to={ROUTES.SCHOLAR} className="hidden sm:inline-flex btn btn-primary btn-sm">
+                <Link to={ROUTES.SCHOLAR} className="btn btn-primary btn-sm">
                   Dashboard
                 </Link>
               )}
             </div>
           ) : (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm">
                 Login
               </Link>
