@@ -1,0 +1,41 @@
+const mongoose = require('mongoose');
+
+/**
+ * Community Testimonial model.
+ *
+ * Shown in the homepage's "What Our Community Says" section (Phase 4).
+ * Admin creates these from the admin panel. The photo is a URL (e.g. an
+ * image uploaded to a CDN) — for the FYP we use /assets/images/testimonials/
+ * in the public folder, but the schema accepts any URL string.
+ */
+const testimonialSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true,
+    maxlength: [80, 'Name must be 80 characters or fewer'],
+  },
+  role: {
+    type: String,
+    required: [true, 'Role is required'],
+    trim: true,
+    maxlength: [120, 'Role must be 120 characters or fewer'],
+  },
+  quote: {
+    type: String,
+    required: [true, 'Quote is required'],
+    trim: true,
+    maxlength: [600, 'Quote must be 600 characters or fewer'],
+  },
+  photo: {
+    type: String,
+    default: '/assets/images/testimonials/testimonial-1.jpg',
+  },
+  order: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+}, { timestamps: true });
+
+testimonialSchema.index({ isActive: 1, order: 1, createdAt: -1 });
+
+module.exports = mongoose.model('Testimonial', testimonialSchema);

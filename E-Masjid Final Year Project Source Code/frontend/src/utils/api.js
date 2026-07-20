@@ -128,6 +128,28 @@ class ApiService {
   getPrayerTimes(params = '') { return this.request('GET', `/api/prayer-times${params ? '?' + params : ''}`) }
   updatePrayerTimes(data) { return this.request('PUT', '/api/prayer-times', data) }
 
+  // Marketing (Phase 4.5)
+  getMarketingStats() { return this.request('GET', '/api/marketing/stats') }
+  getMarketingImpact() { return this.request('GET', '/api/marketing/impact') }
+  getMarketingFeaturedCampaign() { return this.request('GET', '/api/marketing/featured-campaign') }
+  getMarketingCampaigns() { return this.request('GET', '/api/marketing/campaigns') }
+  getMarketingTestimonials() { return this.request('GET', '/api/marketing/testimonials') }
+  getMarketingHeroSlides() { return this.request('GET', '/api/marketing/hero-slides') }
+
+  // Admin Marketing CRUD (Phase 4.5)
+  adminListCampaigns() { return this.request('GET', '/api/admin/marketing/campaigns') }
+  adminCreateCampaign(data) { return this.request('POST', '/api/admin/marketing/campaigns', data) }
+  adminUpdateCampaign(id, data) { return this.request('PUT', `/api/admin/marketing/campaigns/${id}`, data) }
+  adminDeleteCampaign(id) { return this.request('DELETE', `/api/admin/marketing/campaigns/${id}`) }
+  adminListTestimonials() { return this.request('GET', '/api/admin/marketing/testimonials') }
+  adminCreateTestimonial(data) { return this.request('POST', '/api/admin/marketing/testimonials', data) }
+  adminUpdateTestimonial(id, data) { return this.request('PUT', `/api/admin/marketing/testimonials/${id}`, data) }
+  adminDeleteTestimonial(id) { return this.request('DELETE', `/api/admin/marketing/testimonials/${id}`) }
+  adminListHeroSlides() { return this.request('GET', '/api/admin/marketing/hero-slides') }
+  adminCreateHeroSlide(data) { return this.request('POST', '/api/admin/marketing/hero-slides', data) }
+  adminUpdateHeroSlide(id, data) { return this.request('PUT', `/api/admin/marketing/hero-slides/${id}`, data) }
+  adminDeleteHeroSlide(id) { return this.request('DELETE', `/api/admin/marketing/hero-slides/${id}`) }
+
   // Nikah Bookings
   getNikahBookings() { return this.request('GET', '/api/nikah-bookings') }
   createNikahBooking(data) { return this.request('POST', '/api/nikah-bookings', data) }

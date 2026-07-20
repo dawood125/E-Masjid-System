@@ -6,7 +6,10 @@
       "Bash(curl -s \"http://localhost:5173/src/components/User/Pages/Home.jsx\")",
       "Bash(curl -s \"http://localhost:5173/src/components/User/Pages/Home.jsx?bust=$\\(date +%s\\)\")",
       "Bash(curl -s \"http://localhost:5173/src/styles/globals.css?bust=$\\(date +%s\\)\")",
-      "Bash(node Testing/03_Navbar_Masjid_Selection/verify_hero_reactive.js)"
+      "Bash(node Testing/03_Navbar_Masjid_Selection/verify_hero_reactive.js)",
+      "Bash(node -e ' *)",
+      "Bash(node fix-quotes.cjs)",
+      "Bash(node fix-callbacks.cjs)"
     ]
   }
 }

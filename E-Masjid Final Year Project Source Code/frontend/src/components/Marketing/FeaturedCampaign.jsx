@@ -1,0 +1,128 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import api from '../../utils/api.js'
+import { ROUTES } from '../../utils/constants.js'
+
+/**
+ * Featured campaign: a single large donation CTA card with a progress bar.
+ * Phase 4.5: Now fetched from GET /api/marketing/featured-campaign. If no
+ * campaign is featured, the section is hidden entirely (clean fallback).
+ */
+function formatPKR(n) {
+  return 'PKR ' + Number(n || 0).toLocaleString('en-PK')
+}
+
+export default function FeaturedCampaign() {
+  const [campaign, setCampaign] = useState(null)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    api.getMarketingFeaturedCampaign()
+      .then((res) => { if (mounted) { setCampaign(res.data); setLoaded(true) } })
+      .catch(() => { if (mounted) setLoaded(true) })
+    return () => { mounted = false }
+  }, [])
+
+  // Hide section entirely if no featured campaign
+  if (loaded && !campaign) return null
+  if (!campaign) return null
+
+  const pct = campaign.progressPercent ?? Math.min(Math.round((campaign.raisedAmount / campaign.targetAmount) * 100), 100)
+
+  return (
+    <section className="py-20 bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#047857] text-white relative overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M40 0l8 16 16 8-16 8-8 16-8-16-16-8 16-8z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+        }}
+      />
+
+      <div className="container relative">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white">
+              <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
+              Featured Campaign
+            </span>
+            <h2 className="mt-4 font-primary text-3xl md:text-5xl font-bold leading-tight">
+              {campaign.title}
+            </h2>
+            {campaign.subtitle && (
+              <p className="mt-4 text-white/85 text-lg leading-relaxed max-w-xl">
+                {campaign.subtitle}
+              </p>
+            )}
+            <div className="mt-6 flex flex-wrap items-center gap-5 text-sm text-white/80">
+              <span className="inline-flex items-center gap-2">
+                <i className="material-icons-round text-base text-[#d4af37]">group</i>
+                {campaign.donorCount || 0} donors
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <i className="material-icons-round text-base text-[#d4af37]">schedule</i>
+                {campaign.daysLeft || 0} days left
+              </span>
+            </div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                to={ROUTES.DONATE}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold bg-[#d4af37] text-[#1f2937] border-2 border-[#d4af37] hover:bg-[#b7791f] hover:border-[#b7791f] shadow-lg transition-all"
+              >
+                <i className="material-icons-round">volunteer_activism</i>
+                Donate Now
+              </Link>
+              <Link
+                to={ROUTES.TRANSPARENCY}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold bg-transparent text-white border-2 border-white/40 hover:bg-white/10 transition-all"
+              >
+                See Full Transparency Report
+                <i className="material-icons-round">arrow_forward</i>
+              </Link>
+            </div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-7 border border-white/15">
+            <div className="flex items-end justify-between mb-2">
+              <div>
+                <p className="text-sm uppercase tracking-wider text-white/70">Raised so far</p>
+                <p className="text-4xl font-bold text-white mt-1">{formatPKR(campaign.raisedAmount)}</p>
+              </div>
+              <p className="text-5xl font-bold text-[#d4af37] tabular-nums">{pct}%</p>
+            </div>
+
+            <div className="mt-3 h-3 w-full bg-white/15 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#d4af37] to-yellow-400 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-sm text-white/80">
+              <span>{pct}% funded</span>
+              <span>Goal: {formatPKR(campaign.targetAmount)}</span>
+            </div>
+
+            <div className="mt-7 grid grid-cols-3 gap-3 text-center">
+              {[
+                { amount: 'PKR 500',  label: 'Bronze'  },
+                { amount: 'PKR 2,000', label: 'Silver'  },
+                { amount: 'PKR 10,000', label: 'Gold'    },
+              ].map((tier) => (
+                <button
+                  key={tier.label}
+                  type="button"
+                  className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 py-3 px-2 transition-colors group"
+                >
+                  <p className="text-[#d4af37] font-bold">{tier.amount}</p>
+                  <p className="text-xs text-white/70 uppercase tracking-wider mt-0.5">{tier.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}

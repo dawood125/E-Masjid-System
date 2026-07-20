@@ -35,6 +35,21 @@ body {
   overflow-x: hidden;
 }
 
+/* Cinematic slow-zoom animation for the static hero image fallback.
+   Used when the hero video fails to load or on browsers that block autoplay.
+   Animates from scale 1 + center to scale 1.08 + slight pan over 20s,
+   then loops. Pauses on hover so users can read the text without distraction. */
+@keyframes kenBurns {
+  0%   { transform: scale(1)    translate(0,   0); }
+  50%  { transform: scale(1.08) translate(-1%, -1%); }
+  100% { transform: scale(1)    translate(0,   0); }
+}
+.animate-ken-burns {
+  animation: kenBurns 20s ease-in-out infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
 .material-icons-round {
   font-family: "Material Icons Round";
   font-style: normal;

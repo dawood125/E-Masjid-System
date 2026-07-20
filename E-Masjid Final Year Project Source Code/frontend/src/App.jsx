@@ -22,6 +22,7 @@ import AdminLogin from './components/Admin/Pages/AdminLogin'
 
 // Admin Pages
 import AdminDashboard from './components/Admin/Pages/Dashboard'
+import AdminMarketing from './components/Admin/Pages/Marketing'
 import DonationsExpenses from './components/Admin/Pages/DonationsExpenses'
 import AdminPrayerTimes from './components/Admin/Pages/PrayerTimes'
 import AdminEvents from './components/Admin/Pages/Events'
@@ -88,6 +89,7 @@ function App() {
               <Route path="scholars" element={<AdminScholars />} />
               <Route path="committee" element={<AdminCommittee />} />
               <Route path="fund-requests" element={<AdminFundRequests />} />
+              <Route path="marketing" element={<AdminMarketing />} />
             </Route>
 
             {/* Scholar Routes */}

@@ -18,6 +18,7 @@ export default function Sidebar({ role = 'admin' }) {
     { label: 'Manage Scholars', path: ROUTES.ADMIN_SCHOLARS, icon: 'school' },
     { label: 'Committee Members', path: ROUTES.ADMIN_COMMITTEE, icon: 'groups' },
     { label: 'Fund Requests', path: ROUTES.ADMIN_FUND_REQUESTS, icon: 'request_quote' },
+    { label: 'Marketing Content', path: '/admin/marketing', icon: 'campaign' },
   ]
 
   const scholarLinks = [

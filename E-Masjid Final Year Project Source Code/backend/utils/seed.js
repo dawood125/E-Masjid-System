@@ -10,6 +10,9 @@ const Announcement = require('../models/Announcement');
 const PrayerTime = require('../models/PrayerTime');
 const NikahBooking = require('../models/NikahBooking');
 const FundRequest = require('../models/FundRequest');
+const Campaign = require('../models/Campaign');
+const Testimonial = require('../models/Testimonial');
+const HeroSlide = require('../models/HeroSlide');
 
 const seedDB = async () => {
   try {
@@ -21,6 +24,7 @@ const seedDB = async () => {
       User.deleteMany({}), Mosque.deleteMany({}), Donation.deleteMany({}),
       Expense.deleteMany({}), Event.deleteMany({}), Announcement.deleteMany({}),
       PrayerTime.deleteMany({}), NikahBooking.deleteMany({}), FundRequest.deleteMany({}),
+      Campaign.deleteMany({}), Testimonial.deleteMany({}), HeroSlide.deleteMany({}),
     ]);
 
     // Create users
@@ -191,6 +195,68 @@ const seedDB = async () => {
         mosqueId: mosque._id,
       },
     ]);
+
+    // ─── Phase 4.5: Marketing content ─────────────────────────────
+    // Sample featured campaign (shown in the homepage "Featured Campaign" section)
+    await Campaign.create({
+      title: 'Help Us Build a New Minaret',
+      subtitle: 'Our community has grown. We need a taller minaret so the Adhan can be heard across Sheikhupura.',
+      targetAmount: 800000,
+      raisedAmount: 320000,
+      donorCount: 142,
+      daysLeft: 23,
+      isActive: true,
+      isFeatured: true,
+      order: 0,
+      createdBy: admin._id,
+    });
+
+    // Sample testimonials (shown in the "What Our Community Says" section)
+    await Testimonial.create({
+      name: 'Ayesha Malik',
+      role: 'Community Member, Young Professional',
+      quote: 'I never imagined I could book a Nikah service so easily. The mosque team helped my family through every step with such respect and care.',
+      photo: '/assets/images/testimonials/testimonial-1.jpg',
+      order: 0,
+      isActive: true,
+      createdBy: admin._id,
+    });
+    await Testimonial.create({
+      name: 'Haji Muhammad Aslam',
+      role: 'Community Elder, Lifetime Member',
+      quote: 'This mosque has been the heart of our community for generations. The new digital system makes it easier for our children to stay connected to the deen.',
+      photo: '/assets/images/testimonials/testimonial-2.jpg',
+      order: 1,
+      isActive: true,
+      createdBy: admin._id,
+    });
+    await Testimonial.create({
+      name: 'Fatima & Zainab',
+      role: 'Mother & Daughter',
+      quote: 'My daughter loves her madrassa classes here. The teachers are so patient, and the Quran program has given her a beautiful foundation in Islam.',
+      photo: '/assets/images/testimonials/testimonial-3.jpg',
+      order: 2,
+      isActive: true,
+      createdBy: admin._id,
+    });
+
+    // Sample hero carousel slides (shown in the "Life at the Masjid" carousel)
+    const defaultSlides = [
+      { image: '/assets/images/gallery/gallery-fajr.jpg',       caption: 'Fajr prayer at dawn — worshippers in sujood' },
+      { image: '/assets/images/gallery/gallery-quran.jpg',      caption: 'Quran study circle with our ustaad' },
+      { image: '/assets/images/gallery/gallery-madrassa.jpg',  caption: 'Children learning Arabic letters' },
+      { image: '/assets/images/gallery/gallery-iftar.jpg',      caption: 'Community iftar during Ramadan' },
+      { image: '/assets/images/gallery/gallery-nikah.jpg',      caption: 'A blessed Nikah ceremony' },
+      { image: '/assets/images/gallery/gallery-courtyard.jpg', caption: 'Our peaceful courtyard at golden hour' },
+    ];
+    for (let i = 0; i < defaultSlides.length; i++) {
+      await HeroSlide.create({
+        ...defaultSlides[i],
+        order: i,
+        isActive: true,
+        createdBy: admin._id,
+      });
+    }
 
     console.log('\n✅ Database seeded successfully!');
     console.log('\n📧 Login Credentials (primary — for module features):');

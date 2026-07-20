@@ -47,6 +47,8 @@ app.use('/api/scholars', require('./routes/scholars'));
 app.use('/api/mosques', require('./routes/mosques'));
 app.use('/api/fund-requests', require('./routes/fundRequests'));
 app.use('/api/committee', require('./routes/committee'));
+app.use('/api/marketing', require('./routes/marketing'));
+app.use('/api/admin/marketing', require('./routes/adminMarketing'));
 
 // Health check
 app.get('/api/health', (req, res) => {
