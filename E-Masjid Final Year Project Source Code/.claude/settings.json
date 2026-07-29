@@ -9,7 +9,16 @@
       "Bash(node Testing/03_Navbar_Masjid_Selection/verify_hero_reactive.js)",
       "Bash(node -e ' *)",
       "Bash(node fix-quotes.cjs)",
-      "Bash(node fix-callbacks.cjs)"
+      "Bash(node fix-callbacks.cjs)",
+      "Bash(npm test *)",
+      "Bash(curl -s -o /dev/null -w \"Backend: HTTP %{http_code}\\\\n\" http://localhost:5000/api/health)",
+      "Bash(curl -s -o /dev/null -w \"Frontend: HTTP %{http_code}\\\\n\" http://localhost:5173)",
+      "Bash(node Testing/03_Navbar_Masjid_Selection/phase35_visual_test.js)",
+      "Bash(curl -s -o /dev/null -w \"Backend: HTTP %{http_code}\\\\nFrontend: HTTP %{http_code}\\\\n\" http://localhost:5000/api/health)",
+      "Bash(node Testing/03_Navbar_Masjid_Selection/verify_3_fixes.js)",
+      "Bash(node Testing/03_Navbar_Masjid_Selection/diag_dropdown.js)",
+      "Read(//d/College data/Seven semster/Project data/Git hub data/E-Masjid Final Year Source Code/frontend/src/components/Common/**)",
+      "Bash(node Testing/03_Navbar_Masjid_Selection/verify_logo_fix.js)"
     ]
   }
 }

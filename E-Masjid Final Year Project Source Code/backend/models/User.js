@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema({
   },
   phone: { type: String },
   specialization: { type: String },
+  // Phase 3.5: Address fields used by the new 2-step registration
+  // (geolocation + city + street address)
+  address: { type: String, trim: true, maxlength: 200 },
+  city: { type: String, trim: true, maxlength: 80 },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
   isActive: { type: Boolean, default: true },
   resetPasswordToken: String,

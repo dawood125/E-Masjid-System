@@ -163,6 +163,7 @@ class ApiService {
   // Mosques
   getMosques() { return this.request('GET', '/api/mosques') }
   getPublicMosques() { return this.request('GET', '/api/mosques/public') }
+  searchMosques(params = '') { return this.request('GET', `/api/mosques/search${params ? '?' + params : ''}`) }
   getMosque(id) { return this.request('GET', `/api/mosques/${id}`) }
   createMosque(data) { return this.request('POST', '/api/mosques', data) }
   updateMosque(id, data) { return this.request('PUT', `/api/mosques/${id}`, data) }

@@ -146,3 +146,108 @@
   - `npm run lint` ✅ 0 errors
   - `npm run build` ✅ success
   - `npm test` (backend) ✅ 10/10
+
+---
+
+## FIX-NAV-013 — Bumped navbar z-index + added zIndex:60 to mosque selector container
+
+- **File:** `frontend/src/components/Common/Navbar.jsx`
+- **Root cause:** Native HTML `<select>` controls render in a separate OS layer that ignores z-index. The navbar was `z-40` which lost to the hero's overlay at times.
+- **Fix applied:**
+  1. Header class: `z-40` → `z-50`
+  2. Mosque selector container: `relative` → `relative` + inline `style={{ zIndex: 60 }}`
+  3. Bonus (Phase 3.5): Replaced the native `<select>` with a `<button>` that opens the new `MosqueSearchModal` — the modal uses a custom dropdown UI (no native select issues)
+- **Result:** Mosque selector is now always visible above the hero, even when scrolled. The modal opens with a clean Google-Maps-style search experience.
+- **Verification:** `phase35_visual_test.js` screenshot 02 confirms the mosque button "Masjid Al-Rah..." is clearly visible above the hero section.
+- **Lint + build:** 0 errors, 0 warnings (after fixing 3 lint issues with underscores)
+
+---
+
+## FIX-NAV-014 — 2-step Register flow with address + home-mosque selection
+
+- **Files modified (8 new + 3 modified):**
+  - `backend/models/User.js` — added `address` (max 200) and `city` (max 80) fields
+  - `backend/routes/auth.js` — POST `/api/auth/register` now accepts `address`, `city`, `mosqueId` (validates the ObjectId against the Mosque model and ensures `isActive: true`)
+  - `backend/routes/mosques.js` — new GET `/api/mosques/search?query=&city=` route (public, returns up to 50 active mosques matching name/city/address)
+  - `frontend/src/utils/api.js` — added `searchMosques(params)` method
+  - `frontend/src/hooks/useGeolocation.js` — NEW — wraps browser Geolocation API + BigDataCloud free reverse-geocode; graceful error handling (permission denied, timeout, etc.)
+  - `frontend/src/components/Auth/Pages/MosqueSearchModal.jsx` — NEW — reusable modal with debounced search, city filter, "use my current location" button, selectable cards, Escape-to-close, scroll-lock
+  - `frontend/src/components/User/Pages/Register.jsx` — refactored to 2-step flow with a stepper indicator. Step 1 (basic info) → Step 2 (address + home-mosque). Submit is at the end of Step 2.
+  - `frontend/src/components/Common/Navbar.jsx` — desktop + mobile mosque button now opens `MosqueSearchModal` instead of using a native `<select>`
+  - `frontend/src/context/AuthContext.jsx` — `register()` now accepts a full formData object (was 4 positional args)
+- **Result:** User signup is now a guided 2-step experience:
+  - Step 1: Quick basic info
+  - Step 2: Address (optional), City (auto-filled from selected mosque), Home Mosque (via search modal with "use my location" option)
+- **Verification:**
+  - `npm run lint` → 0 errors, 0 warnings (fixed 3 lint issues: orphan `>`, unused `err`, unused `activeMosqueId`)
+  - `npm run build` → success (522 kB bundle, 6.11s)
+  - `npm test` (backend) → 10/10 passing (~42s)
+  - `phase35_visual_test.js` → 6 screenshots captured (homepage, scrolled-navbar-with-mosque-button, modal-open, modal-search, modal-closed, register-step1)
+- **Out of scope (deferred to future):** per-mosque role assignments, mfa, password reset on first login, terms-of-service document link
+
+---
+
+## FIX-NAV-015 — Bumped Navbar dropdown + header + mosque selector z-indexes
+
+- **File:** `frontend/src/components/Common/Navbar.jsx`
+- **Root cause:** The original BUG-NAV-013 fix bumped the header to z-50, but the DropdownMenu component was ALSO at z-50. Since the dropdowns extend BELOW the header into the area where the hero section's stacking context lives, they ended up behind the hero.
+- **Fix applied:**
+  - Header: `z-50` → `z-[60]`
+  - Dropdown menu (Services, More): `z-50` → `z-[60]`
+  - Mosque selector div: `z-60` → `z-70` (inline style)
+  - Modal: `z-[60]` → `z-[70]`
+- **Result:** All dropdowns (Services, More), the mosque selector, and the new search modal are now visible above the hero section at every viewport width.
+- **Verification:** `verify_3_fixes.js` — Playwright opens the Services dropdown and confirms `a:has-text("Nikah Booking")` is `isVisible()`. Then opens More and confirms `a:has-text("Announcements")` is `isVisible()`. Both PASS.
+
+---
+
+## FIX-NAV-016 — Register Step 1 now validates ALL fields before advancing
+
+- **File:** `frontend/src/components/User/Pages/Register.jsx`
+- **Root cause:** The original `goToStep2` only checked `password === confirmPassword` and `terms`. The form would silently jump to Step 2 with an empty name/email/phone if the user clicked "Continue" without filling them.
+- **Fix applied:**
+  - Added a `PASSWORD_RULE` constant at the top of the file matching the backend's rule
+  - Rewrote `goToStep2` to validate ALL fields (name length, email regex, phone length, password rule, confirm match, terms)
+  - On any validation failure: stores errors in `fieldErrors` state, renders them inline via the existing `FieldError` component, and shows a summary toast
+  - Only advances to Step 2 when ALL fields are valid
+- **Result:** Users can no longer reach Step 2 with empty/invalid data. Each error is shown right under the offending field, plus a combined toast at the top.
+- **Verification:** `verify_3_fixes.js` — clicks "Continue" with empty fields, confirms the form STAYS on Step 1 (heading "Create Your Account" still visible, "Step 1 of 2" indicator still shown). Then fills all fields correctly and confirms it advances to Step 2 ("Find Your Home Mosque" heading visible).
+
+---
+
+## FIX-NAV-017 — Removed unreliable geolocation feature entirely
+
+- **Files modified (2):**
+  - `frontend/src/hooks/useGeolocation.js` — **DELETED** (entire file removed)
+  - `frontend/src/components/Auth/Pages/MosqueSearchModal.jsx` — removed the `useGeolocation` import, the `useGeolocation()` hook call, the geolocation button + handler, and the auto-fill-on-location effect. The modal is now simpler: search bar + city filter + selectable cards + Cancel/Confirm.
+- **Root cause:** The BigDataCloud free reverse-geocode endpoint is unreliable (returns wrong city for some networks, doesn't return street address on the free tier). For the FYP demo, having a feature that "sometimes works" is worse than not having it.
+- **Result:** Modal no longer has the "Use my current location" button. The city field is still pre-filled from the currently-active mosque (via `initialCity` prop) so the user doesn't have to retype it.
+- **Verification:** `verify_3_fixes.js` — opens the search modal, counts buttons matching "Use my current location", expects 0. PASS.
+
+---
+
+## FIX-NAV-018 — Header `overflow: visible` (was clipping dropdowns)
+
+- **File:** `frontend/src/components/Common/Navbar.jsx`
+- **Root cause:** The `overflow-x-hidden` Tailwind class on the `<header>` (added during the BUG-NAV-010 mobile-overflow fix) was auto-forcing `overflow-y: auto` per CSS spec. This CLIPPED the absolute-positioned dropdowns (Services / More / mosque selector button) that extend below the header's 80px height.
+- **Fix applied:** Replaced `overflow-x-hidden` with an inline `style={{ overflow: 'visible' }}`. The `html { overflow-x: hidden }` (in globals.css) still prevents horizontal page-level scrolling, so the original mobile-overflow fix is preserved.
+- **Result:** All dropdowns (Services, More, mosque selector button) are now fully visible.
+- **Verification:** `verify_3_fixes.js` Playwright test passes all 5 assertions including "Services dropdown items visible" + "More dropdown items visible".
+
+---
+
+## FIX-NAV-019 — Logo + user name truncation with max-width
+
+- **File:** `frontend/src/components/Common/Navbar.jsx`
+- **Root cause:** The logo's inner text block and the user name span both used `whitespace-nowrap` but had no `max-w` constraint. Long text (e.g. "Muhammad Abdullah Khan Farooqi" or a long masjid name) would push the right-side auth buttons (Logout, Admin) off-screen.
+- **Fix applied (4 changes):**
+  1. Logo text block: `<div className="hidden sm:flex flex-col min-w-0">` → added `max-w-[10rem]` to clamp to 160px
+  2. User name span: `<span className="hidden xl:inline text-sm font-medium text-gray-700 whitespace-nowrap">` → changed to `truncate max-w-[10rem]` with `title={user?.name || 'User'}` for the full-name tooltip on hover
+  3. City sub-line: added `title={activeMosque?.city || 'Select a mosque'}` for hover tooltip
+  4. Logged-out auth block: added `shrink-0` so the Login/Register buttons can't shrink
+- **Result:** Long user names (e.g. "Muhammad Abdullah Khan Farooqi") and long masjid names (e.g. "Central Mosque of Sheikhupura") are truncated with ellipsis to fit the 160px max. The auth buttons stay visible on the right. Hover tooltips show the full name.
+- **Verification:** `verify_logo_fix.js` Playwright test passes all 4 assertions:
+  - Logged out, header right edge = 1440px ✓
+  - Logged in, user name span truncated to 160px (right edge = 1235px, well under 1440px) ✓
+  - Logged in, header still 1440px wide (no overflow) ✓
+  - Logo visible at x=112, right=332 (fully visible) ✓

@@ -148,3 +148,142 @@
 - **Expected:** Hero heading updates to "Welcome to Masjid Al-Rahman" when the dropdown is changed
 - **Actual:** Hero heading stays at the hardcoded "Masjid Al-Noor" because the original Home.jsx hero used a literal string instead of the dynamic `activeMosque?.name`. Same bug in the gallery section ("Life at Masjid Al-Noor" heading).
 - **Status:** FIXED (FIX-NAV-011, 2026-06-24). Verified by `verify_hero_reactive.js` — captured 3 screenshots showing the hero updates from "Masjid Al-Rahman" to "Masjid Al-Noor" on dropdown change. See `bugs_fixed.md`.
+
+---
+
+## BUG-NAV-013 — Navbar mosque dropdown hides under hero section (z-index issue)
+
+- **Severity:** High (visible to all users at every width — partner reported this after Phase 4 deployment)
+- **Location:** `frontend/src/components/Common/Navbar.jsx` lines 113 (header z-index) + 168 (mosque selector container)
+- **Found via:** Real Chromium browser test on the live Netlify deployment (post-Phase 4 deploy)
+- **Steps to Reproduce:**
+  1. Open `http://localhost:5173` on a desktop window (≥1280px so the mosque selector is visible)
+  2. Look at the navbar
+- **Expected:** The navbar's mosque selector dropdown (and the entire navbar) should appear ABOVE the hero section's overlay
+- **Actual:** The mosque `<select>` (and the navbar in general) is partially obscured by the hero section's overlay — specifically when scrolling, the dropdown options pop in behind the hero's gradient overlay
+- **Root cause:** Two compounding issues:
+  1. The `<header>` was `z-40` while the hero's gradient overlay was higher (no explicit z-index, but `relative` puts it in the same stacking context as the navbar)
+  2. The mosque `<select>` is a **native browser control** which renders in a separate OS layer that ignores z-index — this is why the dropdown options were specifically affected
+- **Status:** FIXED (FIX-NAV-013, 2026-06-24). See `bugs_fixed.md`. Two changes:
+  1. Navbar header changed from `z-40` to `z-50`
+  2. The mosque selector div gets inline `style={{ zIndex: 60 }}` so even the native select dropdown options layer on top
+- **Verified by:** `phase35_visual_test.js` — the scrolled homepage screenshot (screenshot 02) shows the mosque button clearly visible above the hero.
+
+---
+
+## BUG-NAV-014 (Phase 3.5) — Register form had no address or home-mosque selection
+
+- **Severity:** High (data gap — FYP had no way for users to specify their address or home mosque at signup)
+- **Location:** `frontend/src/components/User/Pages/Register.jsx` (entire 1-step form)
+- **Found via:** Partner's UX request during Phase 3.5 planning
+- **Steps to Reproduce:**
+  1. Click "Register" on the public site
+  2. Fill in the 1-step form (name, email, phone, password, terms)
+  3. Click "Create Account"
+- **Expected:** The user has the option to provide their address and pick a home mosque during signup
+- **Actual:** There was no way to enter address or pick a mosque — the user's `user.mosqueId` was always null unless set manually in the seed
+- **Status:** FIXED (FIX-NAV-014, 2026-06-24). See `bugs_fixed.md`. The Register form was refactored into a 2-step flow:
+  1. **Step 1: Basic info** (name, email, phone, password, terms)
+  2. **Step 2: Address + home-mosque selection** (uses the new `MosqueSearchModal` with search + city filter + "use my current location" button)
+- **Bonus:** New `/api/mosques/search` backend route + `useGeolocation` frontend hook + `address`/`city` fields on the User model.
+
+---
+
+## BUG-NAV-015 — Navbar Services/More dropdowns hidden under hero (z-index still too low)
+
+- **Severity:** High (visible to all users at every width — partner reported after Phase 3.5)
+- **Location:** `frontend/src/components/Common/Navbar.jsx` line 42 (Services/More dropdown) + line 121 (header)
+- **Found via:** Real Chromium browser test (Playwright)
+- **Steps to Reproduce:**
+  1. Open `http://localhost:5173` on a desktop browser (≥1280px wide)
+  2. Click the "Services" button in the navbar
+  3. The dropdown opens but the items (Nikah Booking, My Bookings, Transparency) are NOT visible
+- **Expected:** Dropdown items appear ABOVE the hero
+- **Actual:** The Phase 3.5 z-index fix (BUG-NAV-013) bumped the navbar to z-50 + mosque selector to z-60, but the SERVICES/MORE dropdowns were STILL at z-50 (same as the header). Since the hero is in a separate stacking context, the dropdowns (z-50) ended up behind the hero.
+- **Root cause:** The DropdownMenu component used `z-50` (same as the header z-50). The header's z-50 was correct for the header itself, but the dropdowns (which extend BELOW the header) needed a HIGHER z-index than the surrounding content (especially the hero's stacking context).
+- **Status:** FIXED (FIX-NAV-015). Bumped the DropdownMenu's z-50 to z-[60] (and header to z-[60], mosque selector to z-70). All dropdowns are now visible above the hero.
+
+---
+
+## BUG-NAV-016 — Register Step 1 doesn't validate before moving to Step 2
+
+- **Severity:** High (data gap — user could reach Step 2 with empty name/email/phone/password)
+- **Location:** `frontend/src/components/User/Pages/Register.jsx` `goToStep2()` function (pre-fix)
+- **Found via:** Partner's manual test of Phase 3.5 Test 14
+- **Steps to Reproduce:**
+  1. Open `http://localhost:5173/register`
+  2. Click "Continue" without filling any fields
+  3. The form jumps to Step 2 with empty data
+- **Expected:** Form stays on Step 1 and shows clear per-field validation errors (e.g. "Name is required", "Email is invalid", "Phone is required", "Password must be at least 8 characters with 1 letter and 1 number")
+- **Actual:** The old `goToStep2` only checked `password === confirmPassword` and `terms`. If both were empty, it showed a single toast and proceeded anyway. If the user filled in just `terms`, they could reach Step 2 with no name/email/phone.
+- **Status:** FIXED (FIX-NAV-016). The `goToStep2` now runs a full client-side validation matching the backend's `PASSWORD_RULE`:
+  - Name: at least 2 characters
+  - Email: must match `/^\S+@\S+\.\S+$/`
+  - Phone: at least 7 characters
+  - Password: must match `^(?=.*[A-Za-z])(?=.*\d).{8,64}$`
+  - Confirm password: must match
+  - Terms: must be checked
+- All errors are shown INLINE under the field AND as a summary toast.
+
+---
+
+## BUG-NAV-017 — Geolocation feature returned wrong city name (unreliable)
+
+- **Severity:** Medium (FYP demo risk — could fail in front of examiner)
+- **Location:** `frontend/src/hooks/useGeolocation.js` + `frontend/src/components/Auth/Pages/MosqueSearchModal.jsx`
+- **Found via:** Partner's manual test of Phase 3.5 Test 14
+- **Steps to Reproduce:**
+  1. Open `http://localhost:5173/register`
+  2. Fill Step 1, advance to Step 2
+  3. Click "Use my current location"
+  4. Grant browser permission
+  5. Wait for the result
+- **Expected:** The city field is auto-filled with the user's actual city
+- **Actual:** The BigDataCloud free reverse-geocode API either returned the wrong city (e.g. "Lahore" when the user is in Sheikhupura) or returned nothing. The address field was never auto-filled (only city is returned by BigDataCloud's free tier).
+- **Root cause:** The free BigDataCloud endpoint provides `city` and `countryName` but NOT `street` or `address`. The partner's suggested fix is correct: **the feature is unreliable for the FYP demo and should be removed entirely.**
+- **Status:** FIXED (FIX-NAV-017). Per partner decision:
+  1. Deleted `frontend/src/hooks/useGeolocation.js` entirely
+  2. Removed the "Use my current location" button + all related code from `MosqueSearchModal.jsx`
+  3. The `initialCity` prop still works (pre-fills the city field with the currently-active mosque's city) but no GPS lookup
+  4. The modal is now simpler: search bar + city filter + selectable cards + Cancel/Confirm. Same UX, fewer failure modes.
+
+---
+
+## BUG-NAV-018 — Navbar Services/More dropdowns STILL not showing items after z-index fix
+
+- **Severity:** High (visible to all users at every desktop width)
+- **Location:** `frontend/src/components/Common/Navbar.jsx` line 121 (`<header>` element)
+- **Found via:** Partner's manual retest of Phase 3.5 Test 15 + Playwright diagnostic
+- **Steps to Reproduce:**
+  1. Open `http://localhost:5173` on a desktop browser (≥1280px)
+  2. Click the "Services" button in the navbar
+  3. The dropdown opens (chevron rotates) but the items are NOT visible
+- **Expected:** Dropdown items (Nikah Booking, My Bookings, Transparency) are fully visible below the button
+- **Actual:** The previous z-index fix (BUG-NAV-015) bumped the header + dropdown to z-[60], but the dropdown was STILL invisible
+- **Root cause:** The header element had `overflow-x-hidden` (a class added during the BUG-NAV-010 mobile overflow fix). Per CSS spec, when an element has `overflow-x` set to anything other than `visible`, the browser auto-sets `overflow-y: auto` — which CLIPS the dropdown's Y content that extends below the header's 80px height.
+- **Status:** FIXED (FIX-NAV-018). Changed `overflow-x-hidden` Tailwind class on the `<header>` to an inline `style={{ overflow: 'visible' }}` (the `html { overflow-x: hidden }` from BUG-NAV-010 still prevents horizontal scroll at the page level). Verified by Playwright: clicking the "Services" button reveals all 3 items as `isVisible()`.
+
+---
+
+## BUG-NAV-019 — Logo / user name cut off when long text (login or long masjid name)
+
+- **Severity:** High (visible to all logged-in users + all users when masjid name is long)
+- **Location:** `frontend/src/components/Common/Navbar.jsx` lines 128-133 (logo text block) + 192-196 (user name span)
+- **Found via:** Partner's manual retest after Phase 3.5 (visual inspection of logged-in screenshot)
+- **Steps to Reproduce:**
+  1. Log in as any user
+  2. Observe the navbar — the user name (e.g. "Muhammad Abdullah Khan Farooqi") pushes the layout
+  3. OR visit with a very long masjid name
+- **Expected:** Long text is truncated with ellipsis, layout stays within the viewport
+- **Actual:** The text used `whitespace-nowrap` (forces single line) but had no max-width — so it pushed the auth buttons (Logout, Admin/Dashboard) off-screen on the right
+- **Root cause:** The logo's text block (`hidden sm:flex flex-col min-w-0`) and the user name span both lacked a `max-w` constraint, so the inner flex children could grow unbounded
+- **Status:** FIXED (FIX-NAV-019). Three changes:
+  1. Logo text block: added `max-w-[10rem]` to clamp to 160px
+  2. User name span: changed `whitespace-nowrap` → `truncate max-w-[10rem]` + `title={user?.name}` for hover tooltip
+  3. City sub-line: added `title={...}` for hover tooltip
+  4. Logged-out auth block: added `shrink-0` so the Login/Register buttons can't shrink
+- **Verification:** `verify_logo_fix.js` — Playwright tests with a 32-char user name. All 4 assertions PASS:
+  - Header right edge = 1440px (no overflow, no matter how long the name is)
+  - User name truncated to 160px max
+  - Logo visible at x=112, right=332 (well within viewport)
+  - All logged-in + logged-out tests pass

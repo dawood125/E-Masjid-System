@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useUI } from '../../hooks/useUI.js'
 import { useMosque } from '../../hooks/useMosque.js'
 import { ROUTES } from '../../utils/constants.js'
+import MosqueSearchModal from '../Auth/Pages/MosqueSearchModal.jsx'
 
 function DropdownMenu({ label, items, isActive, closeMobileMenu: closeMobileFn }) {
   const [open, setOpen] = useState(false)
@@ -38,7 +39,7 @@ function DropdownMenu({ label, items, isActive, closeMobileMenu: closeMobileFn }
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-52 rounded-xl border border-gray-200 bg-white py-2 shadow-xl animate-fade-in z-50">
+        <div className="absolute top-full left-0 mt-1 w-52 rounded-xl border border-gray-200 bg-white py-2 shadow-xl animate-fade-in z-[60]">
           {items.map((item) => (
             <Link
               key={item.path}
@@ -62,9 +63,10 @@ function DropdownMenu({ label, items, isActive, closeMobileMenu: closeMobileFn }
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
   const { toggleMobileMenu, mobileMenuOpen, closeMobileMenu } = useUI()
-  const { mosques, activeMosque, activeMosqueId, setActiveMosque } = useMosque()
+  const { mosques, activeMosque, setActiveMosque } = useMosque()
   const location = useLocation()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isMosqueModalOpen, setIsMosqueModalOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,8 +77,14 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleMosqueChange = useCallback((e) => {
-    setActiveMosque(e.target.value)
+  const handleMosqueChange = useCallback((mosque) => {
+    // Phase 3.5: accepts a full mosque object from MosqueSearchModal
+    if (!mosque) {
+      setActiveMosque('')
+    } else {
+      setActiveMosque(mosque._id)
+    }
+    setIsMosqueModalOpen(false)
   }, [setActiveMosque])
 
   // Primary nav links (always visible)
@@ -110,18 +118,18 @@ export default function Navbar() {
   const isMoreActive = moreItems.some((item) => isActive(item.path))
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-40 border-b border-gray-200 transition-all duration-300 overflow-x-hidden ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`}>
+    <header className={`fixed top-0 left-0 right-0 z-[60] border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`} style={{ overflow: 'visible' }}>
       <div className="container h-20 flex items-center gap-2 lg:gap-4">
         {/* Logo */}
         <Link to={ROUTES.HOME} className="flex items-center gap-3 shrink-0 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#047857] to-[#064e3b] shadow-md">
             <i className="material-icons-round text-white text-[26px]">mosque</i>
           </div>
-          <div className="hidden sm:flex flex-col min-w-0">
-            <span className="font-primary text-lg lg:text-xl font-bold leading-tight text-[#064e3b] truncate">
+          <div className="hidden sm:flex flex-col min-w-0 max-w-[10rem]">
+            <span className="font-primary text-lg lg:text-xl font-bold leading-tight text-[#064e3b] truncate" title={activeMosque?.name || 'E-Masjid'}>
               {activeMosque?.name || 'E-Masjid'}
             </span>
-            <span className="text-xs font-medium text-gray-500 truncate">
+            <span className="text-xs font-medium text-gray-500 truncate" title={activeMosque?.city || 'Select a mosque'}>
               {activeMosque?.city || 'Select a mosque'}
             </span>
           </div>
@@ -165,28 +173,25 @@ export default function Navbar() {
 
         {/* Mosque Selector — hidden below xl, shows at xl+ only (to keep room for nav links at lg) */}
         {mosques.length > 0 && (
-          <div className="hidden xl:flex items-center gap-2 shrink min-w-0 relative">
+          <div className="hidden xl:flex items-center gap-2 shrink min-w-0 relative" style={{ zIndex: 70 }}>
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Mosque</span>
-            <select
-              className="min-w-0 w-32 2xl:w-44 truncate rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={activeMosqueId || ''}
-              onChange={handleMosqueChange}
+            <button
+              type="button"
+              onClick={() => setIsMosqueModalOpen(true)}
               title={activeMosque ? `${activeMosque.name} (${activeMosque.city})` : 'Select a mosque'}
+              className="min-w-0 w-36 2xl:w-48 truncate rounded-lg border border-gray-300 bg-white pl-2 pr-7 py-2 text-sm text-gray-700 text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {mosques.map((m) => (
-                <option key={m._id} value={m._id}>
-                  {m.name} ({m.city})
-                </option>
-              ))}
-            </select>
+              {activeMosque ? `${activeMosque.name}` : 'Select a mosque'}
+            </button>
+            <i className="material-icons-round absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 text-base pointer-events-none">expand_more</i>
           </div>
         )}
 
         {/* Auth Buttons — always visible at sm+, never shrink */}
         <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
           {isAuthenticated ? (
-            <div className="hidden lg:flex items-center gap-2">
-              <span className="hidden xl:inline text-sm font-medium text-gray-700 whitespace-nowrap">
+            <div className="hidden lg:flex items-center gap-2 shrink-0 min-w-0">
+              <span className="hidden xl:inline text-sm font-medium text-gray-700 truncate max-w-[10rem]" title={user?.name || 'User'}>
                 {user?.name || 'User'}
               </span>
               <button
@@ -210,7 +215,7 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2 shrink-0">
               <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm">
                 Login
               </Link>
@@ -241,20 +246,25 @@ export default function Navbar() {
               {mosques.length > 0 && (
                 <div className="mb-3 rounded-xl border border-gray-200 bg-white p-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Select Mosque</p>
-                  <select
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                    value={activeMosqueId || ''}
-                    onChange={(e) => {
-                      setActiveMosque(e.target.value)
+                  <button
+                    type="button"
+                    onClick={() => {
                       closeMobileMenu()
+                      setIsMosqueModalOpen(true)
                     }}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg border border-gray-200 bg-white text-left hover:border-[#047857]/40"
                   >
-                    {mosques.map((m) => (
-                      <option key={m._id} value={m._id}>
-                        {m.name} ({m.city})
-                      </option>
-                    ))}
-                  </select>
+                    <i className="material-icons-round text-[#047857]">mosque</i>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {activeMosque ? activeMosque.name : 'Choose a mosque'}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {activeMosque ? `${activeMosque.city}` : 'Search by name or city'}
+                      </p>
+                    </div>
+                    <i className="material-icons-round text-gray-400">chevron_right</i>
+                  </button>
                 </div>
               )}
 
@@ -347,6 +357,14 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* Phase 3.5: reusable search modal (used by both desktop + mobile triggers) */}
+      <MosqueSearchModal
+        open={isMosqueModalOpen}
+        onClose={() => setIsMosqueModalOpen(false)}
+        onSelect={handleMosqueChange}
+        initialCity={activeMosque?.city || ''}
+      />
     </header>
   )
 }

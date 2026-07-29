@@ -15,6 +15,39 @@ router.get('/public', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// GET /api/mosques/search - Search active mosques (public, used by signup modal)
+//   query params:
+//     ?query=<text>  - matches name, city, address (case-insensitive)
+//     ?city=<city>    - filter to a specific city
+//   Both optional. Returns active mosques only.
+router.get('/search', async (req, res, next) => {
+  try {
+    const rawQuery = (req.query.query || '').toString().trim();
+    const rawCity  = (req.query.city  || '').toString().trim();
+    const q  = sanitizeString(rawQuery);
+    const ct = sanitizeString(rawCity);
+
+    const filter = { isActive: true };
+    if (q) {
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      filter.$or = [
+        { name:    re },
+        { city:    re },
+        { address: re },
+      ];
+    }
+    if (ct) {
+      // exact case-insensitive match on city
+      filter.city = new RegExp('^' + ct.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
+    }
+    const mosques = await Mosque.find(filter)
+      .select('name city address phone email image enabledModules')
+      .sort({ name: 1 })
+      .limit(50);
+    res.json({ success: true, data: mosques });
+  } catch (error) { next(error); }
+});
+
 // GET /api/mosques - List mosques (manager)
 router.get('/', protect, authorize('manager'), async (req, res, next) => {
   try {

@@ -97,10 +97,11 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const register = useCallback(async (email, password, name, phone) => {
+  const register = useCallback(async (formData) => {
+    // Phase 3.5: accept a full form-data object (was previously 4 positional args)
     try {
       setError(null)
-      const data = await api.register({ email, password, name, phone })
+      const data = await api.register(formData)
       
       setUser(data.user)
       localStorage.setItem('user', JSON.stringify(data.user))

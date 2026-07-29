@@ -3,9 +3,10 @@ const router = express.Router();
 const crypto = require('crypto');
 const { body, param } = require('express-validator');
 const User = require('../models/User');
+const Mosque = require('../models/Mosque');
 const generateToken = require('../utils/generateToken');
 const sendEmail = require('../utils/sendEmail');
-const { handleValidation, sanitizeString } = require('../middleware/validate');
+const { handleValidation, sanitizeString, isValidObjectId } = require('../middleware/validate');
 
 const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/;
 const passwordValidation = body('password')
@@ -31,13 +32,34 @@ router.post(
     const email = sanitizeString(req.body.email).toLowerCase();
     const password = req.body.password;
     const phone = sanitizeString(req.body.phone || '');
+    // Phase 3.5: optional address fields
+    const address = sanitizeString(req.body.address || '');
+    const city = sanitizeString(req.body.city || '');
+    // Phase 3.5: optional home-mosque selection (ObjectId; validated if present)
+    const rawMosqueId = sanitizeString(req.body.mosqueId || '');
+    let mosqueId = null;
+    if (rawMosqueId) {
+      if (!isValidObjectId(rawMosqueId)) {
+        return res.status(400).json({ success: false, message: 'Invalid mosque id' });
+      }
+      const m = await Mosque.findById(rawMosqueId).select('_id isActive').lean();
+      if (!m || !m.isActive) {
+        return res.status(400).json({ success: false, message: 'Selected mosque is not available' });
+      }
+      mosqueId = rawMosqueId;
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
-    const user = await User.create({ name, email, password, phone, role: 'community' });
+    const user = await User.create({
+      name, email, password, phone, role: 'community',
+      ...(address ? { address } : {}),
+      ...(city ? { city } : {}),
+      ...(mosqueId ? { mosqueId } : {}),
+    });
     const token = generateToken(user._id, user.role);
 
     res.status(201).json({

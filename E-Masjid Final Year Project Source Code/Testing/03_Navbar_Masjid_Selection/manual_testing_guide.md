@@ -331,3 +331,186 @@ After selecting a mosque and refreshing the page, the same mosque should still b
 1. List of tests that PASSED
 2. List of tests that FAILED with exact error text / screenshot
 3. Any layout issues you noticed (please include the browser width when reporting)
+
+---
+
+## Test 13: Mosque selector no longer hides under the hero (z-index fix)
+
+### What You're Testing
+After scrolling, the mosque button in the navbar should always be fully visible above the hero section, not clipped or hidden behind the green overlay.
+
+### Steps to Follow
+1. Open `http://localhost:5173` on a desktop browser (≥1280px wide)
+2. Scroll down a few hundred pixels (so the navbar overlaps the hero)
+3. Click the mosque button ("Masjid Al-...")
+4. Try opening the dropdown (or for Phase 3.5, the new modal)
+
+### What Should Happen
+- The mosque button is fully visible
+- The dropdown options appear ABOVE the hero (not behind it)
+- The new search modal opens on top of everything else
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: _________pass______
+
+---
+
+## Test 14: Register 2-step flow (Phase 3.5)
+
+### What You're Testing
+The Register form is now 2-step: basic info → address + home mosque selection.
+
+### Steps to Follow
+1. Open `http://localhost:5173/register`
+2. Fill in Step 1: name, email, phone, password, confirmPassword, check terms
+3. Click "Continue" (the button at the bottom)
+4. You should now see Step 2: address, city, and a "Choose a home mosque" button
+5. Click the "Choose a home mosque" button
+6. The new search modal should open with search, city filter, and a "Use my current location" button
+7. Optionally click "Use my current location" (browser will ask permission)
+8. Pick a mosque (e.g. Masjid Al-Noor) and click "Confirm Selection"
+9. Step 2 should now show the selected mosque
+10. Click "Create Account"
+
+### What Should Happen
+- The form has a visible 2-step indicator at the top (1/2 → 2/2)
+- Step 2 has Address (optional), City, Home Mosque selector
+- The search modal is clean, with search + city filter + geolocation button
+- Picking a mosque shows it on the form
+- After Create Account, you're logged in and redirected to the homepage
+- The mosque you selected is now the default mosque in the public navbar dropdown
+- (Bonus) The success toast says "Welcome to [Mosque Name]"
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: _________pass______
+
+---
+
+## Test 15: Navbar Services + More dropdowns are visible (not hidden)
+
+### What You're Testing
+Clicking the "Services" or "More" button in the navbar shows a dropdown of links that is fully visible (not hidden behind the hero section).
+
+### Steps to Follow
+1. Open `http://localhost:5173` on a desktop browser (≥1280px wide)
+2. Click the **"Services"** button in the navbar
+3. Look at the dropdown that appears
+4. Click outside to close it
+5. Click the **"More"** button in the navbar
+6. Look at the dropdown that appears
+
+### What Should Happen
+- The Services dropdown shows: Nikah Booking, My Bookings, Transparency
+- The More dropdown shows: Announcements, Fund Request, My Requests
+- The dropdown is fully visible (NOT hidden behind the hero)
+- Clicking a link navigates and closes the dropdown
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: __________fail_____
+
+---
+
+## Test 16: Register Step 1 validates before advancing
+
+### What You're Testing
+Clicking "Continue" with empty/invalid fields shows clear errors and does NOT advance to Step 2.
+
+### Steps to Follow
+1. Open `http://localhost:5173/register`
+2. Click "Continue" without filling anything
+3. Look at the form
+
+### What Should Happen
+- The form STAYS on Step 1 (heading still "Create Your Account")
+- Per-field errors are shown under each input (e.g. "Name is required", "Please enter a valid email address", "Password must be at least 8 characters and include at least 1 letter and 1 number")
+- A summary toast appears at the top right
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: ________pass_______
+
+---
+
+## Test 17: "Use my current location" button is REMOVED from the search modal
+
+### What You're Testing
+After Phase 3.5 cleanup, the "Use my current location" button is gone from the mosque search modal (because the underlying free API was unreliable).
+
+### Steps to Follow
+1. Open `http://localhost:5173/register`, complete Step 1, advance to Step 2
+2. Click the "Choose a home mosque" button
+3. Look at the search modal that opens
+4. Alternatively: from the public homepage, click the mosque selector in the navbar
+
+### What Should Happen
+- The modal opens
+- It has: search bar + city filter + the list of mosques
+- It does NOT have a "Use my current location" button
+- It does NOT have a "Requesting browser permission" dialog
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: _____pass__________
+
+---
+
+## Test 18: Navbar Services + More dropdowns finally show items (real browser verified)
+
+### What You're Testing
+After the BUG-NAV-015 z-index fix DIDN'T fully work, the BUG-NAV-018 fix (overflow: visible on the header) now makes the dropdowns fully visible. This test confirms it.
+
+### Steps to Follow
+1. Open `http://localhost:5173` on a desktop browser (≥1280px)
+2. Click the "Services" button
+3. Look at the dropdown
+4. Close it (click outside)
+5. Click the "More" button
+6. Look at the dropdown
+
+### What Should Happen
+- Services dropdown shows: Nikah Booking, My Bookings, Transparency
+- More dropdown shows: Announcements, Fund Request, My Requests
+- The dropdown is fully visible (white background, items readable)
+- Clicking a link navigates and closes the dropdown
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: _____pass__________
+
+---
+
+## Test 19: Long user name doesn't push logout off-screen
+
+### What You're Testing
+When logged in with a user that has a long name (e.g. "Muhammad Abdullah Khan Farooqi"), the user name truncates with ellipsis and the Logout / Admin buttons stay visible.
+
+### Steps to Follow
+1. Log in as a user with a long name (you can register a new one with a long name for this test)
+2. Look at the right side of the navbar
+3. Hover over the truncated user name
+
+### What Should Happen
+- The user name shows as "Muhammad Abdullah..." (truncated with ellipsis)
+- The Logout button + Admin/Dashboard button (if applicable) are fully visible
+- The header does NOT overflow the viewport
+- Hovering on the truncated name shows the full name in a tooltip
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: ______pass_________
+
+---
+
+## Test 20: Long masjid name doesn't push mosque selector off-screen
+
+### What You're Testing
+When the active mosque has a long name (e.g. "Central Mosque of Sheikhupura"), the name truncates with ellipsis in both the logo AND the mosque selector button.
+
+### Steps to Follow
+1. Register a new mosque with a long name (you can do this via the manager dashboard, or temporarily change the seed)
+2. Switch the active mosque to the long-named one
+3. Look at the logo (left) and the mosque selector (right of center)
+
+### What Should Happen
+- Logo truncates with ellipsis, doesn't push the nav links off
+- Mosque selector button truncates with ellipsis, doesn't push the auth buttons off
+- The header stays at the viewport width (no horizontal scroll)
+
+### Mark Result
+☐ PASS  ☐ FAIL — Notes: ______pass_________
