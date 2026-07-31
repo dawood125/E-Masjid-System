@@ -1,4 +1,5 @@
-# 06 Prayer Timings Module — questions asked
+# 05 Prayer Timings Module - questions asked
 
-**Status:** Not started (blocked until prior phases complete)
+**Status:** Starting now.
 
+Waiting for user to approve the implementation plan before beginning the automated testing script.

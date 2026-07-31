@@ -20,8 +20,8 @@
 | 1 | `01_Auth_Module` | Login/Register/Logout/Session/RBAC (all 5 roles) | ✅ Complete |
 | 2 | `02_Forgot_Password_Module` | Forgot/Reset password + email-service failure | ✅ Complete (10/10 backend tests, awaiting partner manual) |
 | 3 | `03_Navbar_Masjid_Selection` | Navbar + multi-mosque dropdown | ✅ Complete (10/10 backend tests, awaiting partner manual) |
-| 4 | `04_Homepage_Module` | Public homepage (prayer/announcement/event + carousel + top donors) | ⏸ Pending |
-| 5 | `05_Prayer_Timings_Module` | Public view + admin manage + Jummah + Ramadan | ⏸ Pending |
+| 4 | `04_Homepage_Module` | Public homepage (prayer/announcement/event + carousel + top donors) | ✅ Complete |
+| 5 | `05_Prayer_Timings_Module` | Public view + admin manage + Jummah + Ramadan | 🔄 Starting now |
 | 6 | `06_Announcements_Module` | Public view + admin manage + urgent + scheduling | ⏸ Pending |
 | 7 | `07_Events_Module` | Public + admin CRUD + register + max-participant + draft | ⏸ Pending |
 | 8 | `08_Expenses_Module` | Admin record expenses | ⏸ Pending |

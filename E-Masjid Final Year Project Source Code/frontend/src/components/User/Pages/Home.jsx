@@ -339,9 +339,22 @@ export default function Home() {
             <span className="absolute -top-8 right-4 text-[9rem] leading-none text-white/10 font-serif">&quot;</span>
             <p className="text-[#d4af37] text-xs tracking-[0.12em] uppercase font-semibold">Hadith of the Day</p>
             <p className="mt-5 text-2xl italic leading-relaxed">
-              The best among you are those who have the best manners and character.
+              {[
+                { text: 'The best among you are those who have the best manners and character.', source: 'Sahih Bukhari 3559' },
+                { text: 'None of you truly believes until he loves for his brother what he loves for himself.', source: 'Sahih Bukhari 13' },
+                { text: 'The strong man is not one who wrestles well, but the strong man is one who controls himself when he is angry.', source: 'Sahih Bukhari 6114' },
+                { text: 'Whoever believes in Allah and the Last Day, let him speak good or remain silent.', source: 'Sahih Bukhari 6018' },
+                { text: 'Make things easy and do not make them difficult, cheer people up and do not drive them away.', source: 'Sahih Bukhari 69' },
+                { text: 'The most beloved of deeds to Allah are those that are most consistent, even if they are small.', source: 'Sahih Bukhari 6464' },
+                { text: 'A Muslim is one from whose tongue and hands other Muslims are safe.', source: 'Sahih Bukhari 10' },
+              ][Math.floor((new Date().getTime() / 86400000)) % 7].text}
             </p>
-            <p className="mt-4 text-white/70">Sahih Bukhari 3559</p>
+            <p className="mt-4 text-white/70">
+              {[
+                'Sahih Bukhari 3559', 'Sahih Bukhari 13', 'Sahih Bukhari 6114',
+                'Sahih Bukhari 6018', 'Sahih Bukhari 69', 'Sahih Bukhari 6464', 'Sahih Bukhari 10',
+              ][Math.floor((new Date().getTime() / 86400000)) % 7]}
+            </p>
           </aside>
         </div>
       </section>

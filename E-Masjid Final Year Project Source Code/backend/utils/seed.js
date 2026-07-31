@@ -95,13 +95,16 @@ const seedDB = async () => {
       { mosqueId: mosque._id }
     );
 
-    // Seed Donations
+    // Seed Donations (both mosques)
     const donations = [
       { donorName: 'Abdullah Ahmed', email: 'abdullah@example.com', amount: 5000, type: 'Zakat', paymentMethod: 'Cash', mosqueId: mosque._id },
       { donorName: 'Fatima Khan', email: 'fatima@example.com', amount: 2500, type: 'Sadaqah', paymentMethod: 'Card', mosqueId: mosque._id },
       { donorName: 'Muhammad Hassan', email: 'hassan@example.com', amount: 10000, type: 'Masjid Fund', paymentMethod: 'Cash', mosqueId: mosque._id },
       { donorName: 'Anonymous', email: '', amount: 7500, type: 'Zakat', paymentMethod: 'Online', isAnonymous: true, mosqueId: mosque._id },
       { donorName: 'Ibrahim Rahman', email: 'ibrahim@example.com', amount: 3000, type: 'Sadaqah', paymentMethod: 'Cash', mosqueId: mosque._id },
+      { donorName: 'Bilal Raza', email: 'bilal@example.com', amount: 8000, type: 'Masjid Fund', paymentMethod: 'Cash', mosqueId: mosque2._id },
+      { donorName: 'Khadija Noor', email: 'khadija@example.com', amount: 4500, type: 'Sadaqah', paymentMethod: 'Online', mosqueId: mosque2._id },
+      { donorName: 'Usman Ali', email: 'usman@example.com', amount: 15000, type: 'Zakat', paymentMethod: 'Card', mosqueId: mosque2._id },
     ];
     await Donation.insertMany(donations);
 
@@ -114,23 +117,30 @@ const seedDB = async () => {
     ];
     await Expense.insertMany(expenses);
 
-    // Seed Events
+    // Seed Events (dynamic dates so they are always in the future)
+    const today = new Date();
+    const eventDate1 = new Date(today); eventDate1.setDate(eventDate1.getDate() + 7);
+    const eventDate2 = new Date(today); eventDate2.setDate(eventDate2.getDate() + 14);
     const events = [
-      { title: 'Islamic Knowledge Circle', description: 'Weekly gathering to discuss Islamic topics.', date: new Date('2026-06-15'), time: '19:00', location: 'Main Hall', maxParticipants: 100, mosqueId: mosque._id },
-      { title: 'Community Iftaar', description: 'Ramadan community dinner.', date: new Date('2026-06-20'), time: '18:30', location: 'Dining Hall', maxParticipants: 200, mosqueId: mosque._id },
+      { title: 'Islamic Knowledge Circle', description: 'Weekly gathering to discuss Islamic topics.', date: eventDate1, time: '19:00', location: 'Main Hall', maxParticipants: 100, mosqueId: mosque._id },
+      { title: 'Community Iftaar', description: 'Ramadan community dinner.', date: eventDate2, time: '18:30', location: 'Dining Hall', maxParticipants: 200, mosqueId: mosque._id },
+      { title: 'Youth Quran Competition', description: 'Annual Quran recitation competition for youth.', date: eventDate1, time: '10:00', location: 'Main Hall', maxParticipants: 50, mosqueId: mosque2._id },
+      { title: 'Friday Night Lecture', description: 'Special lecture on Islamic ethics and modern life.', date: eventDate2, time: '20:00', location: 'Lecture Hall', maxParticipants: 150, mosqueId: mosque2._id },
     ];
     await Event.insertMany(events);
 
-    // Seed Announcements
+    // Seed Announcements (both mosques)
     const announcements = [
       { title: 'Ramadan Schedule Updated', content: 'The Ramadan prayer schedule has been updated.', isUrgent: true, publishedBy: 'Haji Ahmad', mosqueId: mosque._id },
       { title: 'Mosque Renovation Phase 2', content: 'Phase 2 of renovation will begin next week.', isUrgent: false, publishedBy: 'Imam Khalid', mosqueId: mosque._id },
       { title: 'Youth Islamic Classes', content: 'Weekly youth classes resume on Friday.', isUrgent: false, publishedBy: 'Sheikh Ahmed', mosqueId: mosque._id },
+      { title: 'New Prayer Hall Opened', content: 'Alhamdulillah, our new extended prayer hall is now open for all five daily prayers.', isUrgent: true, publishedBy: 'Qari Imran', mosqueId: mosque2._id },
+      { title: 'Weekend Quran Classes', content: 'Quran classes for children age 5-12 every Saturday and Sunday from 9 AM to 11 AM.', isUrgent: false, publishedBy: 'Qari Imran', mosqueId: mosque2._id },
+      { title: 'Community Clean-Up Drive', content: 'Join us this Friday after Jummah for a community clean-up around the mosque area.', isUrgent: false, publishedBy: 'Haji Raza', mosqueId: mosque2._id },
     ];
     await Announcement.insertMany(announcements);
 
-    // Seed Prayer Times (7 days)
-    const today = new Date();
+    // Seed Prayer Times (7 days, both mosques)
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
@@ -138,6 +148,10 @@ const seedDB = async () => {
       await PrayerTime.create({
         date, fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45',
         jummah: date.getDay() === 5 ? '13:00' : null, mosqueId: mosque._id,
+      });
+      await PrayerTime.create({
+        date, fajr: '05:15', zuhr: '12:30', asr: '16:00', maghrib: '18:35', isha: '20:00',
+        jummah: date.getDay() === 5 ? '13:15' : null, mosqueId: mosque2._id,
       });
     }
 

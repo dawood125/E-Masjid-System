@@ -53,9 +53,8 @@ router.get('/stats', async (req, res, next) => {
       yearsServing = Math.max(1, Math.floor(ms / (365.25 * 24 * 3600 * 1000)));
     }
 
-    // 2. Total donations in PKR
+    // 2. Total donations in PKR (all recorded donations count — model has no status field)
     const donationAgg = await Donation.aggregate([
-      { $match: { status: { $in: ['confirmed', 'completed'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]);
     const totalDonationsPKR = donationAgg[0]?.total || 0;

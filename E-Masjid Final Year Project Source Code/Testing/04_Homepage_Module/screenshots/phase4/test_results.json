@@ -1,0 +1,298 @@
+{
+  "timestamp": "2026-07-31T10:03:41.412Z",
+  "findings": [
+    {
+      "test": "Hero section visible",
+      "result": "PASS",
+      "detail": "Hero renders"
+    },
+    {
+      "test": "Hero heading text",
+      "result": "PASS",
+      "detail": "h1 = \"Connect. Pray. Give back.\""
+    },
+    {
+      "test": "Hero shows mosque name",
+      "result": "PASS",
+      "detail": "subtitle = \"Welcome to Masjid Al-Rahman · Lahore\""
+    },
+    {
+      "test": "Hero \"Donate Now\" CTA",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Hero \"Submit Fund Request\" CTA",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Hero background image loaded",
+      "result": "PASS",
+      "detail": "naturalWidth=2560"
+    },
+    {
+      "test": "Stats \"Years Serving\" visible",
+      "result": "PASS",
+      "detail": "Card renders"
+    },
+    {
+      "test": "Stats \"Total Donations\" visible",
+      "result": "PASS",
+      "detail": "Card renders"
+    },
+    {
+      "test": "Stats \"Active Fund Requests\" visible",
+      "result": "PASS",
+      "detail": "Card renders"
+    },
+    {
+      "test": "Stats \"Families Helped\" visible",
+      "result": "PASS",
+      "detail": "Card renders"
+    },
+    {
+      "test": "Prayer times heading visible",
+      "result": "PASS",
+      "detail": "Heading renders"
+    },
+    {
+      "test": "Prayer \"Fajr\" visible",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Prayer \"Dhuhr\" visible",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Prayer \"Asr\" visible",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Prayer \"Maghrib\" visible",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Prayer \"Isha\" visible",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Prayer \"Jumu'ah\" visible",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Next Prayer badge visible",
+      "result": "PASS",
+      "detail": "Badge shows"
+    },
+    {
+      "test": "Islamic date label present",
+      "result": "PASS",
+      "detail": "Islamic calendar date shown"
+    },
+    {
+      "test": "Impact section heading",
+      "result": "PASS",
+      "detail": "Heading visible"
+    },
+    {
+      "test": "Impact \"Prayers Tracked\"",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Impact \"Students Taught\"",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Impact \"Nikah Ceremonies Hosted\"",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Impact \"Families Supported\"",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Carousel heading visible",
+      "result": "PASS",
+      "detail": "Heading visible"
+    },
+    {
+      "test": "Carousel navigation dots",
+      "result": "PASS",
+      "detail": "6 dots found"
+    },
+    {
+      "test": "Carousel prev/next buttons",
+      "result": "PASS",
+      "detail": "prev=true, next=true"
+    },
+    {
+      "test": "Carousel next changes slide",
+      "result": "PASS",
+      "detail": "Before: \"Children learning Arabic lette...\" After: \"Community iftar during Ramadan...\""
+    },
+    {
+      "test": "Announcements heading visible",
+      "result": "PASS",
+      "detail": "Heading visible"
+    },
+    {
+      "test": "Announcement cards rendered",
+      "result": "PASS",
+      "detail": "3 cards found"
+    },
+    {
+      "test": "Announcements \"View All\" link",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Featured Campaign section",
+      "result": "PASS",
+      "detail": "Section visible (campaign exists)"
+    },
+    {
+      "test": "Campaign progress bar",
+      "result": "PASS",
+      "detail": "Progress bar visible"
+    },
+    {
+      "test": "Testimonials heading visible",
+      "result": "PASS",
+      "detail": "Heading visible"
+    },
+    {
+      "test": "Testimonial cards rendered",
+      "result": "PASS",
+      "detail": "3 cards"
+    },
+    {
+      "test": "Events heading visible",
+      "result": "PASS",
+      "detail": "Heading visible"
+    },
+    {
+      "test": "Events \"View All\" link",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Events data present",
+      "result": "PASS",
+      "detail": "Events are showing"
+    },
+    {
+      "test": "Hadith of the Day visible",
+      "result": "PASS",
+      "detail": "Hadith sidebar renders"
+    },
+    {
+      "test": "Hadith content rendered",
+      "result": "PASS",
+      "detail": "Hadith text shows: \"None of you truly believes unt...\""
+    },
+    {
+      "test": "Fund Request CTA visible",
+      "result": "PASS",
+      "detail": "CTA renders"
+    },
+    {
+      "test": "Submit Request button",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Final CTA heading",
+      "result": "PASS",
+      "detail": "Heading visible"
+    },
+    {
+      "test": "Final \"Donate Now\" button",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Final \"Transparency Report\" button",
+      "result": "PASS",
+      "detail": "Visible"
+    },
+    {
+      "test": "Donate Now href",
+      "result": "PASS",
+      "detail": "href=\"/donate\""
+    },
+    {
+      "test": "Fund Request href",
+      "result": "PASS",
+      "detail": "href=\"/fund-request\""
+    },
+    {
+      "test": "Transparency href",
+      "result": "PASS",
+      "detail": "href=\"/transparency\""
+    },
+    {
+      "test": "Mosque switch changes hero",
+      "result": "PASS",
+      "detail": "Before: \"Welcome to Masjid Al-Rahman · Lahore\" -> After: \"Welcome to Masjid Al-Noor · Sheikhupura\""
+    },
+    {
+      "test": "API Marketing Stats",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Marketing Impact",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Featured Campaign",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Testimonials",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Hero Slides",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Prayer Times",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Events",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    },
+    {
+      "test": "API Announcements",
+      "result": "PASS",
+      "detail": "HTTP 200, hasData=true"
+    }
+  ],
+  "summary": {
+    "pass": 57,
+    "fail": 0,
+    "bug": 0,
+    "info": 0,
+    "skip": 0,
+    "total": 57
+  }
+}
