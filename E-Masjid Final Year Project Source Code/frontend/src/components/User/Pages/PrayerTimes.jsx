@@ -24,18 +24,39 @@ function islamicDateLabel() {
   }
 }
 
+// FIX-PRAYER-004 (BUG-PRAYER-003): if today is Friday AND current time is
+// before the Jumu'ah time, the "next prayer" should be Jumu'ah (not Dhuhr).
+// Jumu'ah is treated as a 6th prayer in the countdown; if the day is not
+// Friday or no Jumu'ah time is set, the regular Dhuhr slot is used.
 function nextPrayerCountdown(todaySchedule) {
   const now = new Date()
-  const upcoming = prayersConfig
-    .map((prayer) => {
-      const value = todaySchedule[prayer.key]
-      if (!value) return null
-      const [h, m] = value.split(':').map(Number)
-      const dt = new Date(now)
-      dt.setHours(h, m, 0, 0)
-      return { ...prayer, dt }
-    })
-    .filter(Boolean)
+  const isFriday = now.getDay() === 5
+
+  // Build the candidate list. If Friday + Jumu'ah time present, swap it in
+  // place of Zuhr/Dhuhr for the countdown.
+  const baseList = prayersConfig.map((prayer) => {
+    const value = todaySchedule[prayer.key]
+    return { ...prayer, value }
+  })
+  const jummahTime = todaySchedule.jummah
+  const candidates = baseList.map((prayer) => {
+    if (prayer.key === 'zuhr' && isFriday && jummahTime) {
+      return {
+        key: 'jummah',
+        name: "Jumu'ah",
+        value: jummahTime,
+        icon: 'mosque',
+      }
+    }
+    return prayer
+  }).filter((p) => p.value)
+
+  const upcoming = candidates.map((prayer) => {
+    const [h, m] = prayer.value.split(':').map(Number)
+    const dt = new Date(now)
+    dt.setHours(h, m, 0, 0)
+    return { ...prayer, dt }
+  })
 
   let next = upcoming.find((item) => item.dt > now)
   if (!next) {
@@ -62,11 +83,26 @@ function nextPrayerCountdown(todaySchedule) {
   }
 }
 
+// FIX-PRAYER-003 (BUG-PRAYER-001): compare date parts only, not full ISO string.
+// `day.date` is an ISO datetime from Mongoose (e.g. "2026-08-10T19:00:00.000Z"),
+// so a string-equality with `slice(0,10)` always returned false and the "Today"
+// badge never rendered.
+function isSameLocalDay(isoString) {
+  if (!isoString) return false
+  const a = new Date(isoString)
+  const b = new Date()
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
 export default function PrayerTimes() {
   const { showToast } = useUI()
   const { activeMosqueId } = useMosque()
   const defaultToday = useMemo(
-    () => ({ fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45', jummah: '13:00' }),
+    () => ({ fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45', jummah: '13:00', sunrise: '06:45' }),
     []
   )
   const [todayTimes, setTodayTimes] = useState(defaultToday)
@@ -112,6 +148,11 @@ export default function PrayerTimes() {
     month: 'long',
     year: 'numeric',
   })
+
+  // FIX-PRAYER-002 (BUG-PRAYER-006): Sunrise now comes from the PrayerTime
+  // document (admin-set). If unset, the Sunrise column/cell is hidden.
+  const sunriseTime = todayTimes.sunrise
+  const hasSunrise = Boolean(sunriseTime)
 
   return (
     <div className="bg-white">
@@ -164,7 +205,7 @@ export default function PrayerTimes() {
           </div>
 
           {/* Prayer Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+          <div className={`grid grid-cols-1 gap-5 ${hasSunrise ? 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}`}>
             {/* Fajr */}
             <div className={`relative rounded-2xl border p-6 shadow-sm transition-all animate-fade-in-up ${
               'fajr' === countdown.nextPrayerKey
@@ -183,17 +224,52 @@ export default function PrayerTimes() {
               </div>
             </div>
 
-            {/* Sunrise (Secondary Card) */}
-            <div className="relative rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm animate-fade-in-up hover:-translate-y-1 hover:shadow-md transition-all" style={{ animationDelay: '90ms' }}>
-              <div className="flex flex-col items-center text-center">
-                <i className="material-icons-round text-4xl mb-2 text-amber-500">wb_sunny</i>
-                <span className="font-semibold text-lg text-amber-900">Sunrise</span>
-                <div className="mt-3 font-primary text-3xl font-bold text-amber-900">{formatTime('06:45')}</div>
+            {/* Sunrise (FIX-PRAYER-002 — only shown if admin has set it) */}
+            {hasSunrise && (
+              <div className="relative rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm animate-fade-in-up hover:-translate-y-1 hover:shadow-md transition-all" style={{ animationDelay: '90ms' }}>
+                <div className="flex flex-col items-center text-center">
+                  <i className="material-icons-round text-4xl mb-2 text-amber-500">wb_sunny</i>
+                  <span className="font-semibold text-lg text-amber-900">Sunrise</span>
+                  <div className="mt-3 font-primary text-3xl font-bold text-amber-900">{formatTime(sunriseTime)}</div>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Dhuhr, Asr, Maghrib, Isha */}
-            {prayers.slice(1).map((prayer, i) => {
+            {/* Dhuhr (or Jumu'ah on Friday — Jumu'ah replaces Dhuhr in display only, not the data) */}
+            {(() => {
+              const isFriday = new Date().getDay() === 5
+              const showAsJummah = isFriday && todayTimes.jummah
+              const prayerKey = showAsJummah ? 'jummah' : 'zuhr'
+              const prayerName = showAsJummah ? "Jumu'ah" : 'Dhuhr'
+              const prayerIcon = showAsJummah ? 'mosque' : 'light_mode'
+              const prayerTime = showAsJummah ? todayTimes.jummah : todayTimes.zuhr
+              const isActive = countdown.nextPrayerKey === prayerKey
+              return (
+                <div
+                  key={prayerKey}
+                  className={`relative rounded-2xl border p-6 shadow-sm transition-all animate-fade-in-up ${
+                    isActive
+                      ? 'bg-[#047857] border-[#047857] text-white shadow-lg -translate-y-1'
+                      : 'bg-white border-gray-200 hover:-translate-y-1 hover:shadow-md'
+                  }`}
+                  style={{ animationDelay: '180ms' }}
+                >
+                  {isActive && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#d4af37] px-4 py-1 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-md whitespace-nowrap">
+                      Next Prayer
+                    </span>
+                  )}
+                  <div className="flex flex-col items-center text-center">
+                    <i className={`material-icons-round text-4xl mb-2 ${isActive ? 'text-[#d4af37]' : 'text-[#047857]'}`}>{prayerIcon}</i>
+                    <span className={`font-semibold text-lg ${isActive ? 'text-white' : 'text-gray-700'}`}>{prayerName}</span>
+                    <div className="mt-3 font-primary text-3xl font-bold">{formatTime(prayerTime)}</div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Asr, Maghrib, Isha */}
+            {prayers.slice(2).map((prayer, i) => {
               const isActive = prayer.key === countdown.nextPrayerKey
               return (
                 <div
@@ -203,7 +279,7 @@ export default function PrayerTimes() {
                       ? 'bg-[#047857] border-[#047857] text-white shadow-lg -translate-y-1'
                       : 'bg-white border-gray-200 hover:-translate-y-1 hover:shadow-md'
                   }`}
-                  style={{ animationDelay: `${(i + 2) * 90}ms` }}
+                  style={{ animationDelay: `${(i + 3) * 90}ms` }}
                 >
                   {isActive && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#d4af37] px-4 py-1 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-md whitespace-nowrap">
@@ -272,7 +348,9 @@ export default function PrayerTimes() {
                   <tr>
                     <th className="px-6 py-4 text-left font-semibold">Day / Date</th>
                     <th className="px-6 py-4 text-center font-semibold">Fajr</th>
-                    <th className="px-6 py-4 text-center font-semibold text-amber-200">Sunrise</th>
+                    {hasSunrise && (
+                      <th className="px-6 py-4 text-center font-semibold text-amber-200">Sunrise</th>
+                    )}
                     <th className="px-6 py-4 text-center font-semibold">Dhuhr</th>
                     <th className="px-6 py-4 text-center font-semibold">Asr</th>
                     <th className="px-6 py-4 text-center font-semibold">Maghrib</th>
@@ -281,22 +359,26 @@ export default function PrayerTimes() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {(weekTimes.length > 0 ? weekTimes : []).map((day) => {
-                    const today = day.date === new Date().toISOString().slice(0, 10)
+                    // FIX-PRAYER-003 (BUG-PRAYER-001): use date-part comparison
+                    const isToday = isSameLocalDay(day.date)
                     const hasJummah = Boolean(day.jummah)
+                    const isFriday = new Date(day.date).getDay() === 5
                     return (
-                      <tr key={day.date} className={`transition-colors ${today ? 'bg-[#f0fdf4]' : 'bg-white hover:bg-gray-50'}`}>
+                      <tr key={day.date} className={`transition-colors ${isToday ? 'bg-[#f0fdf4]' : 'bg-white hover:bg-gray-50'}`}>
                         <td className="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap">
                           {new Date(day.date).toLocaleDateString('en-US', {
                             weekday: 'long',
                             day: 'numeric',
                             month: 'short',
                           })}
-                          {today && <span className="ml-3 rounded-full bg-[#047857] px-3 py-1 text-xs font-bold uppercase text-white shadow-sm">Today</span>}
+                          {isToday && <span className="ml-3 rounded-full bg-[#047857] px-3 py-1 text-xs font-bold uppercase text-white shadow-sm">Today</span>}
                         </td>
                         <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.fajr)}</td>
-                        <td className="px-6 py-4 text-center font-medium text-amber-600 bg-amber-50/50">{formatTime('06:45')}</td>
+                        {hasSunrise && (
+                          <td className="px-6 py-4 text-center font-medium text-amber-600 bg-amber-50/50">{day.sunrise ? formatTime(day.sunrise) : '—'}</td>
+                        )}
                         <td className="px-6 py-4 text-center font-medium text-gray-700">
-                          {hasJummah ? (
+                          {hasJummah && isFriday ? (
                             <span className="inline-flex flex-col items-center">
                               <span className="font-bold text-[#047857]">{formatTime(day.jummah)}</span>
                               <span className="text-[11px] font-bold uppercase tracking-wider text-[#047857] mt-1">Jummah</span>
@@ -313,7 +395,7 @@ export default function PrayerTimes() {
                   })}
                   {!loading && weekTimes.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-6 text-center text-gray-500">No prayer schedule available yet.</td>
+                      <td colSpan={hasSunrise ? 7 : 6} className="px-6 py-6 text-center text-gray-500">No prayer schedule available yet.</td>
                     </tr>
                   )}
                 </tbody>

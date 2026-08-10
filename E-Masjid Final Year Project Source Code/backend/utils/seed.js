@@ -140,20 +140,76 @@ const seedDB = async () => {
     ];
     await Announcement.insertMany(announcements);
 
-    // Seed Prayer Times (7 days, both mosques)
+    // Seed Prayer Times (today + next 6 days, both mosques).
+    // FIX-PRAYER-007 (BUG-PRAYER-008/009): include the new `sunrise` field per
+    // mosque, plus a full Ramadan-2027 sample for both mosques so the admin
+    // can immediately verify the "future-date" editor without typing 30 days
+    // of times by hand.
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       await PrayerTime.create({
-        date, fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45',
-        jummah: date.getDay() === 5 ? '13:00' : null, mosqueId: mosque._id,
+        date,
+        fajr: '05:30', zuhr: '12:45', asr: '15:45', maghrib: '18:25', isha: '19:45',
+        jummah: date.getDay() === 5 ? '13:00' : null,
+        sunrise: '06:45',
+        mosqueId: mosque._id,
       });
       await PrayerTime.create({
-        date, fajr: '05:15', zuhr: '12:30', asr: '16:00', maghrib: '18:35', isha: '20:00',
-        jummah: date.getDay() === 5 ? '13:15' : null, mosqueId: mosque2._id,
+        date,
+        fajr: '05:15', zuhr: '12:30', asr: '16:00', maghrib: '18:35', isha: '20:00',
+        jummah: date.getDay() === 5 ? '13:15' : null,
+        sunrise: '06:30',
+        mosqueId: mosque2._id,
       });
     }
+
+    // Ramadan 2027 sample schedule (FIX-PRAYER-007).
+    // Ramadan 2027 is expected to begin around 17 Feb 2027 (subject to moon
+    // sighting). We seed 30 days starting from that date for both mosques,
+    // with shifted fajr (+30 min) and maghrib = sunset (~5 min after).
+    const ramadanStart = new Date('2027-02-17');
+    ramadanStart.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(ramadanStart);
+      date.setDate(date.getDate() + i);
+      await PrayerTime.create({
+        date,
+        fajr: '05:05', zuhr: '12:30', asr: '16:00', maghrib: '18:05', isha: '19:30',
+        jummah: date.getDay() === 5 ? '13:00' : null,
+        sunrise: '06:25',
+        mosqueId: mosque._id,
+      });
+      await PrayerTime.create({
+        date,
+        fajr: '04:50', zuhr: '12:15', asr: '16:15', maghrib: '18:15', isha: '19:50',
+        jummah: date.getDay() === 5 ? '13:15' : null,
+        sunrise: '06:10',
+        mosqueId: mosque2._id,
+      });
+    }
+
+    // Eid ul-Fitr 2027 (the day after Ramadan ends) — seed with sample times
+    // so the admin "Special Prayer Timings" section has demo data.
+    const eidDate = new Date(ramadanStart);
+    eidDate.setDate(eidDate.getDate() + 30);
+    await PrayerTime.create({
+      date: eidDate,
+      fajr: '05:05', zuhr: '12:30', asr: '16:00', maghrib: '18:05', isha: '19:30',
+      jummah: eidDate.getDay() === 5 ? '13:00' : null,
+      sunrise: '06:25',
+      eidUlFitr: '07:00',
+      mosqueId: mosque._id,
+    });
+    await PrayerTime.create({
+      date: eidDate,
+      fajr: '04:50', zuhr: '12:15', asr: '16:15', maghrib: '18:15', isha: '19:50',
+      jummah: eidDate.getDay() === 5 ? '13:15' : null,
+      sunrise: '06:10',
+      eidUlFitr: '07:00',
+      mosqueId: mosque2._id,
+    });
 
     // Seed Nikah bookings
     await NikahBooking.insertMany([

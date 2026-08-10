@@ -18,7 +18,16 @@
       "Bash(node Testing/03_Navbar_Masjid_Selection/verify_3_fixes.js)",
       "Bash(node Testing/03_Navbar_Masjid_Selection/diag_dropdown.js)",
       "Read(//d/College data/Seven semster/Project data/Git hub data/E-Masjid Final Year Source Code/frontend/src/components/Common/**)",
-      "Bash(node Testing/03_Navbar_Masjid_Selection/verify_logo_fix.js)"
+      "Bash(node Testing/03_Navbar_Masjid_Selection/verify_logo_fix.js)",
+      "Bash(curl -s -m 5 http://localhost:5000/api/health)",
+      "Bash(curl -s -m 5 -o /dev/null -w '%{http_code}\\\\n' http://localhost:5173)",
+      "Bash(curl -s -m 10 http://localhost:5000/api/marketing/stats)",
+      "Bash(curl -v -m 8 http://localhost:5000/api/marketing/stats)",
+      "Bash(curl -s -m 8 http://localhost:5000/api/health)",
+      "Bash(node -e \"const m=require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI, {serverSelectionTimeoutMS: 6000}\\).then\\(\\(\\)=>{console.log\\('OK'\\);process.exit\\(0\\)}\\).catch\\(e=>{console.log\\('FAIL',e.message\\);process.exit\\(1\\)}\\)\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const m=require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI, {serverSelectionTimeoutMS: 6000}\\).then\\(\\(\\)=>{console.log\\('MONGO_OK'\\);process.exit\\(0\\)}\\).catch\\(e=>{console.log\\('MONGO_FAIL',e.message\\);process.exit\\(1\\)}\\)\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const m=require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI, {serverSelectionTimeoutMS: 10000}\\).then\\(\\(\\)=>{console.log\\('MONGO_OK'\\);setTimeout\\(\\(\\)=>{m.connection.db.admin\\(\\).ping\\(\\).then\\(r=>{console.log\\('PING',r\\);process.exit\\(0\\)}\\).catch\\(e=>{console.log\\('PING_FAIL',e.message\\);process.exit\\(1\\)}\\)}, 1000\\)}\\).catch\\(e=>{console.log\\('MONGO_FAIL',e.message\\);process.exit\\(1\\)}\\)\")",
+      "Bash(curl -s -m 3 http://localhost:5000/api/health)"
     ]
   }
 }

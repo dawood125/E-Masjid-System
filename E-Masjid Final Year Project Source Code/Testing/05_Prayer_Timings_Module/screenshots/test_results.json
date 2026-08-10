@@ -1,0 +1,133 @@
+{
+  "timestamp": "2026-08-10T14:49:49.879Z",
+  "findings": [
+    {
+      "test": "Homepage widget shows Fajr",
+      "result": "PASS",
+      "detail": "Initial Fajr (Al-Noor): \"5:15 AM\""
+    },
+    {
+      "test": "Public /prayer-times page loads",
+      "result": "PASS",
+      "detail": "h1 visible"
+    },
+    {
+      "test": "Weekly table \"Today\" badge appears (BUG-PRAYER-001 fix)",
+      "result": "PASS",
+      "detail": "1 badge(s) found"
+    },
+    {
+      "test": "Today-card Sunrise shown from DB (BUG-PRAYER-006 fix)",
+      "result": "PASS",
+      "detail": "Sunrise rendered"
+    },
+    {
+      "test": "Weekly table Sunrise column header",
+      "result": "PASS",
+      "detail": "Column shown"
+    },
+    {
+      "test": "Al-Noor today-card Fajr captured",
+      "result": "PASS",
+      "detail": "fajr=\"5:30 AM\" (expected Al-Noor 05:30)"
+    },
+    {
+      "test": "Mosque switch updates /prayer-times fajr (no reload)",
+      "result": "PASS",
+      "detail": "Before (Al-Noor): \"5:30 AM\" → After (Al-Rahman): \"5:15 AM\""
+    },
+    {
+      "test": "Admin logged in",
+      "result": "PASS",
+      "detail": "Reached /admin"
+    },
+    {
+      "test": "Admin Prayer Times page loads",
+      "result": "PASS",
+      "detail": "Title visible"
+    },
+    {
+      "test": "Date picker present (BUG-PRAYER-005 fix)",
+      "result": "PASS",
+      "detail": "Admin can pick any date"
+    },
+    {
+      "test": "Sunrise input in admin form (BUG-PRAYER-006 fix)",
+      "result": "PASS",
+      "detail": "Editable sunrise field"
+    },
+    {
+      "test": "Admin form auto-populates from DB for picked date",
+      "result": "PASS",
+      "detail": "2027-02-20 Al-Noor Fajr input=\"05:05\" (expected \"05:05\" from Ramadan seed)"
+    },
+    {
+      "test": "Future-date save toast",
+      "result": "PASS",
+      "detail": "Toast shown with date"
+    },
+    {
+      "test": "Future-date save persists across date switches",
+      "result": "PASS",
+      "detail": "After reload: fajr=\"05:12\" (expected \"05:12\")"
+    },
+    {
+      "test": "Mosque mismatch banner appears (BUG-PRAYER-004 fix)",
+      "result": "PASS",
+      "detail": "Yellow warning shown (admin=725713)"
+    },
+    {
+      "test": "Form still shows admin's own mosque times despite navbar mismatch",
+      "result": "PASS",
+      "detail": "admin-mosque Fajr=\"05:30\" (Al-Noor default 05:30)"
+    },
+    {
+      "test": "Banner disappears after clearing localStorage mosque",
+      "result": "PASS",
+      "detail": "Banner hidden"
+    },
+    {
+      "test": "Homepage widget reflects admin update",
+      "result": "PASS",
+      "detail": "After admin save, homepage Fajr=\"5:55 AM\""
+    },
+    {
+      "test": "API Prayer Times (public)",
+      "result": "PASS",
+      "detail": "HTTP status() {\n        return this._initializer.status;\n      }, hasData=true, hasSunrise=true"
+    },
+    {
+      "test": "API Prayer Times for mosque 1",
+      "result": "PASS",
+      "detail": "HTTP status() {\n        return this._initializer.status;\n      }, hasData=true, hasSunrise=true"
+    },
+    {
+      "test": "API Future-date Ramadan 2027",
+      "result": "PASS",
+      "detail": "HTTP status() {\n        return this._initializer.status;\n      }, hasData=true, hasSunrise=true"
+    },
+    {
+      "test": "API Past-date lookup",
+      "result": "PASS",
+      "detail": "HTTP status() {\n        return this._initializer.status;\n      }, hasData=true, hasSunrise=true"
+    },
+    {
+      "test": "PUT with bad sunrise rejected (BUG-PRAYER-007 fix)",
+      "result": "PASS",
+      "detail": "HTTP 400 (expected 400)"
+    },
+    {
+      "test": "PUT with valid sunrise accepted",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    }
+  ],
+  "summary": {
+    "pass": 24,
+    "fail": 0,
+    "bug": 0,
+    "info": 0,
+    "skip": 0,
+    "total": 24
+  }
+}
