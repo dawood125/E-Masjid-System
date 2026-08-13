@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import { useAuth } from '../../../hooks/useAuth.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { formatDate } from '../../../utils/formatters.js'
-import { getActiveMosqueId } from '../../../utils/mosque.js'
 
 const FILTERS = ['all', 'published', 'urgent', 'draft']
 const PAGE_SIZE = 6
@@ -13,8 +14,13 @@ function getAnnouncementStatus(item) {
   return item.status || 'published'
 }
 
+function localTodayISO() {
+  return new Date().toLocaleDateString('sv-SE')
+}
+
 export default function Announcements() {
   const { showToast } = useUI()
+  const { user } = useAuth()
 
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
@@ -30,24 +36,31 @@ export default function Announcements() {
     urgent: false,
     mode: 'publish',
   })
+  // FIX-ANN-005 (BUG-ANN-008): delete-confirmation modal state
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmDeleteText, setConfirmDeleteText] = useState('')
+
+  // FIX-ANN-004 (BUG-ANN-005): always use admin's own mosqueId, not navbar's.
+  const { activeMosqueId: navbarMosqueId } = useMosque()
+  const adminMosqueId = user?.mosqueId || null
+  const mosqueMismatch = Boolean(adminMosqueId && navbarMosqueId && adminMosqueId !== navbarMosqueId)
+
+  const fetchAnnouncements = async () => {
+    try {
+      const params = adminMosqueId ? `mosqueId=${adminMosqueId}&includeAll=true` : 'includeAll=true'
+      const res = await api.getAnnouncements(params)
+      setAnnouncements(Array.isArray(res.data) ? res.data : [])
+    } catch (err) {
+      showToast(err.message || 'Failed to load announcements.', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let mounted = true
-    const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}&includeAll=true` : 'includeAll=true'
-    ;(async () => {
-      try {
-        const res = await api.getAnnouncements(params)
-        if (!mounted) return
-        setAnnouncements(Array.isArray(res.data) ? res.data : [])
-      } catch (err) {
-        showToast(err.message || 'Failed to load announcements.', 'error')
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    })()
-    return () => { mounted = false }
-  }, [showToast])
+    fetchAnnouncements()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminMosqueId])
 
   const preparedAnnouncements = useMemo(() => {
     return announcements.map((item) => {
@@ -78,7 +91,7 @@ export default function Announcements() {
   const visible = filtered.slice(0, page * PAGE_SIZE)
   const hasMore = visible.length < filtered.length
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = localTodayISO()
 
   const openCreateModal = () => {
     setEditingAnnouncement(null)
@@ -92,7 +105,7 @@ export default function Announcements() {
       title: item.title,
       content: item.content,
       publishDate: item.publishDate ? new Date(item.publishDate).toISOString().slice(0, 10) : '',
-      urgent: item.isUrgent || false,
+      urgent: item.isUrgent || false, // FIX-ANN-003 (BUG-ANN-010): pre-populate the urgent checkbox
       mode: item.status === 'draft' ? 'draft' : 'publish',
     })
     setIsModalOpen(true)
@@ -101,17 +114,12 @@ export default function Announcements() {
   const handleAnnouncementSubmit = async (event) => {
     event.preventDefault()
 
-    if (newAnnouncement.publishDate && newAnnouncement.publishDate < todayStr) {
-      showToast('Publication date cannot be in the past.', 'error')
-      return
-    }
-
     try {
       const payload = {
         title: newAnnouncement.title,
         content: newAnnouncement.content,
         isUrgent: newAnnouncement.urgent,
-        publishedBy: 'Admin',
+        publishedBy: user?.name || 'Admin', // FIX-ANN-006 (BUG-ANN-009)
         status: newAnnouncement.mode === 'draft' ? 'draft' : 'published',
       }
       if (newAnnouncement.publishDate) payload.publishDate = newAnnouncement.publishDate
@@ -133,6 +141,58 @@ export default function Announcements() {
       setNewAnnouncement({ title: '', content: '', publishDate: '', urgent: false, mode: 'publish' })
     } catch (err) {
       showToast(err.message || 'Failed to save announcement.', 'error')
+    }
+  }
+
+  // FIX-ANN-003 (BUG-ANN-004): wire quick actions to real API calls
+  const handleMarkUrgent = async (item) => {
+    try {
+      const newUrgent = !item.isUrgent
+      const res = await api.updateAnnouncement(item.id, { isUrgent: newUrgent, publishedBy: item.publishedBy || 'Admin' })
+      setAnnouncements((prev) =>
+        prev.map((a) => ((a._id || a.id) === item.id ? res.data : a))
+      )
+      showToast(newUrgent ? 'Marked as urgent.' : 'Removed from urgent.', 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to update.', 'error')
+    }
+  }
+
+  const handlePublishDraft = async (item) => {
+    try {
+      const res = await api.updateAnnouncement(item.id, {
+        status: 'published',
+        publishDate: new Date().toISOString(),
+        publishedBy: item.publishedBy || 'Admin',
+      })
+      setAnnouncements((prev) =>
+        prev.map((a) => ((a._id || a.id) === item.id ? res.data : a))
+      )
+      showToast('Announcement published.', 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to publish.', 'error')
+    }
+  }
+
+  const openDeleteConfirm = (item) => {
+    setConfirmDelete(item)
+    setConfirmDeleteText('')
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    if (confirmDeleteText.trim() !== (confirmDelete.title || '').trim()) {
+      showToast('Title does not match. Please type the announcement title exactly to confirm.', 'error')
+      return
+    }
+    try {
+      await api.deleteAnnouncement(confirmDelete.id)
+      setAnnouncements((prev) => prev.filter((a) => (a._id || a.id) !== confirmDelete.id))
+      showToast('Announcement deleted successfully.', 'success')
+      setConfirmDelete(null)
+      setConfirmDeleteText('')
+    } catch (err) {
+      showToast(err.message || 'Failed to delete announcement.', 'error')
     }
   }
 
@@ -168,6 +228,24 @@ export default function Announcements() {
           </button>
         </div>
       </div>
+
+      {/* FIX-ANN-004 (BUG-ANN-005): mosque-mismatch warning banner */}
+      {mosqueMismatch && (
+        <section className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-200 text-amber-800">
+              <i className="material-icons-round">warning</i>
+            </div>
+            <div className="text-sm text-amber-900">
+              <p className="font-semibold">You&apos;re viewing a different mosque in the navbar.</p>
+              <p className="mt-1">
+                This page <strong>always</strong> shows <strong>your own mosque&apos;s</strong> announcements
+                based on your login. Switching the navbar mosque will not change what gets managed here.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
@@ -264,20 +342,37 @@ export default function Announcements() {
                 </span>
 
                 <div className="flex items-center gap-2">
-                  {item.status !== 'urgent' && item.status !== 'draft' && (
+                  {!item.isUrgent && item.status !== 'draft' && (
                     <button
                       type="button"
-                      onClick={() => showToast(`${item.title} marked urgent (demo).`, 'info')}
+                      onClick={() => handleMarkUrgent(item)}
+                      title="Mark as urgent"
+                      aria-label="Mark as urgent"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 text-amber-700 hover:bg-amber-50"
                     >
                       <i className="material-icons-round text-base">priority_high</i>
                     </button>
                   )}
 
+                  {item.isUrgent && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkUrgent(item)}
+                      title="Remove urgent flag"
+                      aria-label="Remove urgent flag"
+                      className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                    >
+                      <i className="material-icons-round text-base">priority_high</i>
+                      Urgent
+                    </button>
+                  )}
+
                   {item.status === 'draft' && (
                     <button
                       type="button"
-                      onClick={() => showToast(`${item.title} published (demo).`, 'success')}
+                      onClick={() => handlePublishDraft(item)}
+                      title="Publish this draft"
+                      aria-label="Publish this draft"
                       className="rounded-lg bg-primary-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-800"
                     >
                       Publish
@@ -287,21 +382,17 @@ export default function Announcements() {
                   <button
                     type="button"
                     onClick={() => openEditModal(item)}
+                    title="Edit announcement"
+                    aria-label="Edit announcement"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
                   >
                     <i className="material-icons-round text-base">edit</i>
                   </button>
                   <button
                     type="button"
-                    onClick={async () => {
-                      try {
-                        await api.deleteAnnouncement(item.id)
-                        setAnnouncements((prev) => prev.filter((a) => (a._id || a.id) !== item.id))
-                        showToast('Announcement deleted successfully.', 'success')
-                      } catch (err) {
-                        showToast(err.message || 'Failed to delete announcement.', 'error')
-                      }
-                    }}
+                    onClick={() => openDeleteConfirm(item)}
+                    title="Delete announcement"
+                    aria-label="Delete announcement"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
                   >
                     <i className="material-icons-round text-base">delete</i>
@@ -329,6 +420,7 @@ export default function Announcements() {
         </section>
       )}
 
+      {/* Create/Edit modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
@@ -426,6 +518,60 @@ export default function Announcements() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FIX-ANN-005 (BUG-ANN-008): delete-confirmation modal — type title to confirm */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-red-700">
+                <i className="material-icons-round">delete</i>
+                Delete Announcement
+              </h3>
+              <button type="button" onClick={() => { setConfirmDelete(null); setConfirmDeleteText('') }} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-700">
+                This will permanently delete the announcement <strong className="text-gray-900">{confirmDelete.title}</strong>.
+                This action cannot be undone.
+              </p>
+              <p className="text-sm text-gray-700">
+                To confirm, type the announcement title exactly:
+              </p>
+              <p className="rounded-lg bg-gray-100 px-3 py-2 font-mono text-sm font-semibold text-gray-800">
+                {confirmDelete.title}
+              </p>
+              <input
+                type="text"
+                value={confirmDeleteText}
+                onChange={(e) => setConfirmDeleteText(e.target.value)}
+                placeholder="Type the title to confirm"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none"
+                aria-label="Confirm by typing the announcement title"
+              />
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDelete(null); setConfirmDeleteText('') }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={confirmDeleteText.trim() !== (confirmDelete.title || '').trim()}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

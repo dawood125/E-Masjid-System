@@ -64,7 +64,7 @@ npm run dev
 - **Weekly Jama'ah Schedule** table with 7 rows, each row showing the date and 5 (or 6 with Sunrise) prayer times
 - **Quote section** at the bottom
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __pass_____
 
 ---
 
@@ -81,7 +81,7 @@ npm run dev
 - Today's row has a light green background tint
 - A small green "Today" pill badge is visible to the right of the date
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass__
 
 ---
 
@@ -98,7 +98,7 @@ npm run dev
 - Today's Schedule has a Sunrise card showing **06:45 AM** (Al-Noor) or **06:30 AM** (Al-Rahman)
 - Weekly table has a Sunrise column between Fajr and Dhuhr
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass___
 
 ---
 
@@ -116,7 +116,7 @@ npm run dev
 - On Friday after 13:00: countdown shows the next prayer (Asr)
 - On other days: countdown shows Dhuhr/Zuhr as normal
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______ (or N/A if not Friday)
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____n/a___ (or N/A if not Friday)
 
 ---
 
@@ -138,7 +138,7 @@ npm run dev
 - Sunrise time updates (e.g., 06:30 instead of 06:45)
 - No white flash, no page reload
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass___
 
 ---
 
@@ -160,7 +160,7 @@ npm run dev
 - Clicking Prayer Times opens `/admin/prayer-times`
 - Page title: **"Manage Prayer Times"**
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass____
 
 ---
 
@@ -179,7 +179,7 @@ npm run dev
 - Jumu'ah card has primary (dark green) styling
 - "Last updated" timestamp below
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass___
 
 ---
 
@@ -200,7 +200,7 @@ npm run dev
 - Homepage widget's Fajr shows **5:42 AM**
 - No need to manually refresh the homepage — it should reflect within ~1 second
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass___
 
 ---
 
@@ -221,7 +221,7 @@ npm run dev
 - After saving, the toast shows the picked date
 - Switching the date to a different one and back shows your edited value persisted
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass____
 
 ---
 
@@ -240,7 +240,7 @@ npm run dev
 - Saving updates the sunrise time in the DB
 - Public `/prayer-times` Sunrise card reflects the new time
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass____
 
 ---
 
@@ -260,7 +260,7 @@ npm run dev
 - The form below still shows Al-Noor times (your own mosque), NOT Al-Rahman times
 - This protects you from accidentally saving Al-Rahman times to the Al-Noor DB row
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __pass_____
 
 ---
 
@@ -279,7 +279,7 @@ npm run dev
 - Save succeeds (no "past dates not allowed" error)
 - The public page for yesterday would reflect the change (though yesterday isn't shown in the public weekly table by default)
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __pass_____
 
 ---
 
@@ -298,7 +298,7 @@ npm run dev
 - Admin form inputs stack vertically
 - Date picker full-width
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: _______
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass____
 
 ---
 

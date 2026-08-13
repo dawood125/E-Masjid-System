@@ -66,19 +66,13 @@ router.post(
 });
 
 // PUT /api/announcements/:id
+// FIX-ANN-007 (BUG-ANN-006): removed the past-date block on edit. The admin must
+// be able to correct drafts even if their scheduled publishDate is now in the past
+// (Phase 5 Q11 parity). The create-side past-date check is preserved.
 router.put('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid announcement id' });
-    }
-
-    if (req.body.publishDate) {
-      const pubDate = new Date(req.body.publishDate);
-      const todayMidnight = new Date();
-      todayMidnight.setHours(0, 0, 0, 0);
-      if (pubDate < todayMidnight) {
-        return res.status(400).json({ success: false, message: 'Publication date cannot be in the past' });
-      }
     }
 
     const updateFields = {};

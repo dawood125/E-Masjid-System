@@ -8,6 +8,18 @@ import { formatDate } from '../../../utils/formatters.js'
 
 const filters = ['all', 'news', 'important', 'event', 'community']
 
+function islamicDateLabel() {
+  try {
+    return new Intl.DateTimeFormat('en-TN-u-ca-islamic', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date())
+  } catch {
+    return 'Islamic Date'
+  }
+}
+
 function inferCategory(item) {
   const title = item.title.toLowerCase()
   const content = item.content.toLowerCase()
@@ -28,7 +40,7 @@ function categoryTagClass(category) {
 
 export default function Announcements() {
   const { showToast } = useUI()
-  const { activeMosqueId } = useMosque()
+  const { activeMosqueId, activeMosque } = useMosque()
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
   const [page, setPage] = useState(1)
@@ -87,6 +99,31 @@ export default function Announcements() {
   const currentPage = Math.min(page, totalPages)
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  // FIX-ANN-008 (BUG-ANN-007): show current page + neighboring pages with ellipsis.
+  // Previously `Array.from({ length: totalPages }).slice(0, 5)` capped at pages 1-5,
+  // making it impossible to reach page 6+.
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const windowStart = Math.max(1, Math.min(currentPage - 2, totalPages - 4))
+    const windowEnd = Math.min(totalPages, windowStart + 4)
+    const numbers = []
+    if (windowStart > 1) {
+      numbers.push(1)
+      if (windowStart > 2) numbers.push('...')
+    }
+    for (let i = windowStart; i <= windowEnd; i++) numbers.push(i)
+    if (windowEnd < totalPages) {
+      if (windowEnd < totalPages - 1) numbers.push('...')
+      numbers.push(totalPages)
+    }
+    return numbers
+  }, [totalPages, currentPage])
+
+  // FIX-ANN-001 (BUG-ANN-001/002): dynamic mosque name + dynamic Islamic date.
+  const dynamicSubtitle = activeMosque
+    ? `Stay informed with the latest news, updates, and important announcements from ${activeMosque.name}, ${activeMosque.city || ''}.`
+    : 'Stay informed with the latest news, updates, and important announcements from your masjid.'
+
   return (
     <div className="bg-white">
       <section className="py-12">
@@ -95,19 +132,18 @@ export default function Announcements() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <h1 className="font-primary text-5xl font-bold text-[#064e3b]">Community Announcements</h1>
-                <p className="mt-3 max-w-3xl text-lg text-gray-600">
-                  Stay informed with the latest news, updates, and important announcements from Masjid Al-Noor, Sheikhupura.
-                </p>
+                <p className="mt-3 max-w-3xl text-lg text-gray-600">{dynamicSubtitle}</p>
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-[#047857] border border-primary-200">
                 <i className="material-icons-round">calendar_today</i>
-                <span>15 Shawwal 1446 AH</span>
+                <span>{islamicDateLabel()}</span>
               </div>
             </div>
           </header>
 
-          {urgent && (
-            <article className="mb-7 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm animate-fade-in">
+          {/* FIX-ANN-002 (BUG-ANN urgent): amber banner at top for urgent announcement */}
+          {urgent && urgent.isUrgent && (
+            <article className="mb-7 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-md animate-fade-in">
               <div className="p-8">
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold uppercase text-white">
                   <i className="material-icons-round text-sm">campaign</i>
@@ -158,13 +194,6 @@ export default function Announcements() {
                     {f === 'all' ? 'All Updates' : f[0].toUpperCase() + f.slice(1)}
                   </button>
                 ))}
-
-                <div className="mx-1 h-6 w-px bg-gray-300" />
-
-                <button type="button" className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100">
-                  <span>Newest First</span>
-                  <i className="material-icons-round text-base">sort</i>
-                </button>
               </div>
             </div>
           </section>
@@ -178,17 +207,31 @@ export default function Announcements() {
               </div>
             )}
             {paged.map((item, idx) => (
-              <article key={item.id} className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+              <article
+                key={item.id}
+                className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl animate-fade-in-up ${
+                  item.isUrgent ? 'border-amber-300 bg-amber-50/40' : 'border-gray-200 bg-white'
+                }`}
+                style={{ animationDelay: `${idx * 80}ms` }}
+              >
                 <div className={`absolute top-0 left-0 h-full w-1 ${
                   item.category === 'important' ? 'bg-amber-500' :
                   item.category === 'event' ? 'bg-blue-500' :
                   item.category === 'community' ? 'bg-green-500' : 'bg-gray-400'
                 }`} />
                 <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${categoryTagClass(item.category)}`}>
-                      {item.category}
-                    </span>
+                  <div className="mb-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${categoryTagClass(item.category)}`}>
+                        {item.category}
+                      </span>
+                      {item.isUrgent && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+                          <i className="material-icons-round text-xs">priority_high</i>
+                          Urgent
+                        </span>
+                      )}
+                    </div>
                     <p className="inline-flex items-center gap-1 text-sm font-medium text-gray-500">
                       <i className="material-icons-round text-base">calendar_today</i>
                       {formatDate(item.date)}
@@ -224,8 +267,14 @@ export default function Announcements() {
             </button>
 
             <div className="flex gap-1">
-              {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
-                const pageNo = i + 1
+              {pageNumbers.map((pageNo, idx) => {
+                if (pageNo === '...') {
+                  return (
+                    <span key={`ellipsis-${idx}`} className="inline-flex h-9 w-9 items-center justify-center text-sm font-semibold text-gray-500">
+                      …
+                    </span>
+                  )
+                }
                 return (
                   <button
                     key={pageNo}
