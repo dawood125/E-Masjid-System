@@ -1,8 +1,8 @@
 # 06 Announcements Module - Bugs Found
 
-**Total:** 11 BUGs found  
-**Status:** ✅ All 11 BUGs fixed & verified — see `bugs_fixed.md` for details  
-**Automated test:** 24/25 PASS (1 known test-side limitation, not a code bug)
+**Total:** 12 BUGs found  
+**Status:** ✅ All 12 BUGs fixed & verified — see `bugs_fixed.md` for details  
+**Automated test:** 34/35 PASS (1 known test-side limitation, not a code bug)
 
 ---
 
@@ -237,5 +237,42 @@
 | BUG-ANN-009 | Low | FIX-ANN-006 | ✅ Fixed |
 | BUG-ANN-010 | Medium | FIX-ANN-003 | ✅ Fixed |
 | BUG-ANN-011 | Low | FIX-ANN-005 | ✅ Fixed |
+| BUG-ANN-012 | **Critical** (security) | FIX-ANN-012 | ✅ Fixed |
 
-**Total: 11 BUGs → 9 fix groups** (BUG-ANN-001 and -002 share FIX-ANN-001; BUG-ANN-004 and -010 share FIX-ANN-003; BUG-ANN-008 and -011 share FIX-ANN-005). **All 11 BUGs fixed and verified by `announcements_test.js` (24/25 PASS).**
+**Total: 12 BUGs → 10 fix groups** (BUG-ANN-001 and -002 share FIX-ANN-001; BUG-ANN-004 and -010 share FIX-ANN-003; BUG-ANN-008 and -011 share FIX-ANN-005; BUG-ANN-012 is its own fix group). **All 12 BUGs fixed and verified by `announcements_test.js` (34/35 PASS).**
+
+---
+
+## BUG-ANN-012 — Cross-mosque data leak: an admin can see/edit announcements of any masjid
+
+| Field | Value |
+|-------|-------|
+| Severity | **Critical** (security/auth) |
+| Locations | `backend/utils/seed.js`, `backend/routes/announcements.js`, `backend/routes/auth.js`, `backend/models/User.js`, `frontend/src/utils/api.js`, `frontend/src/components/Admin/Pages/Announcements.jsx` |
+| Root cause | Two compounding gaps: (1) `seed.js` never assigned `admin2` to `mosque2._id`, so her JWT had `mosqueId: undefined`; (2) `GET /api/announcements` is a public endpoint that returns everything when called without `mosqueId`. The admin frontend sends no filter when `user.mosqueId` is undefined → admin sees rows from BOTH mosques. |
+| Status | ✅ Fixed (FIX-ANN-012) |
+| Proposed fix | (a) Wire admin2 to `mosque2._id` in `seed.js` so her JWT has `mosqueId`. Managers are NOT given a `user.mosqueId` — their scope is per-mosque via the `Mosque.managerId` field on the Mosque document (existing role pattern). (b) Use the existing **`manager` role** as the cross-mosque operator (not a new `superadmin` role). (c) Add a **protected** `GET /api/announcements/admin` route that forces `req.user.mosqueId` scope; Manager can pass `?mosqueId=` to choose any of the mosques they oversee, or omit it to get all managed mosques. (d) `POST` returns 403 if `body.mosqueId` ≠ the caller's own `mosqueId` (regular admin) or not in their `managedIds` (manager). (e) `PUT`/`DELETE` scoped by `req.user.mosqueId` (regular admin) or `$in: managedIds` / `?mosqueId=` (manager). (f) Login response includes `mosqueId` so frontend AuthContext has it immediately. (g) Admin frontend uses the new protected endpoint. |
+
+**Steps to reproduce (before fix):**
+1. Login as `admin2@emasjid.pk` / `admin123` (Al-Rahman admin per UI label).
+2. Navigate to `/admin/announcements`.
+3. The list shows BOTH Al-Noor's and Al-Rahman's announcements — not just Al-Rahman's.
+4. Attempt to POST a new announcement: the DB row is saved with `mosqueId: undefined` (orphan).
+
+**Expected:** admin2 sees ONLY Al-Rahman items; cannot create/edit any other mosque's data; the form is refused if `body.mosqueId` ≠ their own.
+**Actual (before fix):** admin2 sees all items, can create orphans, can attempt to edit other mosques (returns 404 because query was scoped by undefined mosqueId, but the data-leak in GET is the critical hole).
+
+**Why this is a Phase 6 bug, not a Phase 1–5 bug:**
+The Phase 1–5 admin pages (Events, Donations, Expenses, Prayer Times, etc.) have the same shape — they all read `getActiveMosqueId()` from navbar localStorage on the frontend, and the backend handlers do scope by `req.user.mosqueId` but only when `req.user.mosqueId` is set. The seed gap exposed it. **Phase 6 fixes the Announcements surface end-to-end; the same fix pattern will need to be repeated for the other modules in their own phases.**
+
+**Verification (after fix):**
+- admin2 `GET /api/announcements/admin` → 3 rows, all `mosqueId=Al-Rahman` ✅
+- admin `GET /api/announcements/admin` → 5 rows, all `mosqueId=Al-Noor` ✅
+- manager (manages Al-Noor) `GET /api/announcements/admin` → 5 rows, all `mosqueId=Al-Noor` ✅
+- manager `GET /api/announcements/admin?mosqueId=Al-Noor` → 5 rows ✅
+- manager `GET /api/announcements/admin?mosqueId=Al-Rahman` (not their mosque) → 400 ✅
+- manager2 (manages Al-Rahman) `GET /api/announcements/admin` → 3 rows, all `mosqueId=Al-Rahman` ✅
+- admin2 POST with `body.mosqueId=Al-Noor` → 403 Forbidden ✅
+- admin2 PUT an Al-Noor announcement → 404 Not found ✅
+- manager POST with `mosqueId=Al-Noor` (managed mosque) → 201, saved to Al-Noor ✅
+- manager POST with `mosqueId=Al-Rahman` (NOT managed) → 403 Forbidden ✅

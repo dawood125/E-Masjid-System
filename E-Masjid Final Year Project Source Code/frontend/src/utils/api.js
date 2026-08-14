@@ -120,6 +120,10 @@ class ApiService {
 
   // Announcements
   getAnnouncements(params = '') { return this.request('GET', `/api/announcements${params ? '?' + params : ''}`) }
+  // Phase 6 (BUG-ANN-012): admin-side GET that force-scopes to req.user.mosqueId
+  // on the backend. SuperAdmin can pass ?mosqueId=... to choose. Prevents an
+  // unscoped admin from seeing another masjid's announcements.
+  getAdminAnnouncements(params = '') { return this.request('GET', `/api/announcements/admin${params ? '?' + params : ''}`) }
   createAnnouncement(data) { return this.request('POST', '/api/announcements', data) }
   updateAnnouncement(id, data) { return this.request('PUT', `/api/announcements/${id}`, data) }
   deleteAnnouncement(id) { return this.request('DELETE', `/api/announcements/${id}`) }

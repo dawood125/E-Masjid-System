@@ -43,12 +43,17 @@ export default function Announcements() {
   // FIX-ANN-004 (BUG-ANN-005): always use admin's own mosqueId, not navbar's.
   const { activeMosqueId: navbarMosqueId } = useMosque()
   const adminMosqueId = user?.mosqueId || null
-  const mosqueMismatch = Boolean(adminMosqueId && navbarMosqueId && adminMosqueId !== navbarMosqueId)
+  const isManager = user?.role === 'manager'
+  const mosqueMismatch = Boolean(!isManager && adminMosqueId && navbarMosqueId && adminMosqueId !== navbarMosqueId)
 
   const fetchAnnouncements = async () => {
     try {
-      const params = adminMosqueId ? `mosqueId=${adminMosqueId}&includeAll=true` : 'includeAll=true'
-      const res = await api.getAnnouncements(params)
+      // Phase 6 (BUG-ANN-012): call the protected admin endpoint so the backend
+      // can force-scope to req.user.mosqueId. Manager can pass ?mosqueId=
+      // to choose (within the mosques they oversee); everyone else gets their
+      // own scope (or 400 if unscoped).
+      const params = isManager && navbarMosqueId ? `mosqueId=${navbarMosqueId}` : ''
+      const res = await api.getAdminAnnouncements(params)
       setAnnouncements(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
       showToast(err.message || 'Failed to load announcements.', 'error')
@@ -60,7 +65,7 @@ export default function Announcements() {
   useEffect(() => {
     fetchAnnouncements()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminMosqueId])
+  }, [adminMosqueId, isManager, navbarMosqueId])
 
   const preparedAnnouncements = useMemo(() => {
     return announcements.map((item) => {

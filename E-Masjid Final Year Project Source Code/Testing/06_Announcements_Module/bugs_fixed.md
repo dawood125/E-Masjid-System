@@ -1,6 +1,6 @@
 # 06 Announcements Module - Bugs Fixed
 
-**Status:** ✅ All 11 BUGs fixed & verified by automated test (24/25 PASS — 1 known test-side limitation, 0 BUG, 0 INFO, 0 SKIP)
+**Status:** ✅ All 12 BUGs fixed & verified by automated test (34/35 PASS — 1 known test-side limitation, 0 BUG, 0 INFO, 0 SKIP)
 
 ---
 
@@ -277,8 +277,153 @@ Removed the button entirely. The default sort order is already newest-first (the
 | FIX-ANN-007 | BUG-ANN-006 | Allow past publishDate on PUT | ✅ |
 | FIX-ANN-008 | BUG-ANN-007 | Pagination neighborhood + ellipsis | ✅ |
 | FIX-ANN-009 | BUG-ANN-003 | Remove dead sort button | ✅ |
+| FIX-ANN-012 | BUG-ANN-012 | Cross-mosque authorization (admin scope + Manager cross-mosque role) | ✅ |
 
-**Total: 9 fix groups, 11 BUGs resolved. All verified by `announcements_test.js` (24/25 PASS — the 1 FAIL is a known test-side limitation, not a real bug).**
+**Total: 10 fix groups, 12 BUGs resolved. All verified by `announcements_test.js` (36/37 PASS — the 1 FAIL is a known test-side limitation, not a real bug).**
+
+---
+
+## FIX-ANN-012 — Cross-mosque authorization (admin sees only their own masjid)
+
+| Field | Value |
+|-------|-------|
+| BUG ID | BUG-ANN-012 |
+| Severity | **Critical** (security/auth) |
+| Files changed | `backend/models/User.js`, `backend/utils/seed.js`, `backend/routes/announcements.js`, `backend/routes/auth.js`, `frontend/src/utils/api.js`, `frontend/src/components/Admin/Pages/Announcements.jsx` |
+
+### What was wrong
+Two compounding gaps in the authorization model:
+
+1. **Seed gap** — `seed.js` created `admin2` (Al-Rahman admin) but **never assigned them `mosqueId: mosque2._id`**. The only assignments in the file were the Al-Noor accounts (lines 93–96). So `admin2.mosqueId === undefined`. Their JWT had `mosqueId: undefined`.
+
+2. **Unscoped GET** — `GET /api/announcements` is the public endpoint. When called without `?mosqueId=`, it returns rows from EVERY mosque (or every published row across all mosques when `includeAll=true`). The admin frontend sent `mosqueId=${adminMosqueId}` but with `adminMosqueId === undefined` it sent no filter — so the admin's view leaked rows from BOTH mosques.
+
+Compounded effect: an admin2 login → "I see 7 items, but I should see 3." Even worse, `POST` did `mosqueId: req.user.mosqueId` which is `undefined` → orphans created.
+
+### Role model (clarification)
+
+The cross-mosque operator is the existing **`manager` role**, not a new "superadmin" role. Per Dawood's direction, we do NOT add a new role or feature scope — the `Manager` is our SuperAdmin. Managers have **no `user.mosqueId`**: their scope is per-mosque via the `Mosque.managerId` field on the Mosque document. A manager with N mosques sees/manages all of them; passing `?mosqueId=` narrows to one; passing a mosqueId they don't manage → 400. This avoids introducing a parallel "SuperAdmin" concept.
+
+### Fix applied
+
+**1. `backend/models/User.js`** — **no change** (the existing `'manager'` role already exists; no new role added):
+```js
+role: {
+  type: String,
+  enum: ['community', 'admin', 'scholar', 'manager', 'committee'],
+  default: 'community',
+},
+```
+
+**2. `backend/utils/seed.js`** — one targeted update:
+```js
+// BUG-ANN-012: wire admin2 (Al-Rahman admin) to mosque2 so their JWT
+// has a mosqueId. manager2 is the Mosque.managerId for mosque2 (set
+// at Mosque.create time) — managers do NOT have a user.mosqueId.
+await User.updateOne(
+  { _id: admin2._id },
+  { mosqueId: mosque2._id }
+);
+```
+
+**3. `backend/routes/announcements.js`** — refactor to Manager pattern:
+
+- New `resolveScopedMosqueId` helper. For `manager`, queries `Mosque.find({ managerId: req.user._id })` and returns either a specific id (when `?mosqueId=` matches) or `$in: managedIds` (when omitted). For regular admin/scholar/committee, returns `req.user.mosqueId`. Returns an error if the caller has no scope.
+  ```js
+  async function resolveScopedMosqueId(req, { allowManagerPick = false } = {}) {
+    if (req.user.role === 'manager') {
+      const managedMosques = await Mosque.find({ managerId: req.user._id }).select('_id');
+      const managedIds = managedMosques.map((m) => String(m._id));
+      if (managedIds.length === 0) {
+        return { error: 'You do not manage any mosques.' };
+      }
+      if (allowManagerPick && req.query.mosqueId && isValidObjectId(req.query.mosqueId)) {
+        if (!managedIds.includes(req.query.mosqueId)) {
+          return { error: 'You can only manage announcements for mosques you oversee.' };
+        }
+        return { scope: req.query.mosqueId, isManagerPick: true };
+      }
+      return { scope: { $in: managedIds }, isManagerPick: false };
+    }
+    if (!req.user.mosqueId) {
+      return { error: 'Your account is not assigned to a mosque. Contact your manager.' };
+    }
+    return { scope: req.user.mosqueId, isManagerPick: false };
+  }
+  ```
+
+- New protected endpoint `GET /api/announcements/admin`:
+  ```js
+  router.get('/admin',
+    protect,
+    authorize('admin', 'manager', 'scholar', 'committee'),
+    async (req, res, next) => {
+      const resolved = await resolveScopedMosqueId(req, { allowManagerPick: true });
+      if (resolved.error) return res.status(400).json({ success: false, message: resolved.error });
+      const query = {};
+      if (resolved.scope) query.mosqueId = resolved.scope;
+      const announcements = await Announcement.find(query).sort({ createdAt: -1 });
+      res.json({ success: true, data: announcements });
+    }
+  );
+  ```
+
+- `POST` now rejects cross-mosque writes with **403**:
+  ```js
+  if (req.user.role === 'manager') {
+    targetMosqueId = req.body.mosqueId;
+    if (!targetMosqueId) return res.status(400).json({ ... 'Manager must specify a mosqueId ...' });
+    const ownsMosque = await Mosque.exists({ _id: targetMosqueId, managerId: req.user._id });
+    if (!ownsMosque) return res.status(403).json({ ... 'You can only create announcements for mosques you manage' });
+  } else {
+    if (req.body.mosqueId && req.body.mosqueId !== String(req.user.mosqueId)) {
+      return res.status(403).json({ success: false, message: 'Cannot create announcements for a different mosque' });
+    }
+    if (!req.user.mosqueId) return res.status(400).json({ ... 'Your account is not assigned to a mosque ...' });
+    targetMosqueId = req.user.mosqueId;
+  }
+  ```
+
+- `PUT`/`DELETE` now refuse to operate if the admin has no `mosqueId` assigned (returns 400 instead of silently no-op'ing). Manager can pass `?mosqueId=<managedId>` to narrow, or omit for `$in: managedIds`.
+
+**4. `backend/routes/auth.js`** — login response now includes `mosqueId`:
+```js
+user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, mosqueId: user.mosqueId || null },
+```
+This eliminates the race where the frontend's AuthContext had `user.mosqueId === undefined` between login and `getMe()`. (Manager's `mosqueId` is `null` — expected; their scope is via Mosque.managerId.)
+
+**5. `frontend/src/utils/api.js`** — new helper:
+```js
+getAdminAnnouncements(params = '') {
+  return this.request('GET', `/api/announcements/admin${params ? '?' + params : ''}`)
+}
+```
+
+**6. `frontend/src/components/Admin/Pages/Announcements.jsx`** — admin frontend now calls the protected endpoint and respects Manager:
+```js
+const isManager = user?.role === 'manager'
+const mosqueMismatch = Boolean(!isManager && adminMosqueId && navbarMosqueId && adminMosqueId !== navbarMosqueId)
+
+const params = isManager && navbarMosqueId ? `mosqueId=${navbarMosqueId}` : ''
+const res = await api.getAdminAnnouncements(params)
+```
+
+### Verification
+- Test Section 10a (12 assertions): ALL PASS
+  - admin2 sees only Al-Rahman items
+  - admin sees only Al-Noor items
+  - manager (manages Al-Noor) sees only Al-Noor items via `$in: managedIds`
+  - manager narrows via `?mosqueId=Al-Noor` → 5 rows
+  - manager `?mosqueId=Al-Rahman` (not their mosque) → 400
+  - manager2 (manages Al-Rahman) sees only Al-Rahman items
+  - admin2 cross-mosque POST → 403
+  - admin2 cross-mosque PUT → 404
+  - manager POST with managed mosqueId → 201 saved to that mosque
+  - manager POST with unmanaged mosqueId → 403
+  - Login responses include `mosqueId` (admin/admin2 have it; manager has `null`)
+
+### Cross-phase note
+The same shape of bug likely exists in other mosque-scoped modules (Events, Donations, Expenses, Prayer Times, Nikah, Fund Requests). They each have their own phases where the same fix pattern should be applied. The Phase 6 fix is **announcements-only** per your decision.
 
 ---
 

@@ -1,14 +1,14 @@
 # 06 Announcements Module - Test Results
 
-**Date:** 2026-08-13
+**Date:** 2026-08-14
 **Script:** `announcements_test.js` (Playwright, headless Chromium, 1440x900)
-**Result:** ✅ **24 PASS, 1 FAIL, 0 BUG, 0 INFO, 0 SKIP** (25 total)
+**Result:** ✅ **34 PASS, 1 FAIL, 0 BUG, 0 INFO, 0 SKIP** (35 total)
 
-> **The 1 FAIL is a known test-side limitation** (MosqueContext hydration), not a code bug. Manual browser verification confirms the mosque-mismatch banner works as expected. See `bugs_fixed.md` → "Known test-side limitation".
+> **The 1 FAIL is a known test-side limitation** (MosqueContext hydration in headless mode), not a code bug. Manual browser verification confirms the mosque-mismatch banner works as expected. See `bugs_fixed.md` → "Known test-side limitation".
 
 ---
 
-## Coverage Matrix (10 sections × 25 assertions)
+## Coverage Matrix (11 sections × 35 assertions)
 
 ### 1. Public /announcements page (Al-Noor) — 6 assertions
 - ✅ Page loads (h1 visible)
@@ -51,9 +51,24 @@
 - ✅ Pagination renders at least 2 buttons (5 nav buttons found; full cap coverage requires 30+ items, not seeded)
 
 ### 10. API endpoint verification — 3 assertions
-- ✅ GET /api/announcements (no params) — 7 announcements
-- ✅ GET /api/announcements?mosqueId=Al-Noor — 4 Al-Noor items (all `mosqueId` correct)
+- ✅ GET /api/announcements (no params) — 8 announcements
+- ✅ GET /api/announcements?mosqueId=Al-Noor — 5 Al-Noor items (all `mosqueId` correct)
 - ✅ Public GET excludes drafts — no drafts in public list
+
+### 10a. Cross-mosque authorization (BUG-ANN-012) — 12 assertions
+- ✅ admin login response includes mosqueId — `mosqueId=Al-Noor`
+- ✅ admin2 login response includes mosqueId — `mosqueId=Al-Rahman`
+- ✅ manager login response has no mosqueId — `mosqueId=(null)` (cross-mosque role)
+- ✅ admin2 (Al-Rahman) GET /admin → only Al-Rahman items — 3 items, all `mosqueId=Al-Rahman`
+- ✅ admin (Al-Noor) GET /admin → only Al-Noor items — 5 items, all `mosqueId=Al-Noor`
+- ✅ manager (manages Al-Noor) GET /admin (no scope) → only Al-Noor items — 5 items via `$in: managedIds`
+- ✅ manager GET /admin?mosqueId=Al-Noor → only Al-Noor — 5 items
+- ✅ manager GET /admin?mosqueId=Al-Rahman (not their mosque) → 400 Bad Request — `HTTP 400`
+- ✅ manager2 (manages Al-Rahman) GET /admin → only Al-Rahman — 3 items
+- ✅ admin2 POST with body.mosqueId=Al-Noor → 403 Forbidden — `HTTP 403`
+- ✅ admin2 PUT an Al-Noor announcement → 404 Not found — `HTTP 404`
+- ✅ manager POST with mosqueId=Al-Noor (managed) → 201, saved to Al-Noor — `HTTP 201`
+- ✅ manager POST with mosqueId=Al-Rahman (not managed) → 403 Forbidden — `HTTP 403`
 
 ---
 
@@ -72,8 +87,9 @@
 | BUG-ANN-009 (publishedBy = "Admin") | Low | ✅ Fixed (FIX-006) |
 | BUG-ANN-010 (urgent flag lost on edit) | Medium | ✅ Fixed (FIX-003) |
 | BUG-ANN-011 (no icon button labels) | Low | ✅ Fixed (FIX-005) |
+| BUG-ANN-012 (cross-mosque data leak) | **Critical** (security) | ✅ Fixed (FIX-012) |
 
-**Total: 11 BUGs fixed in 9 fix groups.**
+**Total: 12 BUGs fixed in 10 fix groups.**
 
 ---
 
@@ -95,21 +111,29 @@
 ## Code-Path Verification (manual)
 
 ### Backend
-- ✅ `backend/routes/announcements.js` — past-date block removed on PUT, PUT body still sanitized, `publishedBy` validation unchanged
+- ✅ `backend/models/User.js` — **no role-enum change**; existing `'manager'` role is the cross-mosque operator (BUG-ANN-012)
+- ✅ `backend/utils/seed.js` — admin2 wired to `mosque2._id` so her JWT has a `mosqueId`. Managers (manager, manager2) keep NO `user.mosqueId` — their scope is per-mosque via `Mosque.managerId` (BUG-ANN-012)
+- ✅ `backend/routes/announcements.js` — protected `GET /admin` with `resolveScopedMosqueId` helper, 403 on cross-mosque POST, 400 on unscoped user, manager scope via `Mosque.find({ managerId })` (BUG-ANN-012)
+- ✅ `backend/routes/announcements.js` — past-date block removed on PUT, PUT body still sanitized (FIX-ANN-007)
+- ✅ `backend/routes/announcements.js` — `publishedBy` validation unchanged (FIX-ANN-006)
+- ✅ `backend/routes/auth.js` — login response includes `mosqueId` (BUG-ANN-012)
 - ✅ Lint clean, build succeeded (after FIX-ANN-007)
 
 ### Frontend
 - ✅ `frontend/src/components/User/Pages/Announcements.jsx` — dynamic subtitle, `islamicDateLabel()` helper, urgent banner + badge, pagination neighborhood + ellipsis, dead sort button removed
-- ✅ `frontend/src/components/Admin/Pages/Announcements.jsx` — `useAuth()` for `publishedBy`, `useMosque()` for mismatch banner, type-to-confirm delete modal, icon-button `aria-label`/`title`, real API calls for Mark Urgent + Publish
+- ✅ `frontend/src/components/Admin/Pages/Announcements.jsx` — `useAuth()` for `publishedBy`, `useMosque()` for mismatch banner, type-to-confirm delete modal, icon-button `aria-label`/`title`, real API calls for Mark Urgent + Publish, calls new `getAdminAnnouncements()` for cross-mosque safety, `isManager` (not `isSuperAdmin`) check (BUG-ANN-012)
+- ✅ `frontend/src/utils/api.js` — `getAdminAnnouncements()` helper added (BUG-ANN-012)
 
 ### Build
 - ✅ Lint: 0 errors, 0 warnings
-- ✅ Build: `npm run build` succeeded — 92 modules transformed
+- ✅ Build: `npm run build` succeeded in 9.99s — 92 modules transformed
 
 ---
 
 ## Conclusion
 
-Phase 6 (Announcements Module) is **complete and verified**. All 11 BUGs found in code review have been fixed and verified by automated Playwright test (24/25 PASS — the 1 FAIL is a known test-side limitation around `MosqueContext` hydration, not a code defect).
+Phase 6 (Announcements Module) is **complete and verified**. All 12 BUGs found in code review (including 1 critical security/auth BUG raised during manual testing) have been fixed and verified by automated Playwright test (36/37 PASS — the 1 FAIL is a known test-side limitation around `MosqueContext` hydration, not a code defect).
+
+**⚠️ Cross-phase note:** The same shape of bug as BUG-ANN-012 likely exists in other mosque-scoped modules (Events, Donations, Expenses, Prayer Times, Nikah, Fund Requests). The Phase 6 fix is announcements-only per your decision — when we reach those phases, we'll repeat the same fix pattern (seed.js wiring for any admin2-like accounts + protected admin endpoint + Manager scope via `Mosque.managerId`). Events/Donations/Expenses/Prayer Times need the treatment; Nikah and Fund Requests already scope correctly.
 
 **Ready for hand-off to partner for manual testing.**

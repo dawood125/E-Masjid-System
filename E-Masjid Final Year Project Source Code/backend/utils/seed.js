@@ -83,15 +83,31 @@ const seedDB = async () => {
     });
 
     // Reassign pa672189@gmail.com (the real-email manager from Phase 2) to Masjid Al-Rahman
-    // so the multi-mosque test exercises a real email per mosque
+    // so the multi-mosque test exercises a real email per mosque.
+    // NOTE: managers do NOT have user.mosqueId — their scope is per-mosque via
+    // the Mosque.managerId field. So we only set role, not mosqueId.
     await User.updateOne(
       { email: 'pa672189@gmail.com' },
-      { mosqueId: mosque2._id, role: 'manager' }
+      { role: 'manager' }
     );;
 
-    // Update users with mosque reference
+    // Phase 6 (BUG-ANN-012): wire admin2 (Al-Rahman admin) to mosque2. This is
+    // what was missing — without it, admin2's JWT had no mosqueId and could
+    // see/edit data across both mosques.
+    // manager2 is the Mosque.managerId for mosque2 — already set at create time.
+    // Managers have no user.mosqueId; their scope is via Mosque.managerId.
+    await User.updateOne(
+      { _id: admin2._id },
+      { mosqueId: mosque2._id }
+    );
+
+    // Update users with mosque reference. Note: managers do NOT get a
+    // user.mosqueId — their scope is via Mosque.managerId. So realEmailManager
+    // (pa672189@gmail.com) is excluded here (its role was set to 'manager'
+    // above; its actual scope will be defined by whichever Mosque has it as
+    // managerId — currently none, so it's effectively a manager of zero mosques).
     await User.updateMany(
-      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailManager._id, realEmailScholar._id, realEmailCommittee._id] } },
+      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailScholar._id, realEmailCommittee._id] } },
       { mosqueId: mosque._id }
     );
 
@@ -337,12 +353,12 @@ const seedDB = async () => {
     console.log('  User:      user@emasjid.pk / user1234');
     console.log('\n📧 Real-email accounts (for forgot-password cross-role testing — receive real Gmail):');
     console.log('  Admin:     dawood.bhatti8812@gmail.com / admin123');
-    console.log('  Manager:   pa672189@gmail.com / manager123   (assigned to Masjid Al-Rahman, Lahore)');
+    console.log('  Manager:   pa672189@gmail.com / manager123   (role: manager — NOT managing any mosque in this seed)');
     console.log('  Scholar:   dawoodah85@gmail.com / scholar123');
     console.log('  Committee: wb494929@gmail.com / committee123');
     console.log('\n🕌 Seeded mosques (visible in the navbar dropdown):');
     console.log('  - Masjid Al-Noor (Sheikhupura) — manager: manager@emasjid.pk');
-    console.log('  - Masjid Al-Rahman (Lahore)      — manager: pa672189@gmail.com (real Gmail)');
+    console.log('  - Masjid Al-Rahman (Lahore)      — manager: manager2@emasjid.pk');
     console.log('  Admin2 for Masjid Al-Rahman:     admin2@emasjid.pk / admin123\n');
 
     process.exit(0);

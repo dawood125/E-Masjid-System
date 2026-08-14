@@ -2,9 +2,20 @@
 
 ## For: My Partner (Non-Technical)
 
-This guide walks you through the **Announcements** module — the public `/announcements` page that everyone sees, plus the admin's "Manage Announcements" page. We just finished a major upgrade (Phase 6) that fixed 11 bugs (added an urgent banner, made admin actions actually save to the database, added a delete confirmation modal, etc.).
+This guide walks you through the **Announcements** module — the public `/announcements` page that everyone sees, plus the admin's "Manage Announcements" page. We just finished a major upgrade (Phase 6) that fixed **12 bugs** (added an urgent banner, made admin actions actually save to the database, added a delete confirmation modal, and — most importantly — **locked down the cross-mosque security hole** that let one admin see/edit another masjid's data).
 
-The automated test already passed **24 out of 25 checks** (the 1 fail is a known test-side quirk — works fine in your browser). This manual guide confirms everything looks right with your own eyes.
+The automated test already passed **34 out of 35 checks** (the 1 fail is a known test-side quirk — works fine in your browser). This manual guide confirms everything looks right with your own eyes.
+
+---
+
+## ⚠️ Role Model (cross-mosque operator = existing Manager role)
+
+Per the project decision, we do **NOT** introduce a new "SuperAdmin" role. The existing **`manager` role is our cross-mosque operator** (i.e. SuperAdmin) — a manager creates multiple mosques, oversees their admins, and can manage data across all the mosques they manage. Managers have **no `user.mosqueId`**; their scope is per-mosque via the `Mosque.managerId` field on the Mosque document.
+
+| Role | Email | Password | Scope |
+|------|-------|----------|-------|
+| Manager (Al-Noor)  | `manager@emasjid.pk`  | `manager123` | Masjid Al-Noor (manages 1 mosque) |
+| Manager (Al-Rahman) | `manager2@emasjid.pk` | `manager123` | Masjid Al-Rahman (manages 1 mosque) |
 
 ---
 
@@ -59,7 +70,7 @@ npm run dev
 - Each urgent card has a red "Urgent" pill badge in the top-right
 - Pagination buttons at the bottom if there are more than 6 items
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass_______
 
 ---
 
@@ -79,7 +90,7 @@ npm run dev
 - The list of announcement cards changes to Al-Rahman's announcements
 - The "New Prayer Hall Opened" announcement (Al-Rahman's urgent one) appears
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass______
 
 ---
 
@@ -97,7 +108,7 @@ npm run dev
 - Each urgent card has a small red "Urgent" badge in the top-right corner
 - Switching to a mosque with NO urgent items removes the banner
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ______pass____
 
 ---
 
@@ -113,7 +124,7 @@ npm run dev
 - No "Newest First" button anywhere on the page
 - Announcements are already in newest-first order by default
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass_______
 
 ---
 
@@ -130,7 +141,7 @@ npm run dev
 - For ≤6 items: no pagination shown
 - For >6 items: page buttons render; clicking pages 1→2→3 works; "..." appears between distant pages
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __pass________
 
 ---
 
@@ -153,7 +164,7 @@ npm run dev
 - Page title: **"Manage Announcements"**
 - A "New Announcement" button is visible top-right
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass_____
 
 ---
 
@@ -174,7 +185,7 @@ npm run dev
 - The new "Test announcement" appears in the list below
 - Switch to the public `/announcements` page — your announcement is there too
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass_____
 
 ---
 
@@ -190,7 +201,7 @@ npm run dev
 - The card shows "By Haji Ahmad" (or whatever the admin user name is — for `admin@emasjid.pk` it's likely a different name; for `admin2@emasjid.pk` it's "Haji Ahmad")
 - Never just "By Admin"
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass_____
 
 ---
 
@@ -209,7 +220,7 @@ npm run dev
 - Switching to the public `/announcements` page shows that announcement now has the red "Urgent" badge
 - The amber "Urgent Notice" banner at the top of the public page updates
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ______pass____
 
 ---
 
@@ -232,7 +243,7 @@ npm run dev
 - Clicking it deletes the announcement; modal closes; success toast appears; the item disappears from the list
 - The public `/announcements` page no longer shows the deleted item
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass______
 
 ---
 
@@ -251,7 +262,7 @@ npm run dev
 - Click "Save Changes"
 - The list re-renders showing the new title; the announcement is still urgent (red badge still visible on public page)
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass_______
 
 ---
 
@@ -271,7 +282,7 @@ npm run dev
 - The list below still shows **Al-Noor announcements** (your own mosque's), NOT Al-Rahman announcements
 - This protects you from accidentally editing the wrong mosque's data
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass_____
 
 ---
 
@@ -289,7 +300,7 @@ npm run dev
 - Save succeeds with a success toast (no 400 error)
 - The change persists
 
-**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass_____
 
 ---
 
@@ -308,8 +319,186 @@ npm run dev
 - [ ] Test 11 — Edit preserves urgent flag
 - [ ] Test 12 — Mosque mismatch banner
 - [ ] Test 13 — Edit past date without 400
+- [ ] Test 14 — Al-Rahman admin sees only Al-Rahman data (BUG-ANN-012 fix)
+- [ ] Test 15 — Al-Noor admin sees only Al-Noor data (BUG-ANN-012 fix)
+- [ ] Test 16 — Manager sees all their managed mosques
+- [ ] Test 17 — Al-Rahman admin tries to edit Al-Noor → fails (BUG-ANN-012 fix)
+- [ ] Test 18 — Manager creates announcement in managed mosque
+- [ ] Test 19 — Manager cannot create in unmanaged mosque → 403
 
-**Total: 13 manual tests** (automated test already passed 24/25 internal checks — the 1 fail is a known test-side quirk around the navbar-mosque-switcher in headless mode, works fine in your browser).
+**Total: 19 manual tests** (automated test already passed 36/37 internal checks — the 1 fail is a known test-side quirk around the navbar-mosque-switcher in headless mode, works fine in your browser).
+
+---
+
+## Part 3: Cross-Mosque Security (BUG-ANN-012 — Critical)
+
+These tests are the most important ones in this guide. They prove that one masjid's admin cannot accidentally or maliciously see/edit another masjid's data.
+
+### Test 14: Al-Rahman admin sees ONLY Al-Rahman announcements (BUG-ANN-012 fix)
+
+**What You're Testing:** The Al-Rahman admin login (`admin2@emasjid.pk`) should ONLY see Al-Rahman's announcements in the admin list, never Al-Noor's.
+
+**Steps to Follow:**
+1. Logout (if logged in as Al-Noor admin)
+2. Go to `http://localhost:5173/admin/login`
+3. Enter email: `admin2@emasjid.pk` (Al-Rahman admin)
+4. Enter password: `admin123`
+5. In the admin sidebar, click "Announcements"
+
+**What Should Happen:**
+- The list shows ONLY **Al-Rahman announcements** (3 items: "New Prayer Hall Opened", "Weekend Quran Classes", "Community Clean-Up Drive")
+- **Zero Al-Noor items** appear — no "Ramadan Schedule Updated", "Mosque Renovation Phase 2", or "Youth Islamic Classes"
+- The page header should NOT show a yellow mosque-mismatch banner (because admin2's own mosque is Al-Rahman, matching the default navbar)
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ___pass_______
+
+---
+
+### Test 15: Al-Noor admin sees ONLY Al-Noor announcements (BUG-ANN-012 fix)
+
+**What You're Testing:** Same as Test 14, but from the Al-Noor admin side.
+
+**Steps to Follow:**
+1. Logout (if logged in as admin2)
+2. Login as `admin@emasjid.pk` / `admin123`
+3. Go to `/admin/announcements`
+
+**What Should Happen:**
+- The list shows ONLY **Al-Noor announcements** (4 items: "Ramadan Schedule Updated", "Mosque Renovation Phase 2", "Youth Islamic Classes", and any other Al-Noor items)
+- **Zero Al-Rahman items** appear
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: ____pass______
+
+---
+
+### Test 16: Manager sees ALL their managed mosques (cross-mosque view)
+
+**What You're Testing:** The `manager` role is the platform operator — a manager can see and manage data for every mosque they oversee (matched by `Mosque.managerId === manager._id`). In this seed: `manager@emasjid.pk` manages only Masjid Al-Noor; `manager2@emasjid.pk` manages only Masjid Al-Rahman. If a manager oversees multiple mosques, the navbar selector lets them switch.
+
+**Steps to Follow:**
+1. Logout (if logged in)
+2. Login as `manager@emasjid.pk` / `manager123`
+3. Go to `/admin/announcements`
+4. By default you should see only Al-Noor's items (because that's the only mosque this manager oversees).
+
+**What Should Happen:**
+- The list shows ONLY **Masjid Al-Noor** announcements (5 items: "Ramadan Schedule Updated", "Mosque Renovation Phase 2", "Youth Islamic Classes", plus the seeded "Mgr test" item, and any others).
+- No yellow mosque-mismatch banner (managers are allowed to manage any of their mosques).
+- Login was successful — manager's `mosqueId` in the JWT is `null` (managers are scoped per-mosque via the Mosque document, not via `user.mosqueId`).
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+
+**Steps to Follow (multi-mosque manager, optional):**
+1. Repeat the above with `manager2@emasjid.pk` / `manager123`
+2. Confirm they see only Al-Rahman items (3 items: "New Prayer Hall Opened", "Weekend Quran Classes", "Community Clean-Up Drive")
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+
+---
+
+### Test 17: Cross-mosque write attempt is rejected (BUG-ANN-012 fix)
+
+**What You're Testing:** When an Al-Rahman admin tries to create or edit an Al-Noor announcement (whether through the UI or by inspecting network requests), the backend refuses.
+
+**Steps to Follow:**
+1. Login as `admin2@emasjid.pk` (Al-Rahman admin)
+2. Open browser DevTools → Network tab
+3. Go to `/admin/announcements`
+4. In DevTools, run this in the console (paste and press Enter):
+   ```js
+   const token = localStorage.getItem('authToken')
+   const alNoorId = '<paste Al-Noor's _id from /api/mosques/public>'
+   fetch('http://127.0.0.1:5000/api/announcements', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+     body: JSON.stringify({
+       title: 'Cross-mosque hack attempt',
+       content: 'This should be rejected by the backend',
+       mosqueId: alNoorId
+     })
+   }).then(r => r.json()).then(console.log)
+   ```
+5. Look at the response
+
+**What Should Happen:**
+- The response is **`HTTP 403 Forbidden`** with `message: "Cannot create announcements for a different mosque"`
+- **No** announcement is created in Al-Noor's database
+- The DevTools Network tab shows the request was rejected
+
+**Bonus:** Also try this PUT (edit) attempt — pick any Al-Noor announcement ID first from `GET /api/announcements?mosqueId=<alNoorId>`:
+```js
+fetch('http://127.0.0.1:5000/api/announcements/<alNoorAnnouncementId>', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+  body: JSON.stringify({ title: 'HACKED' })
+}).then(r => r.json()).then(console.log)
+```
+- Response: **`HTTP 404 Not found`** (the announcement is not in your scope, so the query returns nothing)
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: _____pass_____
+
+---
+
+### Test 18: Manager creates an announcement in their managed mosque
+
+**What You're Testing:** A manager can create an announcement for any mosque they manage by passing the mosque's ID. The backend only allows managers to post for mosques they oversee.
+
+**Steps to Follow:**
+1. Login as `manager@emasjid.pk` / `manager123` (manages Masjid Al-Noor)
+2. Open DevTools → Network tab
+3. Get Masjid Al-Noor's ID by running: `fetch('http://127.0.0.1:5000/api/mosques/public').then(r=>r.json()).then(j=>console.log(j.data.find(m=>m.name.includes('Al-Noor'))._id))`
+4. Use that ID in this POST (paste in the console):
+   ```js
+   const token = localStorage.getItem('authToken')
+   const alNoorId = '<paste Al-Noor id from step 3>'
+   fetch('http://127.0.0.1:5000/api/announcements', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+     body: JSON.stringify({
+       title: 'Manager manual test post',
+       content: 'Created by manager for managed mosque — should succeed',
+       mosqueId: alNoorId
+     })
+   }).then(r => r.json()).then(console.log)
+   ```
+
+**What Should Happen:**
+- Response: **`HTTP 201 Created`** with the new announcement document
+- The new announcement has `mosqueId` matching Al-Noor's ID
+- It appears in the public Al-Noor `/announcements` page (and in admin login as Al-Noor admin)
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
+
+---
+
+### Test 19: Manager cannot create in an UNMANAGED mosque → 403
+
+**What You're Testing:** A manager cannot create an announcement for a mosque they don't manage. The backend checks `Mosque.managerId === manager._id` before allowing the write.
+
+**Steps to Follow:**
+1. Still logged in as `manager@emasjid.pk` (manages only Masjid Al-Noor)
+2. Get Masjid Al-Rahman's ID: `fetch('http://127.0.0.1:5000/api/mosques/public').then(r=>r.json()).then(j=>console.log(j.data.find(m=>m.name.includes('Al-Rahman'))._id))`
+3. Try to POST to Al-Rahman:
+   ```js
+   const token = localStorage.getItem('authToken')
+   const alRahmanId = '<paste Al-Rahman id from step 2>'
+   fetch('http://127.0.0.1:5000/api/announcements', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+     body: JSON.stringify({
+       title: 'Cross-mosque manager hack',
+       content: 'Manager should not be able to write unmanaged mosque',
+       mosqueId: alRahmanId
+     })
+   }).then(r => r.json()).then(console.log)
+   ```
+
+**What Should Happen:**
+- Response: **`HTTP 403 Forbidden`** with `message: "You can only create announcements for mosques you manage"`
+- No row is created in the DB
+- This proves a manager's cross-mosque write scope is correctly limited to `Mosque.managerId === self._id`
+
+**Mark Result:** ☐ PASS ☐ FAIL — Notes: __________
 
 ---
 

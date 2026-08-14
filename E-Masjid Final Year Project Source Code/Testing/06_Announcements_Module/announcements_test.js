@@ -416,6 +416,163 @@ function log(test, result, detail = '') {
       `no drafts in public list`
     )
 
+    // =======================================================================
+    // SECTION 10a: BUG-ANN-012 — cross-mosque authorization
+    // =======================================================================
+    console.log('\n--- Section 10a: Cross-mosque authorization (BUG-ANN-012) ---')
+
+    // Helper: login via API and return token + user
+    async function loginAs(email, password) {
+      const r = await page.request.post(API_URL + '/api/auth/login', {
+        data: { email, password },
+      })
+      const j = await r.json()
+      return { token: j.token, user: j.user }
+    }
+
+    // Login as admin (Al-Noor) + admin2 (Al-Rahman) + manager (manages Al-Noor)
+    const adminSession = await loginAs('admin@emasjid.pk', 'admin123')
+    const admin2Session = await loginAs('admin2@emasjid.pk', 'admin123')
+    const managerSession = await loginAs('manager@emasjid.pk', 'manager123')
+
+    // The login response should include mosqueId now (BUG-ANN-012 part 2)
+    log(
+      'admin login response includes mosqueId',
+      adminSession.user?.mosqueId === alNoorId ? 'PASS' : 'FAIL',
+      `mosqueId=${adminSession.user?.mosqueId}`
+    )
+    log(
+      'admin2 login response includes mosqueId',
+      admin2Session.user?.mosqueId === alRahmanId ? 'PASS' : 'FAIL',
+      `mosqueId=${admin2Session.user?.mosqueId}`
+    )
+    log(
+      'manager login response has no mosqueId (cross-mosque role)',
+      !managerSession.user?.mosqueId ? 'PASS' : 'FAIL',
+      `mosqueId=${managerSession.user?.mosqueId || '(none)'}`
+    )
+
+    // admin2 (Al-Rahman) GET /api/announcements/admin → ONLY Al-Rahman
+    const admin2ScopeRes = await page.request.get(API_URL + '/api/announcements/admin', {
+      headers: { Authorization: 'Bearer ' + admin2Session.token },
+    })
+    const admin2ScopeJson = await admin2ScopeRes.json()
+    const admin2List = admin2ScopeJson.data || []
+    const admin2OnlyRahman = admin2List.length > 0 && admin2List.every((a) => a.mosqueId === alRahmanId)
+    log(
+      'admin2 (Al-Rahman) GET /admin → only Al-Rahman items',
+      admin2OnlyRahman ? 'PASS' : 'FAIL',
+      `${admin2List.length} items, all mosqueId=${admin2List[0]?.mosqueId}`
+    )
+
+    // admin (Al-Noor) GET /api/announcements/admin → ONLY Al-Noor
+    const adminScopeRes = await page.request.get(API_URL + '/api/announcements/admin', {
+      headers: { Authorization: 'Bearer ' + adminSession.token },
+    })
+    const adminScopeJson = await adminScopeRes.json()
+    const adminList = adminScopeJson.data || []
+    const adminOnlyNoor = adminList.length > 0 && adminList.every((a) => a.mosqueId === alNoorId)
+    log(
+      'admin (Al-Noor) GET /admin → only Al-Noor items',
+      adminOnlyNoor ? 'PASS' : 'FAIL',
+      `${adminList.length} items, all mosqueId=${adminList[0]?.mosqueId}`
+    )
+
+    // manager GET /api/announcements/admin (no mosqueId) → ALL of THEIR managed mosques
+    // manager@emasjid.pk manages only Al-Noor, so this should show Al-Noor items.
+    const managerAllRes = await page.request.get(API_URL + '/api/announcements/admin', {
+      headers: { Authorization: 'Bearer ' + managerSession.token },
+    })
+    const managerAllJson = await managerAllRes.json()
+    const managerList = managerAllJson.data || []
+    const managerOnlyOwn = managerList.length > 0 && managerList.every((a) => a.mosqueId === alNoorId)
+    log(
+      'manager GET /admin (no scope) → only managed-mosque items (Al-Noor)',
+      managerOnlyOwn ? 'PASS' : 'FAIL',
+      `${managerList.length} items, all mosqueId=${managerList[0]?.mosqueId}`
+    )
+
+    // manager GET /api/announcements/admin?mosqueId=Al-Noor → ONLY Al-Noor (within their scope)
+    const managerNarrowRes = await page.request.get(API_URL + '/api/announcements/admin?mosqueId=' + alNoorId, {
+      headers: { Authorization: 'Bearer ' + managerSession.token },
+    })
+    const managerNarrowJson = await managerNarrowRes.json()
+    const managerNarrowList = managerNarrowJson.data || []
+    const managerNarrowOnlyNoor = managerNarrowList.length > 0 && managerNarrowList.every((a) => a.mosqueId === alNoorId)
+    log(
+      'manager GET /admin?mosqueId=Al-Noor → only Al-Noor',
+      managerNarrowOnlyNoor ? 'PASS' : 'FAIL',
+      `${managerNarrowList.length} items`
+    )
+
+    // manager tries to ?mosqueId=Al-Rahman (a mosque they don't manage) → 400
+    const managerForeignRes = await page.request.get(API_URL + '/api/announcements/admin?mosqueId=' + alRahmanId, {
+      headers: { Authorization: 'Bearer ' + managerSession.token },
+    })
+    log(
+      'manager GET /admin?mosqueId=Al-Rahman (not their mosque) → 400',
+      managerForeignRes.status() === 400 ? 'PASS' : 'FAIL',
+      `HTTP ${managerForeignRes.status()}`
+    )
+
+    // admin2 POST with body.mosqueId=Al-Noor → 403
+    const crossPostRes = await page.request.post(API_URL + '/api/announcements', {
+      headers: { Authorization: 'Bearer ' + admin2Session.token, 'Content-Type': 'application/json' },
+      data: { title: 'cross-mosque post', content: 'should be rejected', mosqueId: alNoorId },
+    })
+    log(
+      'admin2 POST with body.mosqueId=Al-Noor → 403 Forbidden',
+      crossPostRes.status() === 403 ? 'PASS' : 'FAIL',
+      `HTTP ${crossPostRes.status()}`
+    )
+
+    // admin2 PUT an Al-Noor announcement → 404 (not in their scope)
+    const noorAnnRes = await page.request.get(API_URL + '/api/announcements?mosqueId=' + alNoorId)
+    const noorAnnJson = await noorAnnRes.json()
+    const noorAnnId = (noorAnnJson.data || [])[0]?._id
+    if (noorAnnId) {
+      const crossPutRes = await page.request.put(API_URL + '/api/announcements/' + noorAnnId, {
+        headers: { Authorization: 'Bearer ' + admin2Session.token, 'Content-Type': 'application/json' },
+        data: { title: 'HACKED by admin2' },
+      })
+      log(
+        'admin2 PUT an Al-Noor announcement → 404 Not found',
+        crossPutRes.status() === 404 ? 'PASS' : 'FAIL',
+        `HTTP ${crossPutRes.status()}`
+      )
+    }
+
+    // manager POST with mosqueId=Al-Noor (a mosque they manage) → 201, saved to Al-Noor
+    const managerPostRes = await page.request.post(API_URL + '/api/announcements', {
+      headers: { Authorization: 'Bearer ' + managerSession.token, 'Content-Type': 'application/json' },
+      data: { title: 'Manager cross-mosque post', content: 'manager can post for managed mosque', mosqueId: alNoorId },
+    })
+    const managerPostJson = await managerPostRes.json()
+    const managerCreated = managerPostJson.data?.mosqueId === alNoorId
+    log(
+      'manager POST with mosqueId=Al-Noor (managed mosque) → 201, saved to Al-Noor',
+      managerPostRes.status() === 201 && managerCreated ? 'PASS' : 'FAIL',
+      `HTTP ${managerPostRes.status()}, mosqueId=${managerPostJson.data?.mosqueId}`
+    )
+
+    // manager POST with mosqueId=Al-Rahman (NOT their mosque) → 403
+    const managerForeignPostRes = await page.request.post(API_URL + '/api/announcements', {
+      headers: { Authorization: 'Bearer ' + managerSession.token, 'Content-Type': 'application/json' },
+      data: { title: 'should fail', content: 'manager cannot post to unmanaged mosque', mosqueId: alRahmanId },
+    })
+    log(
+      'manager POST with mosqueId=Al-Rahman (not managed) → 403',
+      managerForeignPostRes.status() === 403 ? 'PASS' : 'FAIL',
+      `HTTP ${managerForeignPostRes.status()}`
+    )
+
+    // Cleanup: delete the manager's created announcement
+    if (managerPostJson.data?._id) {
+      await page.request.delete(API_URL + '/api/announcements/' + managerPostJson.data._id, {
+        headers: { Authorization: 'Bearer ' + managerSession.token },
+      })
+    }
+
     // Cleanup: delete the test announcement
     if (testAnn && token) {
       await page.request.delete(API_URL + '/api/announcements/' + testAnn._id, {

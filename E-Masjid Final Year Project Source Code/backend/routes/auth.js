@@ -110,7 +110,9 @@ router.post(
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone },
+      // Phase 6 (BUG-ANN-012): include mosqueId so the frontend's AuthContext
+      // can read user.mosqueId immediately after login (no getMe() race).
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, mosqueId: user.mosqueId || null },
     });
   } catch (error) {
     next(error);
