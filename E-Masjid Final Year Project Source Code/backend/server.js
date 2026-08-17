@@ -49,6 +49,7 @@ app.use('/api/fund-requests', require('./routes/fundRequests'));
 app.use('/api/committee', require('./routes/committee'));
 app.use('/api/marketing', require('./routes/marketing'));
 app.use('/api/admin/marketing', require('./routes/adminMarketing'));
+app.use('/api/super-admin', require('./routes/superAdmin'));
 
 // Health check
 app.get('/api/health', (req, res) => {

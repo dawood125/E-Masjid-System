@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
+import { Link } from 'react-router-dom'
+import { ROUTES } from '../../../utils/constants.js'
 import api from '../../../utils/api.js'
 
 const ALL_MODULES = [
@@ -16,6 +18,10 @@ export default function ManageMosques() {
   const [mosques, setMosques] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [selectedMosque, setSelectedMosque] = useState(null)
+  const [adminModalMosque, setAdminModalMosque] = useState(null)
+  const [adminForm, setAdminForm] = useState({ name: '', email: '', phone: '', password: '' })
+  const [adminFormBusy, setAdminFormBusy] = useState(false)
+  const [lastCreatedAdmin, setLastCreatedAdmin] = useState(null)
   const { showToast } = useUI()
   const [loading, setLoading] = useState(true)
 
@@ -26,7 +32,9 @@ export default function ManageMosques() {
   const loadMosques = async () => {
     setLoading(true)
     try {
-      const res = await api.getMosques()
+      // Use the super-admin endpoint so we get the full record including the
+      // `admins` array (which /api/mosques also returns for managers).
+      const res = await api.getSuperAdminMosques()
       setMosques(res.data || [])
     } catch (e) {
       showToast(e.message || 'Failed to load mosques', 'error')
@@ -50,17 +58,53 @@ export default function ManageMosques() {
       try {
         const res = await api.createMosque({
           ...formData,
-          enabledModules: ['prayerTimes', 'announcements'],
+          enabledModules: ['prayerTimes', 'announcements', 'donations', 'expenses', 'events'],
           isActive: true,
         })
-        setMosques((prev) => [res.data, ...prev])
+        const newMosque = res.data
+        setMosques((prev) => [newMosque, ...prev])
         setFormData({ name: '', address: '', city: '', phone: '', email: '' })
         setShowForm(false)
-        showToast('Mosque created successfully!', 'success')
+        showToast('Mosque created. Now create the first admin for it.', 'success')
+        // Auto-open the create-admin modal for the new masjid
+        setAdminModalMosque(newMosque)
+        setAdminForm({ name: '', email: '', phone: '', password: '' })
+        setLastCreatedAdmin(null)
       } catch (e) {
         showToast(e.message || 'Failed to create mosque', 'error')
       }
     })()
+  }
+
+  const handleCreateAdmin = (e) => {
+    e.preventDefault()
+    if (!adminForm.name || !adminForm.email) {
+      showToast('Admin name and email are required', 'warning')
+      return
+    }
+    setAdminFormBusy(true)
+    ;(async () => {
+      try {
+        const payload = { name: adminForm.name, email: adminForm.email, phone: adminForm.phone }
+        if (adminForm.password) payload.password = adminForm.password
+        const res = await api.createSuperAdminAdmin(adminModalMosque._id, payload)
+        setLastCreatedAdmin({ ...res.data, generatedPassword: res.generatedPassword })
+        // refresh masjid list so admin count reflects in the UI
+        await loadMosques()
+        showToast('Admin account created. Share the credentials securely.', 'success')
+        setAdminForm({ name: '', email: '', phone: '', password: '' })
+      } catch (e) {
+        showToast(e.message || 'Failed to create admin', 'error')
+      } finally {
+        setAdminFormBusy(false)
+      }
+    })()
+  }
+
+  const closeAdminModal = () => {
+    setAdminModalMosque(null)
+    setLastCreatedAdmin(null)
+    setAdminForm({ name: '', email: '', phone: '', password: '' })
   }
 
   const toggleModule = (mosqueId, moduleKey) => {
@@ -105,12 +149,21 @@ export default function ManageMosques() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-primary text-3xl font-bold text-gray-900">Manage Mosques</h1>
-          <p className="mt-1 text-gray-500">Create, configure and manage your mosques</p>
+          <p className="mt-1 text-gray-500">Create, configure and manage your mosques — Super Admin onboarding</p>
         </div>
-        <button onClick={() => { setShowForm(!showForm) }} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
-          <i className="material-icons-round text-lg">{showForm ? 'close' : 'add'}</i>
-          {showForm ? 'Cancel' : 'Add Mosque'}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to={ROUTES.MANAGER_ADMINS}
+            className="btn btn-secondary"
+          >
+            <i className="material-icons-round text-lg">people</i>
+            View All Admins
+          </Link>
+          <button onClick={() => { setShowForm(!showForm) }} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
+            <i className="material-icons-round text-lg">{showForm ? 'close' : 'add'}</i>
+            {showForm ? 'Cancel' : 'Add Mosque'}
+          </button>
+        </div>
       </div>
 
       {/* Create Mosque Form */}
@@ -207,6 +260,18 @@ export default function ManageMosques() {
                       <i className="material-icons-round text-base">settings</i>
                       Configure Modules
                     </button>
+                    <button
+                      onClick={() => {
+                        setAdminModalMosque(mosque)
+                        setAdminForm({ name: '', email: '', phone: '', password: '' })
+                        setLastCreatedAdmin(null)
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      title="Create a new admin account scoped to this masjid"
+                    >
+                      <i className="material-icons-round text-base">person_add</i>
+                      Add Admin
+                    </button>
                   </div>
                 </div>
 
@@ -254,6 +319,120 @@ export default function ManageMosques() {
           </div>
         ))}
       </div>
+
+      {/* Create-Admin modal (Super Admin flow). Opened after creating a
+          new masjid OR when "Add Admin" is clicked on any masjid card. */}
+      {adminModalMosque && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) closeAdminModal() }}
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="font-primary text-xl font-bold text-gray-900">Create Admin Account</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  For masjid <span className="font-semibold text-gray-800">{adminModalMosque.name}</span>
+                </p>
+              </div>
+              <button
+                onClick={closeAdminModal}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+
+            {!lastCreatedAdmin ? (
+              <form onSubmit={handleCreateAdmin} className="mt-5 space-y-4">
+                <div>
+                  <label className="form-label">Full Name *</label>
+                  <input
+                    className="form-input"
+                    placeholder="e.g. Haji Ahmad"
+                    value={adminForm.name}
+                    onChange={(e) => setAdminForm((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Email *</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="admin@masjid.pk"
+                    value={adminForm.email}
+                    onChange={(e) => setAdminForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Phone (optional)</label>
+                  <input
+                    className="form-input"
+                    placeholder="0300-XXXXXXX"
+                    value={adminForm.phone}
+                    onChange={(e) => setAdminForm((p) => ({ ...p, phone: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Initial password (optional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Leave blank to auto-generate"
+                    value={adminForm.password}
+                    onChange={(e) => setAdminForm((p) => ({ ...p, password: e.target.value }))}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    A random 10-character password is generated if you leave this blank.
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button type="button" onClick={closeAdminModal} className="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={adminFormBusy}
+                    className="btn btn-primary bg-[#047857] hover:bg-[#064e3b] disabled:opacity-60"
+                  >
+                    <i className="material-icons-round text-lg">person_add</i>
+                    {adminFormBusy ? 'Creating…' : 'Create Admin'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-5 space-y-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <i className="material-icons-round text-emerald-700">check_circle</i>
+                    <div className="text-sm text-emerald-900">
+                      <p className="font-semibold">Admin account created for {adminModalMosque.name}.</p>
+                      <p className="mt-1">
+                        Share these credentials with the new admin through a secure channel.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+                  <p><span className="font-semibold text-gray-700">Email:</span> {lastCreatedAdmin.email}</p>
+                  <p className="mt-1"><span className="font-semibold text-gray-700">Initial password:</span>{' '}
+                    <code className="rounded bg-white px-2 py-0.5 font-mono text-[#047857]">{lastCreatedAdmin.generatedPassword}</code>
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button type="button" onClick={() => setLastCreatedAdmin(null)} className="btn btn-secondary">
+                    Create Another
+                  </button>
+                  <button type="button" onClick={closeAdminModal} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

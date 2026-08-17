@@ -38,7 +38,7 @@ export default function ManagerDashboard() {
         <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#d4af37]/10" />
         <div className="absolute -bottom-14 -left-14 h-48 w-48 rounded-full bg-white/5" />
         <div className="relative z-10">
-          <p className="text-[#d4af37] text-sm font-semibold uppercase tracking-wider">Mosque Manager Dashboard</p>
+          <p className="text-[#d4af37] text-sm font-semibold uppercase tracking-wider">Super Admin Dashboard</p>
           <h1 className="mt-2 font-primary text-3xl font-bold">Assalam-o-Alaikum!</h1>
           <p className="mt-2 text-gray-300 max-w-xl">Manage multiple mosques, configure modules, and oversee operations from a single dashboard.</p>
         </div>

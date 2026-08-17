@@ -38,6 +38,7 @@ import ScholarDashboard from './components/Scholar/Pages/Dashboard'
 import ManagerLogin from './components/Manager/Pages/ManagerLogin'
 import ManagerDashboard from './components/Manager/Pages/Dashboard'
 import ManageMosques from './components/Manager/Pages/Mosques'
+import ManageAdmins from './components/Manager/Pages/Admins'
 
 // Committee Pages
 import CommitteeLogin from './components/Committee/Pages/CommitteeLogin'
@@ -102,6 +103,7 @@ function App() {
             <Route path="/manager/*" element={<ManagerLayout />}>
               <Route index element={<ManagerDashboard />} />
               <Route path="mosques" element={<ManageMosques />} />
+              <Route path="admins" element={<ManageAdmins />} />
             </Route>
 
             {/* Committee Routes */}

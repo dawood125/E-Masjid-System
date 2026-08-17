@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import { useAuth } from '../../../hooks/useAuth.js'
 import api from '../../../utils/api.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
@@ -68,6 +69,7 @@ function matchDateFilter(dateString, filter) {
 
 export default function Events() {
   const { showToast } = useUI()
+  const { user } = useAuth()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -91,11 +93,12 @@ export default function Events() {
 
   useEffect(() => {
     let mounted = true
-    const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const params = user?.role === 'manager'
+      ? `mosqueId=${getActiveMosqueId() || ''}`
+      : ''
     ;(async () => {
       try {
-        const res = await api.getEvents(params)
+        const res = await api.getAdminEvents(params)
         if (!mounted) return
         setEvents(Array.isArray(res.data) ? res.data : [])
       } catch (err) {
@@ -105,7 +108,7 @@ export default function Events() {
       }
     })()
     return () => { mounted = false }
-  }, [showToast])
+  }, [showToast, user?.role])
 
   const preparedEvents = useMemo(() => {
     return events.map((event, index) => {
@@ -176,6 +179,10 @@ export default function Events() {
       fd.append('location', newEvent.location)
       fd.append('maxParticipants', String(Number(newEvent.maxParticipants || 0)))
       fd.append('requiresRegistration', newEvent.registrationRequired === 'yes' ? 'true' : 'false')
+      if (user?.role === 'manager') {
+        const mId = getActiveMosqueId()
+        if (mId) fd.append('mosqueId', mId)
+      }
       if (imageFile) fd.append('image', imageFile)
 
       let res

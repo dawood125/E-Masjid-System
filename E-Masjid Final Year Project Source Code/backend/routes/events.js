@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/Event');
+const Mosque = require('../models/Mosque');
 const { protect, authorize } = require('../middleware/auth');
-const { body } = require('express-validator');
 const { handleValidation, isValidObjectId, sanitizeString } = require('../middleware/validate');
 const upload = require('../middleware/upload');
+const { resolveScope } = require('../utils/scope');
 
-// GET /api/events - List events (public)
 router.get('/', async (req, res, next) => {
   try {
     const { mosqueId } = req.query;
@@ -19,7 +19,15 @@ router.get('/', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// GET /api/events/:id
+router.get('/admin', protect, authorize('admin', 'manager', 'scholar', 'committee'), async (req, res, next) => {
+  try {
+    const scope = await resolveScope(req, { allowManagerPick: true });
+    if (scope.error) return res.status(400).json({ success: false, message: scope.error });
+    const events = await Event.find({ mosqueId: scope.scope }).sort({ date: 1 });
+    res.json({ success: true, data: events });
+  } catch (error) { next(error); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -31,15 +39,20 @@ router.get('/:id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// POST /api/events - Create event (admin, with optional image)
+function todayMidnight() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 router.post(
   '/',
   protect,
-  authorize('admin'),
+  authorize('admin', 'manager'),
   upload.single('image'),
   async (req, res, next) => {
   try {
-    const { title, date, time, location, maxParticipants, description, requiresRegistration } = req.body;
+    const { title, date, time, location, maxParticipants, description, requiresRegistration, mosqueId: bodyMosqueId } = req.body;
     if (!title || String(title).trim().length < 3) {
       return res.status(400).json({ success: false, message: 'Title is required (min 3 chars)' });
     }
@@ -50,10 +63,33 @@ router.post(
     if (isNaN(eventDate.getTime())) {
       return res.status(400).json({ success: false, message: 'Invalid date format' });
     }
-    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-    if (eventDate < todayMidnight) {
+    if (eventDate < todayMidnight()) {
       return res.status(400).json({ success: false, message: 'Event date cannot be in past' });
     }
+
+    let targetMosqueId;
+    if (req.user.role === 'manager') {
+      targetMosqueId = bodyMosqueId;
+      if (!targetMosqueId) {
+        return res.status(400).json({ success: false, message: 'Manager must specify a mosqueId in the request body' });
+      }
+      if (!isValidObjectId(targetMosqueId)) {
+        return res.status(400).json({ success: false, message: 'Invalid mosqueId' });
+      }
+      const ownsMosque = await Mosque.exists({ _id: targetMosqueId, managerId: req.user._id });
+      if (!ownsMosque) {
+        return res.status(403).json({ success: false, message: 'You can only create events for mosques you manage' });
+      }
+    } else {
+      if (bodyMosqueId && bodyMosqueId !== String(req.user.mosqueId)) {
+        return res.status(403).json({ success: false, message: 'Cannot create events for a different mosque' });
+      }
+      if (!req.user.mosqueId) {
+        return res.status(400).json({ success: false, message: 'Your account is not assigned to a mosque. Contact your manager.' });
+      }
+      targetMosqueId = req.user.mosqueId;
+    }
+
     const eventData = {
       title: sanitizeString(title),
       description: sanitizeString(description || ''),
@@ -62,29 +98,29 @@ router.post(
       location: sanitizeString(location || ''),
       maxParticipants: Number(maxParticipants) || 0,
       requiresRegistration: requiresRegistration === 'false' ? false : (requiresRegistration === false ? false : true),
-      mosqueId: req.user.mosqueId,
+      mosqueId: targetMosqueId,
     };
-    if (req.file) {
-      eventData.image = '/uploads/events/' + req.file.filename;
-    }
+    if (req.file) eventData.image = '/uploads/events/' + req.file.filename;
     const event = await Event.create(eventData);
     res.status(201).json({ success: true, data: event });
   } catch (error) { next(error); }
 });
 
-// PUT /api/events/:id
-router.put('/:id', protect, authorize('admin'), upload.single('image'), async (req, res, next) => {
+router.put('/:id', protect, authorize('admin', 'manager'), upload.single('image'), async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid event id' });
     }
     if (req.body.date) {
       const eventDate = new Date(req.body.date);
-      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-      if (eventDate < todayMidnight) {
+      if (eventDate < todayMidnight()) {
         return res.status(400).json({ success: false, message: 'Event date cannot be in past' });
       }
     }
+
+    const scope = await resolveScope(req, { allowManagerPick: true });
+    if (scope.error) return res.status(400).json({ success: false, message: scope.error });
+
     const updateData = {
       ...req.body,
       ...(req.body.title ? { title: sanitizeString(req.body.title) } : {}),
@@ -97,11 +133,11 @@ router.put('/:id', protect, authorize('admin'), upload.single('image'), async (r
     if (req.body.maxParticipants !== undefined) {
       updateData.maxParticipants = Number(req.body.maxParticipants) || 0;
     }
-    if (req.file) {
-      updateData.image = '/uploads/events/' + req.file.filename;
-    }
+    if (req.file) updateData.image = '/uploads/events/' + req.file.filename;
+    delete updateData.mosqueId;
+
     const event = await Event.findOneAndUpdate(
-      { _id: req.params.id, mosqueId: req.user.mosqueId },
+      { _id: req.params.id, mosqueId: scope.scope },
       updateData,
       { new: true, runValidators: true }
     );
@@ -110,19 +146,19 @@ router.put('/:id', protect, authorize('admin'), upload.single('image'), async (r
   } catch (error) { next(error); }
 });
 
-// DELETE /api/events/:id
-router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
+router.delete('/:id', protect, authorize('admin', 'manager'), async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid event id' });
     }
-    const event = await Event.findOneAndDelete({ _id: req.params.id, mosqueId: req.user.mosqueId });
+    const scope = await resolveScope(req, { allowManagerPick: true });
+    if (scope.error) return res.status(400).json({ success: false, message: scope.error });
+    const event = await Event.findOneAndDelete({ _id: req.params.id, mosqueId: scope.scope });
     if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
     res.json({ success: true, message: 'Event deleted' });
   } catch (error) { next(error); }
 });
 
-// POST /api/events/:id/register - Register for event
 router.post('/:id/register', protect, async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {

@@ -110,6 +110,7 @@ class ApiService {
 
   // Events
   getEvents(params = '') { return this.request('GET', `/api/events${params ? '?' + params : ''}`) }
+  getAdminEvents(params = '') { return this.request('GET', `/api/events/admin${params ? '?' + params : ''}`) }
   getEvent(id) { return this.request('GET', `/api/events/${id}`) }
   createEvent(data) { return this.request('POST', '/api/events', data) }
   createEventWithImage(formData) { return this.uploadRequest('POST', '/api/events', formData) }
@@ -172,6 +173,21 @@ class ApiService {
   createMosque(data) { return this.request('POST', '/api/mosques', data) }
   updateMosque(id, data) { return this.request('PUT', `/api/mosques/${id}`, data) }
   updateMosqueModules(id, modules) { return this.request('PUT', `/api/mosques/${id}/modules`, { enabledModules: modules }) }
+
+  // Super Admin (Manager) onboarding flow — used by the Manager panel to
+  // list masjids/admins across all masjids they manage and to create the
+  // first admin of a new masjid.
+  getSuperAdminMosques() { return this.request('GET', '/api/super-admin/mosques') }
+  getSuperAdminAdmins() { return this.request('GET', '/api/super-admin/admins') }
+  getSuperAdminUsers(role = '') {
+    return this.request('GET', `/api/super-admin/users${role ? '?role=' + role : ''}`)
+  }
+  createSuperAdminAdmin(mosqueId, data) {
+    return this.request('POST', `/api/super-admin/mosques/${mosqueId}/admin`, data)
+  }
+  createSuperAdminUser(data) {
+    return this.request('POST', '/api/super-admin/users', data)
+  }
 
   // Fund Requests
   getFundRequests(params = '') { return this.request('GET', `/api/fund-requests${params ? '?' + params : ''}`) }

@@ -8,6 +8,7 @@ import { ROUTES } from '../../../utils/constants.js'
 const managerLinks = [
   { label: 'Dashboard', path: ROUTES.MANAGER_DASHBOARD, icon: 'dashboard' },
   { label: 'Manage Mosques', path: ROUTES.MANAGER_MOSQUES, icon: 'mosque' },
+  { label: 'Manage Admins', path: ROUTES.MANAGER_ADMINS, icon: 'people' },
 ]
 
 export default function ManagerLayout() {

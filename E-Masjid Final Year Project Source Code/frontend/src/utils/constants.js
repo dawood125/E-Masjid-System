@@ -104,6 +104,7 @@ export const ROUTES = {
   MANAGER: '/manager',
   MANAGER_DASHBOARD: '/manager',
   MANAGER_MOSQUES: '/manager/mosques',
+  MANAGER_ADMINS: '/manager/admins',
 
   // Committee Routes
   COMMITTEE_LOGIN: '/committee/login',

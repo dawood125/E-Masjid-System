@@ -1,4 +1,7 @@
-# 07 Events Module — bugs fixed
+# Phase 7 â€” Bugs Fixed
 
-**Status:** Not started (blocked until prior phases complete)
-
+| ID | Title | Status |
+|---|---|---|
+| BUG-EVENT-001 | Unscoped admin endpoint leaks across masjids | Fixed |
+| BUG-EVENT-002 | Mosque destructured wrong inside handler | Fixed |
+| BUG-EVENT-003 | Date-filter hid newly created events | Worked around in test (UX documented) |
