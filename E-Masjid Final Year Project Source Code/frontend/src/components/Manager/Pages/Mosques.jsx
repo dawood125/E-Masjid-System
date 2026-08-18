@@ -4,24 +4,16 @@ import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../utils/constants.js'
 import api from '../../../utils/api.js'
 
-const ALL_MODULES = [
-  { key: 'donations', label: 'Donations', icon: 'volunteer_activism', desc: 'Accept and track donations' },
-  { key: 'expenses', label: 'Expenses', icon: 'payments', desc: 'Record and manage expenses' },
-  { key: 'events', label: 'Events', icon: 'event', desc: 'Create and manage events' },
-  { key: 'nikah', label: 'Nikah Services', icon: 'favorite', desc: 'Nikah booking system' },
-  { key: 'announcements', label: 'Announcements', icon: 'campaign', desc: 'Post mosque announcements' },
-  { key: 'prayerTimes', label: 'Prayer Times', icon: 'schedule', desc: 'Manage daily prayer times' },
-  { key: 'fundRequests', label: 'Fund Requests', icon: 'handshake', desc: 'Zakat/Sadaqah fund system' },
-]
-
 export default function ManageMosques() {
   const [mosques, setMosques] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [selectedMosque, setSelectedMosque] = useState(null)
   const [adminModalMosque, setAdminModalMosque] = useState(null)
   const [adminForm, setAdminForm] = useState({ name: '', email: '', phone: '', password: '' })
   const [adminFormBusy, setAdminFormBusy] = useState(false)
   const [lastCreatedAdmin, setLastCreatedAdmin] = useState(null)
+  const [editModalMosque, setEditModalMosque] = useState(null)
+  const [editForm, setEditForm] = useState({ name: '', address: '', city: '', phone: '', email: '', image: '' })
+  const [editFormBusy, setEditFormBusy] = useState(false)
   const { showToast } = useUI()
   const [loading, setLoading] = useState(true)
 
@@ -58,7 +50,6 @@ export default function ManageMosques() {
       try {
         const res = await api.createMosque({
           ...formData,
-          enabledModules: ['prayerTimes', 'announcements', 'donations', 'expenses', 'events'],
           isActive: true,
         })
         const newMosque = res.data
@@ -107,22 +98,40 @@ export default function ManageMosques() {
     setAdminForm({ name: '', email: '', phone: '', password: '' })
   }
 
-  const toggleModule = (mosqueId, moduleKey) => {
-    const target = mosques.find((m) => m._id === mosqueId)
-    if (!target) return
-    const modules = target.enabledModules?.includes(moduleKey)
-      ? target.enabledModules.filter((mod) => mod !== moduleKey)
-      : [...(target.enabledModules || []), moduleKey]
+  const openEditModal = (mosque) => {
+    setEditModalMosque(mosque)
+    setEditForm({
+      name: mosque.name || '',
+      address: mosque.address || '',
+      city: mosque.city || '',
+      phone: mosque.phone || '',
+      email: mosque.email || '',
+      image: mosque.image || '',
+    })
+  }
 
-    setMosques((prev) => prev.map((m) => (m._id === mosqueId ? { ...m, enabledModules: modules } : m)))
+  const closeEditModal = () => {
+    setEditModalMosque(null)
+    setEditForm({ name: '', address: '', city: '', phone: '', email: '', image: '' })
+  }
+
+  const handleEditMosque = (e) => {
+    e.preventDefault()
+    if (!editForm.name || !editForm.city) {
+      showToast('Mosque name and city are required', 'warning')
+      return
+    }
+    setEditFormBusy(true)
     ;(async () => {
       try {
-        const res = await api.updateMosqueModules(mosqueId, modules)
-        setMosques((prev) => prev.map((m) => (m._id === mosqueId ? res.data : m)))
-        showToast('Module updated', 'success')
-      } catch (e) {
-        showToast(e.message || 'Failed to update module', 'error')
-        loadMosques()
+        const res = await api.updateMosque(editModalMosque._id, editForm)
+        setMosques((prev) => prev.map((m) => (m._id === editModalMosque._id ? res.data : m)))
+        showToast('Mosque updated successfully', 'success')
+        closeEditModal()
+      } catch (err) {
+        showToast(err.message || 'Failed to update mosque', 'error')
+      } finally {
+        setEditFormBusy(false)
       }
     })()
   }
@@ -214,7 +223,7 @@ export default function ManageMosques() {
         </form>
       )}
 
-      {/* Mosque List with Module Config */}
+      {/* Mosque List */}
       <div className="space-y-6">
         {loading ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500">
@@ -254,11 +263,12 @@ export default function ManageMosques() {
                       {mosque.isActive ? 'Active' : 'Inactive'}
                     </button>
                     <button
-                      onClick={() => setSelectedMosque(selectedMosque === mosque._id ? null : mosque._id)}
+                      onClick={() => openEditModal(mosque)}
                       className="btn btn-secondary btn-sm"
+                      title="Edit masjid details"
                     >
-                      <i className="material-icons-round text-base">settings</i>
-                      Configure Modules
+                      <i className="material-icons-round text-base">edit</i>
+                      Edit
                     </button>
                     <button
                       onClick={() => {
@@ -274,48 +284,8 @@ export default function ManageMosques() {
                     </button>
                   </div>
                 </div>
-
-                {/* Module badges */}
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {(mosque.enabledModules || []).map((mod) => (
-                    <span key={mod} className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-[#047857] capitalize">
-                      {mod}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
-
-            {/* Module Configuration Panel */}
-            {selectedMosque === mosque._id && (
-              <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fade-in">
-                <h4 className="font-primary text-lg font-semibold text-gray-900 mb-4">
-                  <i className="material-icons-round text-[#047857] align-middle mr-2">tune</i>
-                  Module Configuration — {mosque.name}
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {ALL_MODULES.map((mod) => {
-                    const isEnabled = mosque.enabledModules.includes(mod.key)
-                    return (
-                      <button
-                        key={mod.key}
-                        onClick={() => toggleModule(mosque._id, mod.key)}
-                        className={`rounded-xl border p-4 text-left transition-all ${isEnabled ? 'border-[#047857] bg-primary-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <i className={`material-icons-round text-xl ${isEnabled ? 'text-[#047857]' : 'text-gray-400'}`}>{mod.icon}</i>
-                          <div className={`h-5 w-10 rounded-full transition-colors ${isEnabled ? 'bg-[#047857]' : 'bg-gray-300'} relative`}>
-                            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${isEnabled ? 'left-[22px]' : 'left-0.5'}`} />
-                          </div>
-                        </div>
-                        <p className={`text-sm font-semibold ${isEnabled ? 'text-[#047857]' : 'text-gray-700'}`}>{mod.label}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{mod.desc}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -430,6 +400,100 @@ export default function ManageMosques() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Masjid modal */}
+      {editModalMosque && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) closeEditModal() }}
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="font-primary text-xl font-bold text-gray-900">Edit Masjid</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Update details for <span className="font-semibold text-gray-800">{editModalMosque.name}</span>
+                </p>
+              </div>
+              <button
+                onClick={closeEditModal}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+
+            <form onSubmit={handleEditMosque} className="mt-5 space-y-4">
+              <div>
+                <label className="form-label">Mosque Name *</label>
+                <input
+                  className="form-input"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">City *</label>
+                <input
+                  className="form-input"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">Address</label>
+                <input
+                  className="form-input"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="form-label">Phone</label>
+                  <input
+                    className="form-input"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Email</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Image URL</label>
+                <input
+                  className="form-input"
+                  placeholder="/assets/images/mosques/your-masjid.jpg"
+                  value={editForm.image}
+                  onChange={(e) => setEditForm((p) => ({ ...p, image: e.target.value }))}
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onClick={closeEditModal} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editFormBusy}
+                  className="btn btn-primary bg-[#047857] hover:bg-[#064e3b] disabled:opacity-60"
+                >
+                  <i className="material-icons-round text-lg">save</i>
+                  {editFormBusy ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

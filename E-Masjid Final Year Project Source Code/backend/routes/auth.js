@@ -1,228 +1,59 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
 const { body, param } = require('express-validator');
-const User = require('../models/User');
-const Mosque = require('../models/Mosque');
-const generateToken = require('../utils/generateToken');
-const sendEmail = require('../utils/sendEmail');
-const { handleValidation, sanitizeString, isValidObjectId } = require('../middleware/validate');
+const { protect } = require('../middleware/auth');
+const { handleValidation, isValidObjectId } = require('../middleware/validate');
+const authController = require('../controllers/authController');
+const { PASSWORD_REGEX, findActiveMosqueForRegistration } = require('../services/authService');
 
-const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/;
-const passwordValidation = body('password')
+const passwordRule = body('password')
   .isString()
-  .matches(PASSWORD_RULE)
+  .matches(PASSWORD_REGEX)
   .withMessage('Password must be at least 8 characters and include at least one letter and one number');
 
-// @route   POST /api/auth/register
-// @desc    Register a new user
-// @access  Public
-router.post(
-  '/register',
-  [
-    body('name').isString().trim().isLength({ min: 2, max: 80 }).withMessage('Name must be between 2 and 80 characters'),
-    body('email').isString().trim().isEmail().withMessage('Valid email is required'),
-    passwordValidation,
-    body('phone').optional().isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be between 7 and 20 characters'),
-    handleValidation,
-  ],
-  async (req, res, next) => {
+router.post('/register', [
+  body('name').isString().trim().isLength({ min: 2, max: 80 }).withMessage('Name must be between 2 and 80 characters'),
+  body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+  passwordRule,
+  body('phone').optional().isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be between 7 and 20 characters'),
+  handleValidation,
+], async (req, res, next) => {
   try {
-    const name = sanitizeString(req.body.name);
-    const email = sanitizeString(req.body.email).toLowerCase();
-    const password = req.body.password;
-    const phone = sanitizeString(req.body.phone || '');
-    // Phase 3.5: optional address fields
-    const address = sanitizeString(req.body.address || '');
-    const city = sanitizeString(req.body.city || '');
-    // Phase 3.5: optional home-mosque selection (ObjectId; validated if present)
-    const rawMosqueId = sanitizeString(req.body.mosqueId || '');
-    let mosqueId = null;
-    if (rawMosqueId) {
-      if (!isValidObjectId(rawMosqueId)) {
+    if (req.body.mosqueId) {
+      if (!isValidObjectId(req.body.mosqueId)) {
         return res.status(400).json({ success: false, message: 'Invalid mosque id' });
       }
-      const m = await Mosque.findById(rawMosqueId).select('_id isActive').lean();
-      if (!m || !m.isActive) {
-        return res.status(400).json({ success: false, message: 'Selected mosque is not available' });
-      }
-      mosqueId = rawMosqueId;
+      await findActiveMosqueForRegistration(req.body.mosqueId);
     }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists with this email' });
-    }
-
-    const user = await User.create({
-      name, email, password, phone, role: 'community',
-      ...(address ? { address } : {}),
-      ...(city ? { city } : {}),
-      ...(mosqueId ? { mosqueId } : {}),
-    });
-    const token = generateToken(user._id, user.role);
-
-    res.status(201).json({
-      success: true,
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone },
-    });
-  } catch (error) {
-    next(error);
-  }
+    return authController.register(req, res, next);
+  } catch (e) { next(e); }
 });
 
-// @route   POST /api/auth/login
-// @desc    Login user
-// @access  Public
-router.post(
-  '/login',
-  [
-    body('email').isString().trim().isEmail().withMessage('Valid email is required'),
-    body('password').isString().isLength({ min: 1 }).withMessage('Password is required'),
-    handleValidation,
-  ],
-  async (req, res, next) => {
-  try {
-    const email = sanitizeString(req.body.email).toLowerCase();
-    const { password } = req.body;
+router.post('/login', [
+  body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+  body('password').isString().isLength({ min: 1 }).withMessage('Password is required'),
+  handleValidation,
+], authController.login);
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+router.post('/forgot-password', [
+  body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+  handleValidation,
+], authController.forgotPassword);
+
+router.post('/reset-password/:token', [
+  param('token').isString().isLength({ min: 20, max: 128 }).withMessage('Invalid token'),
+  passwordRule,
+  body('confirmPassword').optional().isString().custom((value, { req }) => {
+    if (value !== undefined && value !== req.body.password) {
+      throw new Error('Passwords do not match');
     }
+    return true;
+  }),
+  handleValidation,
+], authController.resetPassword);
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
+router.get('/me', protect, authController.getMe);
 
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({ success: false, message: 'Account is deactivated' });
-    }
-
-    const token = generateToken(user._id, user.role);
-
-    res.json({
-      success: true,
-      token,
-      // Phase 6 (BUG-ANN-012): include mosqueId so the frontend's AuthContext
-      // can read user.mosqueId immediately after login (no getMe() race).
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, mosqueId: user.mosqueId || null },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   POST /api/auth/forgot-password
-// @desc    Send password reset email
-// @access  Public
-router.post(
-  '/forgot-password',
-  [
-    body('email').isString().trim().isEmail().withMessage('Valid email is required'),
-    handleValidation,
-  ],
-  async (req, res, next) => {
-  try {
-    const email = sanitizeString(req.body.email).toLowerCase();
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.json({ success: true, message: 'If the email exists, a reset link has been sent' });
-    }
-
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-    await user.save();
-
-    // NOTE: In production, ensure CLIENT_URL is set to https://... for secure links.
-    // For local dev, http://localhost:5173 is fine.
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: #047857; padding: 20px; text-align: center; color: white;">
-          <h1>E-Masjid System</h1>
-        </div>
-        <div style="padding: 30px; background: #f9fafb;">
-          <h2>Password Reset Request</h2>
-          <p>You requested a password reset. Click the button below to reset your password:</p>
-          <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #047857; color: white; text-decoration: none; border-radius: 8px; margin: 16px 0;">Reset Password</a>
-          <p style="color: #666; font-size: 14px;">This link expires in 24 hours. If you didn't request this, please ignore.</p>
-        </div>
-      </div>
-    `;
-
-    await sendEmail({ to: user.email, subject: 'E-Masjid Password Reset', html });
-
-    res.json({ success: true, message: 'If the email exists, a reset link has been sent' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   POST /api/auth/reset-password/:token
-// @desc    Reset password
-// @access  Public
-router.post(
-  '/reset-password/:token',
-  [
-    param('token').isString().isLength({ min: 20, max: 128 }).withMessage('Invalid token'),
-    passwordValidation,
-    body('confirmPassword').optional().isString().custom((value, { req }) => {
-      if (value !== undefined && value !== req.body.password) {
-        throw new Error('Passwords do not match');
-      }
-      return true;
-    }),
-    handleValidation,
-  ],
-  async (req, res, next) => {
-  try {
-    const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
-    const user = await User.findOne({
-      resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
-    }
-
-    if (req.body.confirmPassword !== undefined && req.body.confirmPassword !== req.body.password) {
-      return res.status(400).json({ success: false, message: 'Passwords do not match' });
-    }
-
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save();
-
-    res.json({ success: true, message: 'Password reset successful' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// @route   GET /api/auth/me
-// @desc    Get current user
-// @access  Private
-const { protect } = require('../middleware/auth');
-router.get('/me', protect, async (req, res) => {
-  res.json({ success: true, user: req.user });
-});
-
-// @route   POST /api/auth/refresh-token
-// @desc    Refresh JWT token for active sessions
-// @access  Private
-router.post('/refresh-token', protect, async (req, res) => {
-  const token = generateToken(req.user._id, req.user.role);
-  res.json({ success: true, token });
-});
+router.post('/refresh-token', protect, authController.refreshToken);
 
 module.exports = router;

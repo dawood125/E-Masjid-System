@@ -72,7 +72,6 @@ const seedDB = async () => {
     const mosque = await Mosque.create({
       name: 'Masjid Al-Noor', address: 'Near Civil Lines, Main GT Road', city: 'Sheikhupura',
       phone: '0321-5551234', email: 'info@masjidalnoor.pk',
-      enabledModules: ['donations', 'expenses', 'events', 'nikah', 'announcements', 'prayerTimes', 'fundRequests'],
       managerId: manager._id, admins: [admin._id], isActive: true,
     });
 
@@ -83,8 +82,7 @@ const seedDB = async () => {
     const mosque2 = await Mosque.create({
       name: 'Masjid Al-Rahman', address: '15-A Model Town', city: 'Sheikhupura',
       phone: '0321-6669988', email: 'info@masjidalrahman.pk',
-      enabledModules: ['donations', 'expenses', 'events', 'nikah', 'announcements', 'prayerTimes', 'fundRequests'],
-      managerId: manager._id, admins: [admin2._id], isActive: true,  // ← same manager as Al-Noor
+      managerId: manager._id, admins: [admin2._id], isActive: true,
     });
 
     // Masjid Al-Falah (Sheikhupura) — third tenant
@@ -94,7 +92,6 @@ const seedDB = async () => {
     const mosque3 = await Mosque.create({
       name: 'Masjid Al-Falah', address: 'Block B, Samanabad', city: 'Sheikhupura',
       phone: '0321-7773344', email: 'info@masjidalfalah.pk',
-      enabledModules: ['donations', 'expenses', 'events', 'announcements', 'prayerTimes', 'fundRequests'],  // no nikah
       managerId: manager._id, admins: [admin3._id], isActive: true,
     });
 
@@ -105,7 +102,6 @@ const seedDB = async () => {
     const mosque4 = await Mosque.create({
       name: 'Masjid Al-Taqwa', address: 'Housing Colony, Near GTS Bus Stand', city: 'Sheikhupura',
       phone: '0321-8885566', email: 'info@masjidaltaqwa.pk',
-      enabledModules: ['donations', 'expenses', 'events', 'nikah', 'announcements', 'prayerTimes', 'fundRequests'],
       managerId: manager._id, admins: [admin4._id], isActive: true,
     });
 

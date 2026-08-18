@@ -1,0 +1,551 @@
+{
+  "info": {
+    "name": "E-Masjid Phase 7 - Events Module Scope Tests",
+    "description": "Cross-mosque authorization tests for /api/events endpoints. Run the four auth requests first (they populate collection variables), then run any scope test. Each request shows the expected HTTP status + meaning in the title.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Setup - Fetch masjid IDs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/mosques/public",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "mosques", "public"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const noor = (data.data || []).find(m => m.name === 'Masjid Al-Noor');",
+              "const rahman = (data.data || []).find(m => m.name === 'Masjid Al-Rahman');",
+              "if (noor) pm.collectionVariables.set('noorId', noor._id);",
+              "if (rahman) pm.collectionVariables.set('rahmanId', rahman._id);",
+              "pm.collectionVariables.set('unmanagedMosqueId', '5f4f4f4f4f4f4f4f4f4f4f4f');",
+              "console.log('Noor:', pm.collectionVariables.get('noorId'));",
+              "console.log('Rahman:', pm.collectionVariables.get('rahmanId'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "0. Setup - Login as manager (manager@emasjid.pk)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"manager@emasjid.pk\",\"password\":\"manager123\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('managerToken', pm.response.json().token);",
+              "console.log('manager token saved');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "0. Setup - Login as admin (Al-Noor)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin@emasjid.pk\",\"password\":\"admin123\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('adminToken', pm.response.json().token);",
+              "console.log('admin (Al-Noor) token saved');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "0. Setup - Login as admin2 (Al-Rahman)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin2@emasjid.pk\",\"password\":\"admin123\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('admin2Token', pm.response.json().token);",
+              "console.log('admin2 (Al-Rahman) token saved');"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "1. Public GET /api/events - no auth - expect 200",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Public endpoint returns 200', () => pm.expect(pm.response.code).to.eql(200));",
+              "pm.test('Response has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "2. GET /api/events/admin (no auth) - expect 401",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Protected endpoint rejects anonymous', () => pm.expect(pm.response.code).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "3. admin (Al-Noor) GET /api/events/admin - expect 200, only Noor",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+              "const list = pm.response.json().data || [];",
+              "pm.test('Has events', () => pm.expect(list.length).to.be.greaterThan(0));",
+              "pm.test('All events belong to Al-Noor', () => pm.expect(list.every(e => e.mosqueId === pm.collectionVariables.get('noorId'))).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "4. admin2 (Al-Rahman) GET /api/events/admin - expect 200, only Rahman",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{admin2Token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+              "const list = pm.response.json().data || [];",
+              "pm.test('All events belong to Al-Rahman', () => pm.expect(list.every(e => e.mosqueId === pm.collectionVariables.get('rahmanId'))).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "5. manager GET /api/events/admin - expect 200, events from all 4 managed masjids",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+              "const list = pm.response.json().data || [];",
+              "pm.test('Has events', () => pm.expect(list.length).to.be.greaterThan(0));",
+              "const ids = new Set(list.map(e => e.mosqueId));",
+              "pm.test('Events span at least 2 masjids', () => pm.expect(ids.size).to.be.at.least(2));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "6. manager GET ?mosqueId=Al-Noor - expect 200, only Noor",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin?mosqueId={{noorId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"],
+          "query": [{ "key": "mosqueId", "value": "{{noorId}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+              "const list = pm.response.json().data || [];",
+              "pm.test('All events belong to Al-Noor', () => pm.expect(list.every(e => e.mosqueId === pm.collectionVariables.get('noorId'))).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "7. manager GET ?mosqueId=Al-Rahman (managed) - expect 200, only Rahman",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin?mosqueId={{rahmanId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"],
+          "query": [{ "key": "mosqueId", "value": "{{rahmanId}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+              "const list = pm.response.json().data || [];",
+              "pm.test('All events belong to Al-Rahman', () => pm.expect(list.every(e => e.mosqueId === pm.collectionVariables.get('rahmanId'))).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "8. manager GET ?mosqueId=<unmanaged id> - expect 400",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/admin?mosqueId={{unmanagedMosqueId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "admin"],
+          "query": [{ "key": "mosqueId", "value": "{{unmanagedMosqueId}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 (not their mosque)', () => pm.expect(pm.response.code).to.eql(400));",
+              "pm.test('Error message mentions acting on mosques', () => pm.expect(pm.response.json().message).to.match(/mosques/i));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "9. admin2 POST event with body.mosqueId=Al-Noor - expect 403",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{admin2Token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"cross-mosque hack\",\"date\":\"2027-09-01\",\"mosqueId\":\"{{noorId}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 403 Forbidden', () => pm.expect(pm.response.code).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "10. admin2 POST event without body.mosqueId (own mosque) - expect 201",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{admin2Token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"Postman smoke test event\",\"description\":\"Posted by admin2 to their own masjid\",\"date\":\"2027-10-01\",\"time\":\"10:00\",\"location\":\"Main Prayer Hall\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201 Created', () => pm.expect(pm.response.code).to.eql(201));",
+              "pm.test('Saved to Al-Rahman', () => pm.expect(pm.response.json().data.mosqueId).to.eql(pm.collectionVariables.get('rahmanId')));",
+              "pm.collectionVariables.set('createdEventId', pm.response.json().data._id);"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "11. admin2 DELETE the just-created event - expect 200",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{admin2Token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/{{createdEventId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "{{createdEventId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "12. manager POST with mosqueId=Al-Noor (managed) - expect 201",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"Manager Noor event\",\"description\":\"Posted by manager\",\"date\":\"2027-12-01\",\"location\":\"Main Hall\",\"mosqueId\":\"{{noorId}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201', () => pm.expect(pm.response.code).to.eql(201));",
+              "pm.test('Saved to Al-Noor', () => pm.expect(pm.response.json().data.mosqueId).to.eql(pm.collectionVariables.get('noorId')));",
+              "pm.collectionVariables.set('managerNoorEventId', pm.response.json().data._id);"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "13. manager DELETE that Noor event - expect 200 (cleanup)",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/events/{{managerNoorEventId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events", "{{managerNoorEventId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "14. manager POST with mosqueId=<unmanaged id> - expect 403",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"should fail\",\"date\":\"2027-11-01\",\"mosqueId\":\"{{unmanagedMosqueId}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 403 Forbidden', () => pm.expect(pm.response.code).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "15. manager POST without body.mosqueId - expect 400",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"no mosqueId\",\"date\":\"2027-11-01\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 (manager must pick a mosque)', () => pm.expect(pm.response.code).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:5000" },
+    { "key": "noorId", "value": "" },
+    { "key": "rahmanId", "value": "" },
+    { "key": "unmanagedMosqueId", "value": "5f4f4f4f4f4f4f4f4f4f4f4f" },
+    { "key": "managerToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "admin2Token", "value": "" },
+    { "key": "createdEventId", "value": "" },
+    { "key": "managerNoorEventId", "value": "" }
+  ]
+}

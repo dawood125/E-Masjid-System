@@ -87,6 +87,8 @@ export default function Events() {
     time: '',
     endTime: '',
     location: '',
+    locationPreset: '',
+    customLocation: '',
     maxParticipants: '',
     registrationRequired: 'yes',
   })
@@ -145,7 +147,11 @@ export default function Events() {
   const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE))
   const visibleEvents = filteredEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  const PRESET_LOCATIONS = ['Main Prayer Hall', 'Community Center', 'Mosque Courtyard', 'Classroom']
+
   const openEditModal = (evt) => {
+    const existing = evt.location || ''
+    const matchesPreset = PRESET_LOCATIONS.includes(existing)
     setEditingEvent(evt)
     setNewEvent({
       title: evt.title,
@@ -153,7 +159,9 @@ export default function Events() {
       date: evt.date ? new Date(evt.date).toISOString().slice(0, 10) : '',
       time: evt.time || '',
       endTime: '',
-      location: evt.location || '',
+      location: existing,
+      locationPreset: matchesPreset ? existing : '__custom__',
+      customLocation: matchesPreset ? '' : existing,
       maxParticipants: String(evt.maxParticipants || ''),
       registrationRequired: evt.requiresRegistration === false ? 'no' : 'yes',
     })
@@ -163,7 +171,11 @@ export default function Events() {
 
   const openCreateModal = () => {
     setEditingEvent(null)
-    setNewEvent({ title: '', description: '', date: '', time: '', endTime: '', location: '', maxParticipants: '', registrationRequired: 'yes' })
+    setNewEvent({
+      title: '', description: '', date: '', time: '', endTime: '',
+      location: '', locationPreset: '', customLocation: '',
+      maxParticipants: '', registrationRequired: 'yes',
+    })
     setImageFile(null)
     setIsModalOpen(true)
   }
@@ -171,12 +183,16 @@ export default function Events() {
   const handleSubmitEvent = async (event) => {
     event.preventDefault()
     try {
+      const resolvedLocation = newEvent.locationPreset === '__custom__'
+        ? newEvent.customLocation.trim()
+        : newEvent.locationPreset
+
       const fd = new FormData()
       fd.append('title', newEvent.title)
       fd.append('description', newEvent.description)
       fd.append('date', newEvent.date)
       fd.append('time', newEvent.time)
-      fd.append('location', newEvent.location)
+      fd.append('location', resolvedLocation)
       fd.append('maxParticipants', String(Number(newEvent.maxParticipants || 0)))
       fd.append('requiresRegistration', newEvent.registrationRequired === 'yes' ? 'true' : 'false')
       if (user?.role === 'manager') {
@@ -198,7 +214,11 @@ export default function Events() {
       setIsModalOpen(false)
       setEditingEvent(null)
       setImageFile(null)
-      setNewEvent({ title: '', description: '', date: '', time: '', endTime: '', location: '', maxParticipants: '', registrationRequired: 'yes' })
+      setNewEvent({
+        title: '', description: '', date: '', time: '', endTime: '',
+        location: '', locationPreset: '', customLocation: '',
+        maxParticipants: '', registrationRequired: 'yes',
+      })
     } catch (err) {
       showToast(err.message || 'Failed to save event.', 'error')
     }
@@ -508,8 +528,12 @@ export default function Events() {
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">Location *</span>
                   <select
-                    value={newEvent.location}
-                    onChange={(event) => setNewEvent((prev) => ({ ...prev, location: event.target.value }))}
+                    value={newEvent.locationPreset}
+                    onChange={(event) => setNewEvent((prev) => ({
+                      ...prev,
+                      locationPreset: event.target.value,
+                      location: event.target.value === '__custom__' ? prev.customLocation : event.target.value,
+                    }))}
                     required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
                   >
@@ -518,7 +542,18 @@ export default function Events() {
                     <option value="Community Center">Community Center</option>
                     <option value="Mosque Courtyard">Mosque Courtyard</option>
                     <option value="Classroom">Classroom</option>
+                    <option value="__custom__">Other (specify)</option>
                   </select>
+                  {newEvent.locationPreset === '__custom__' && (
+                    <input
+                      type="text"
+                      placeholder="Enter venue name or full address"
+                      value={newEvent.customLocation}
+                      onChange={(event) => setNewEvent((prev) => ({ ...prev, customLocation: event.target.value, location: event.target.value }))}
+                      required
+                      className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    />
+                  )}
                 </label>
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">Maximum Participants</span>

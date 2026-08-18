@@ -32,6 +32,7 @@ regardless of which token calls it.
 4. Confirm the list now shows Al-Rahman events ("Youth Quran
    Competition", "Friday Night Lecture").
 
+Passed
 ### B. Admin CRUD
 
 1. Log in as `admin@emasjid.pk` and go to `http://127.0.0.1:5174/admin/events`.
@@ -107,3 +108,9 @@ Expected: `HTTP 400 — You can only act on mosques you manage.`
 - The `endTime` and `registrationRequired` fields are stored but not
   surfaced on the public page in Phase 7 — these are for future
   expansion and are already wired through the API.
+- The "Location" dropdown has an "Other (specify)" option. Picking it
+  reveals a free-text field — use this for events happening outside
+  the mosque (parks, banquets, etc).
+- Prefer running scenario C and D in Postman (`postman_collection.json`
+  in this folder) instead of DevTools. The 15-request suite covers
+  the same matrix and remembers the tokens for you.

@@ -172,7 +172,6 @@ class ApiService {
   getMosque(id) { return this.request('GET', `/api/mosques/${id}`) }
   createMosque(data) { return this.request('POST', '/api/mosques', data) }
   updateMosque(id, data) { return this.request('PUT', `/api/mosques/${id}`, data) }
-  updateMosqueModules(id, modules) { return this.request('PUT', `/api/mosques/${id}/modules`, { enabledModules: modules }) }
 
   // Super Admin (Manager) onboarding flow — used by the Manager panel to
   // list masjids/admins across all masjids they manage and to create the

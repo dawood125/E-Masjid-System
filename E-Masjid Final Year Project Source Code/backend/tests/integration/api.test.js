@@ -53,7 +53,6 @@ describe('E-Masjid API (integration)', () => {
       city: 'TestCity',
       managerId: manager._id,
       admins: [admin._id],
-      enabledModules: ['donations', 'fundRequests', 'announcements', 'prayerTimes'],
       isActive: true,
     });
 
@@ -231,6 +230,22 @@ describe('E-Masjid API (integration)', () => {
     // Should be ~24 hours (allow a 60-second window for test execution time)
     expect(expiresIn).toBeGreaterThan(24 * 60 * 60 * 1000 - 60_000);
     expect(expiresIn).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
+  });
+
+  test('forgot-password still returns neutral success when email send fails (no SMTP configured)', async () => {
+    const sendEmail = require('../../utils/sendEmail');
+    sendEmail.mockRejectedValueOnce(new Error('SMTP not configured'));
+
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: TEST_COMMUNITY_EMAIL });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toMatch(/if the email exists/i);
+
+    const stored = await User.findOne({ email: TEST_COMMUNITY_EMAIL }).select('+resetPasswordToken +resetPasswordExpire');
+    expect(stored).toBeTruthy();
+    expect(stored.resetPasswordToken).toBeTruthy();
   });
 
   test('reset-password: wrong/missing token rejected; one-time use; matches new password rules', async () => {

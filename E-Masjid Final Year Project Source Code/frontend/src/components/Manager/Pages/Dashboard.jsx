@@ -29,7 +29,6 @@ export default function ManagerDashboard() {
   }, [showToast])
 
   const activeMosques = useMemo(() => mosques.filter(m => m.isActive).length, [mosques])
-  const totalModules = useMemo(() => mosques.reduce((acc, m) => acc + (m.enabledModules?.length || 0), 0), [mosques])
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -45,7 +44,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -65,17 +64,6 @@ export default function ManagerDashboard() {
             <div>
               <p className="text-sm text-gray-500">Active Mosques</p>
               <p className="text-3xl font-bold text-gray-900">{activeMosques}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center">
-              <i className="material-icons-round text-amber-600 text-2xl">widgets</i>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Active Modules</p>
-              <p className="text-3xl font-bold text-gray-900">{totalModules}</p>
             </div>
           </div>
         </div>
@@ -111,14 +99,6 @@ export default function ManagerDashboard() {
               </div>
               <div className="p-5">
                 <p className="text-sm text-gray-500 mb-3">{mosque.address}</p>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {(mosque.enabledModules || []).slice(0, 4).map((mod) => (
-                    <span key={mod} className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-[#047857] capitalize">{mod}</span>
-                  ))}
-                  {mosque.enabledModules.length > 4 && (
-                    <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">+{mosque.enabledModules.length - 4} more</span>
-                  )}
-                </div>
                 <Link to={ROUTES.MANAGER_MOSQUES} className="inline-flex items-center gap-1 text-sm font-semibold text-[#047857] hover:text-[#d4af37] transition-colors">
                   Manage <i className="material-icons-round text-base">arrow_forward</i>
                 </Link>

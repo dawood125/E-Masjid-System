@@ -58,3 +58,20 @@ Total: 29
 same count as before the refactor).
 
 **Frontend production build:** 93 modules, 0 errors.
+
+**Phase 7.4 — Postman scope suite:**
+15 requests, all expected status codes confirmed via the
+`postman_collection.json` collection. Replaces the manual DevTools
+fetch()s with one-click runs. The collection votes its own tokens
+into collection variables so each suite is self-bootstrapping.
+
+**Phase 7.5 — Cleanup fallout from your three questions:**
+- **Custom event location** — added "Other (specify)" to the create
+  modal. Hidden text input reveals on selection.
+- **Edit masjid** — Edit button on each card opens a modal with name /
+  address / city / phone / email / image. Delete kept as a future
+  toggle via the active switch (no hard delete in MVP).
+- **`enabledModules` removed** — schema field, manager endpoint,
+  manager UI, dashboard "Active Modules" stat, mock list, and tests
+  all scrubbed. Cross-checked with `grep -r enabledModules` returning
+  matching code paths only.
