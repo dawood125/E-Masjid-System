@@ -46,7 +46,7 @@ Expected: list filters honor both `mosqueId` and `category`. Empty
 list shows the "No expenses found for this filter" message rather
 than a blank table.
 
-Failed
+Passed (after fix — see bugs_found.md B1, bugs_fixed.md F1)
 ### B. Public Summary aggregation
 
 1. With Al-Noor selected, look at the summary card at the top of the

@@ -5,6 +5,10 @@ import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
+import { downloadTransparencyReport, EXPENSE_CATEGORIES } from '../../../utils/report.js'
+
+const PAGE_LIMIT = 6
+const VIEW_ALL_LIMIT = 100
 
 function donationTypeClass(type) {
   const key = type.toLowerCase()
@@ -28,11 +32,14 @@ function monthKey(dateString) {
 }
 
 export default function Transparency() {
-  const { activeMosqueId } = useMosque()
+  const { activeMosqueId, activeMosque } = useMosque()
   const [monthFilter, setMonthFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [donationPage, setDonationPage] = useState(1)
   const [expensePage, setExpensePage] = useState(1)
+  const [donationViewAll, setDonationViewAll] = useState(false)
+  const [expenseViewAll, setExpenseViewAll] = useState(false)
   const { showToast } = useUI()
   const [donations, setDonations] = useState([])
   const [donationsTotalPages, setDonationsTotalPages] = useState(1)
@@ -41,6 +48,7 @@ export default function Transparency() {
   const [topDonors, setTopDonors] = useState([])
   const [summary, setSummary] = useState({ totalDonations: 0, totalExpenses: 0, balance: 0 })
   const [loading, setLoading] = useState(true)
+  const [donationFilterCategories, setDonationFilterCategories] = useState(['all', 'zakat', 'sadaqah', 'fund'])
 
   const allMonths = useMemo(() => {
     const set = new Set([...donations.map((d) => monthKey(d.createdAt || d.date)), ...expenses.map((e) => monthKey(e.createdAt || e.date))])
@@ -62,16 +70,28 @@ export default function Transparency() {
 
       setLoading(true)
       try {
-        const queryParts = []
-        if (typeFilter !== 'all') queryParts.push(`type=${encodeURIComponent(typeFilter)}`)
-        if (monthFilter !== 'all') queryParts.push(`month=${encodeURIComponent(monthFilter)}`)
-        queryParts.push(`page=${donationSafePage}`)
-        queryParts.push('limit=6')
-        queryParts.push(`mosqueId=${encodeURIComponent(mosqueId)}`)
+        const donationLimit = donationViewAll ? VIEW_ALL_LIMIT : PAGE_LIMIT
+        const expenseLimit = expenseViewAll ? VIEW_ALL_LIMIT : PAGE_LIMIT
+
+        const donationParts = [
+          `page=${donationSafePage}`,
+          `limit=${donationLimit}`,
+          `mosqueId=${encodeURIComponent(mosqueId)}`,
+        ]
+        if (typeFilter !== 'all') donationParts.push(`type=${encodeURIComponent(typeFilter)}`)
+        if (monthFilter !== 'all') donationParts.push(`month=${encodeURIComponent(monthFilter)}`)
+
+        const expenseParts = [
+          `page=${expenseSafePage}`,
+          `limit=${expenseLimit}`,
+          `mosqueId=${encodeURIComponent(mosqueId)}`,
+        ]
+        if (categoryFilter !== 'all') expenseParts.push(`category=${encodeURIComponent(categoryFilter)}`)
+        if (monthFilter !== 'all') expenseParts.push(`month=${encodeURIComponent(monthFilter)}`)
 
         const [donRes, expRes, topRes, donSumRes, expSumRes] = await Promise.all([
-          api.getDonations(queryParts.join('&')),
-          api.getExpenses(`page=${expenseSafePage}&limit=6&mosqueId=${encodeURIComponent(mosqueId)}`),
+          api.getDonations(donationParts.join('&')),
+          api.getExpenses(expenseParts.join('&')),
           api.getTopDonors(`mosqueId=${encodeURIComponent(mosqueId)}`),
           api.getDonationSummary(`mosqueId=${encodeURIComponent(mosqueId)}`),
           api.getExpenseSummary(`mosqueId=${encodeURIComponent(mosqueId)}`),
@@ -97,11 +117,117 @@ export default function Transparency() {
 
     load()
     return () => { mounted = false }
-  }, [showToast, monthFilter, typeFilter, donationSafePage, expenseSafePage, activeMosqueId])
+  }, [showToast, monthFilter, typeFilter, categoryFilter, donationSafePage, expenseSafePage, donationViewAll, expenseViewAll, activeMosqueId])
+
+  function handleMonthChange(value) {
+    setMonthFilter(value)
+    setDonationPage(1)
+    setExpensePage(1)
+  }
+
+  function handleTypeChange(value) {
+    setTypeFilter(value)
+    setDonationPage(1)
+  }
+
+  function handleCategoryChange(value) {
+    setCategoryFilter(value)
+    setExpensePage(1)
+  }
+
+  function handleResetFilters() {
+    setMonthFilter('all')
+    setTypeFilter('all')
+    setCategoryFilter('all')
+    setDonationPage(1)
+    setExpensePage(1)
+  }
+
+  function handleViewAllDonations() {
+    setDonationViewAll(true)
+    setDonationPage(1)
+  }
+
+  function handleViewAllExpenses() {
+    setExpenseViewAll(true)
+    setExpensePage(1)
+  }
+
+  function handleDownloadReport() {
+    try {
+      const result = downloadTransparencyReport({
+        mosqueName: activeMosque?.name,
+        filters: { month: monthFilter, type: typeFilter, category: categoryFilter },
+        donations,
+        expenses,
+        topDonors,
+        summary,
+      })
+      showToast(`Report downloaded (${result.filename})`, 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to generate report', 'error')
+    }
+  }
 
   const totalDonations = summary.totalDonations
   const totalExpenses = summary.totalExpenses
   const balance = summary.balance
+
+  const donationFilterChips = (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-semibold uppercase text-gray-500">Donations:</span>
+      {donationFilterCategories.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => handleTypeChange(c)}
+          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+            typeFilter === c
+              ? 'bg-[#047857] text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {c === 'all' ? 'All' : c === 'fund' ? 'Mosjid Fund' : c[0].toUpperCase() + c.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
+
+  const expenseFilterChips = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs font-semibold uppercase text-gray-500">Expenses:</span>
+      <button
+        type="button"
+        onClick={() => handleCategoryChange('all')}
+        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+          categoryFilter === 'all'
+            ? 'bg-red-600 text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        }`}
+      >
+        All
+      </button>
+      {EXPENSE_CATEGORIES.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => handleCategoryChange(c)}
+          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+            categoryFilter === c
+              ? 'bg-red-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {c}
+        </button>
+      ))}
+    </div>
+  )
+
+  const activeFilterCount =
+    (monthFilter !== 'all' ? 1 : 0) +
+    (typeFilter !== 'all' ? 1 : 0) +
+    (categoryFilter !== 'all' ? 1 : 0)
 
   return (
     <section className="py-12 bg-white">
@@ -171,18 +297,14 @@ export default function Transparency() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 animate-fade-in">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 animate-fade-in space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-semibold text-gray-700">Filter by:</span>
               <select
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 value={monthFilter}
-                onChange={(e) => {
-                  setMonthFilter(e.target.value)
-                  setDonationPage(1)
-                  setExpensePage(1)
-                }}
+                onChange={(e) => handleMonthChange(e.target.value)}
               >
                 {allMonths.map((m) => (
                   <option key={m} value={m}>
@@ -190,29 +312,31 @@ export default function Transparency() {
                   </option>
                 ))}
               </select>
-              <select
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                value={typeFilter}
-                onChange={(e) => {
-                  setTypeFilter(e.target.value)
-                  setDonationPage(1)
-                }}
-              >
-                <option value="all">All Types</option>
-                <option value="zakat">Zakat</option>
-                <option value="sadaqah">Sadaqah</option>
-                <option value="fund">Mosque Fund</option>
-              </select>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  <i className="material-icons-round text-base align-middle">close</i>
+                  <span className="ml-1">Reset ({activeFilterCount})</span>
+                </button>
+              )}
             </div>
 
             <button
               type="button"
               className="inline-flex items-center gap-1 rounded-lg bg-[#047857] px-4 py-2 text-sm font-semibold text-white hover:bg-[#064e3b]"
-              onClick={() => showToast('Export will be added in next iteration', 'info')}
+              onClick={handleDownloadReport}
             >
               <i className="material-icons-round text-base">download</i>
               Download Report
             </button>
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
+            {donationFilterChips}
+            {expenseFilterChips}
           </div>
         </div>
 
@@ -223,7 +347,16 @@ export default function Transparency() {
                 <i className="material-icons-round text-[#047857]">history</i>
                 Donation History
               </h3>
-              <button type="button" className="text-sm font-semibold text-[#047857]" onClick={() => showToast('Loading full records...', 'info')}>View All</button>
+              {donationViewAll ? (
+                <button type="button" className="text-sm font-semibold text-gray-500 hover:text-gray-700" onClick={() => setDonationViewAll(false)}>
+                  <i className="material-icons-round text-base align-middle">unfold_less</i>
+                  <span className="ml-1">Collapse</span>
+                </button>
+              ) : (
+                <button type="button" className="text-sm font-semibold text-[#047857]" onClick={handleViewAllDonations}>
+                  View All
+                </button>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -237,39 +370,49 @@ export default function Transparency() {
                   </tr>
                 </thead>
                 <tbody>
-                  {donations.map((d) => (
-                    <tr key={d._id} className="border-t border-gray-100">
-                      <td className="px-4 py-3">{formatDate(d.createdAt || d.date)}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{d.donorName}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${donationTypeClass(d.type)}`}>{d.type}</span>
+                  {donations.length === 0 && !loading ? (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500">
+                        No donations match the current filter.
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#047857]">{formatCurrency(d.amount)}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    donations.map((d) => (
+                      <tr key={d._id} className="border-t border-gray-100">
+                        <td className="px-4 py-3">{formatDate(d.createdAt || d.date)}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{d.isAnonymous ? 'Anonymous' : d.donorName}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${donationTypeClass(d.type)}`}>{d.type}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-[#047857]">{formatCurrency(d.amount)}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3">
-              <button
-                type="button"
-                disabled={donationSafePage === 1 || loading}
-                onClick={() => setDonationPage((p) => Math.max(1, p - 1))}
-                className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
-              >
-                <i className="material-icons-round text-base">chevron_left</i>
-              </button>
-              <span className="text-xs text-gray-500">Page {donationSafePage} of {donationsTotalPages}</span>
-              <button
-                type="button"
-                disabled={donationSafePage === donationsTotalPages || loading}
-                onClick={() => setDonationPage((p) => Math.min(donationsTotalPages, p + 1))}
-                className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
-              >
-                <i className="material-icons-round text-base">chevron_right</i>
-              </button>
-            </div>
+            {!donationViewAll && (
+              <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3">
+                <button
+                  type="button"
+                  disabled={donationSafePage === 1 || loading}
+                  onClick={() => setDonationPage((p) => Math.max(1, p - 1))}
+                  className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
+                >
+                  <i className="material-icons-round text-base">chevron_left</i>
+                </button>
+                <span className="text-xs text-gray-500">Page {donationSafePage} of {donationsTotalPages}</span>
+                <button
+                  type="button"
+                  disabled={donationSafePage === donationsTotalPages || loading}
+                  onClick={() => setDonationPage((p) => Math.min(donationsTotalPages, p + 1))}
+                  className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
+                >
+                  <i className="material-icons-round text-base">chevron_right</i>
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-white shadow-sm animate-fade-in-up">
@@ -278,7 +421,16 @@ export default function Transparency() {
                 <i className="material-icons-round text-[#047857]">receipt_long</i>
                 Expense History
               </h3>
-              <button type="button" className="text-sm font-semibold text-[#047857]" onClick={() => showToast('Loading full records...', 'info')}>View All</button>
+              {expenseViewAll ? (
+                <button type="button" className="text-sm font-semibold text-gray-500 hover:text-gray-700" onClick={() => setExpenseViewAll(false)}>
+                  <i className="material-icons-round text-base align-middle">unfold_less</i>
+                  <span className="ml-1">Collapse</span>
+                </button>
+              ) : (
+                <button type="button" className="text-sm font-semibold text-[#047857]" onClick={handleViewAllExpenses}>
+                  View All
+                </button>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -292,43 +444,52 @@ export default function Transparency() {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((e) => (
-                    <tr key={e._id} className="border-t border-gray-100">
-                      <td className="px-4 py-3">{formatDate(e.createdAt || e.date)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${expenseTypeClass(e.category)}`}>{e.category}</span>
+                  {expenses.length === 0 && !loading ? (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-8 text-center text-sm text-gray-500">
+                        No expenses match the current filter.
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{e.description}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">{formatCurrency(e.amount)}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    expenses.map((e) => (
+                      <tr key={e._id} className="border-t border-gray-100">
+                        <td className="px-4 py-3">{formatDate(e.createdAt || e.date)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${expenseTypeClass(e.category)}`}>{e.category}</span>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{e.description}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-red-600">{formatCurrency(e.amount)}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3">
-              <button
-                type="button"
-                disabled={expenseSafePage === 1 || loading}
-                onClick={() => setExpensePage((p) => Math.max(1, p - 1))}
-                className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
-              >
-                <i className="material-icons-round text-base">chevron_left</i>
-              </button>
-              <span className="text-xs text-gray-500">Page {expenseSafePage} of {expensesTotalPages}</span>
-              <button
-                type="button"
-                disabled={expenseSafePage === expensesTotalPages || loading}
-                onClick={() => setExpensePage((p) => Math.min(expensesTotalPages, p + 1))}
-                className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
-              >
-                <i className="material-icons-round text-base">chevron_right</i>
-              </button>
-            </div>
+            {!expenseViewAll && (
+              <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-4 py-3">
+                <button
+                  type="button"
+                  disabled={expenseSafePage === 1 || loading}
+                  onClick={() => setExpensePage((p) => Math.max(1, p - 1))}
+                  className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
+                >
+                  <i className="material-icons-round text-base">chevron_left</i>
+                </button>
+                <span className="text-xs text-gray-500">Page {expenseSafePage} of {expensesTotalPages}</span>
+                <button
+                  type="button"
+                  disabled={expenseSafePage === expensesTotalPages || loading}
+                  onClick={() => setExpensePage((p) => Math.min(expensesTotalPages, p + 1))}
+                  className="h-8 w-8 rounded-md border border-gray-300 disabled:opacity-40"
+                >
+                  <i className="material-icons-round text-base">chevron_right</i>
+                </button>
+              </div>
+            )}
           </section>
         </div>
 
-        {/* ==================== TOP DONORS SECTION (NEW) ==================== */}
         <section className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden animate-fade-in-up">
           <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 bg-gradient-to-r from-amber-50 to-white">
             <h3 className="inline-flex items-center gap-2 font-primary text-xl font-bold text-gray-900">
@@ -340,33 +501,37 @@ export default function Transparency() {
           <div className="p-5">
             <p className="text-sm text-gray-500 mb-5">These generous community members have contributed the most to our mosque. Their names appear here with their consent to inspire others.</p>
             <div className="space-y-3">
-              {topDonors.map((donor) => {
-                const rankConfig = {
-                  1: { bg: 'bg-gradient-to-r from-yellow-100 to-amber-100', border: 'border-yellow-300', icon: '🥇', textColor: 'text-yellow-700' },
-                  2: { bg: 'bg-gradient-to-r from-gray-100 to-slate-100', border: 'border-gray-300', icon: '🥈', textColor: 'text-gray-600' },
-                  3: { bg: 'bg-gradient-to-r from-orange-50 to-amber-50', border: 'border-orange-300', icon: '🥉', textColor: 'text-orange-700' },
-                }
-                const config = rankConfig[donor.rank] || { bg: 'bg-white', border: 'border-gray-200', icon: `#${donor.rank}`, textColor: 'text-gray-500' }
+              {topDonors.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">No donor data available yet.</p>
+              ) : (
+                topDonors.map((donor) => {
+                  const rankConfig = {
+                    1: { bg: 'bg-gradient-to-r from-yellow-100 to-amber-100', border: 'border-yellow-300', icon: '🥇', textColor: 'text-yellow-700' },
+                    2: { bg: 'bg-gradient-to-r from-gray-100 to-slate-100', border: 'border-gray-300', icon: '🥈', textColor: 'text-gray-600' },
+                    3: { bg: 'bg-gradient-to-r from-orange-50 to-amber-50', border: 'border-orange-300', icon: '🥉', textColor: 'text-orange-700' },
+                  }
+                  const config = rankConfig[donor.rank] || { bg: 'bg-white', border: 'border-gray-200', icon: `#${donor.rank}`, textColor: 'text-gray-500' }
 
-                return (
-                  <div key={donor.rank} className={`flex items-center gap-4 rounded-xl border ${config.border} ${config.bg} p-4 transition-all hover:shadow-md`}>
-                    <div className="text-2xl w-10 text-center shrink-0">
-                      {typeof config.icon === 'string' && config.icon.startsWith('#') ? (
-                        <span className={`text-lg font-bold ${config.textColor}`}>{config.icon}</span>
-                      ) : (
-                        <span>{config.icon}</span>
-                      )}
+                  return (
+                    <div key={donor.rank} className={`flex items-center gap-4 rounded-xl border ${config.border} ${config.bg} p-4 transition-all hover:shadow-md`}>
+                      <div className="text-2xl w-10 text-center shrink-0">
+                        {typeof config.icon === 'string' && config.icon.startsWith('#') ? (
+                          <span className={`text-lg font-bold ${config.textColor}`}>{config.icon}</span>
+                        ) : (
+                          <span>{config.icon}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">{donor.name}</p>
+                        <p className="text-xs text-gray-500">{donor.donationCount} donations</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-bold text-[#047857]">{formatCurrency(donor.totalAmount)}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{donor.name}</p>
-                      <p className="text-xs text-gray-500">{donor.donationCount} donations</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-lg font-bold text-[#047857]">{formatCurrency(donor.totalAmount)}</p>
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
             <div className="mt-5 rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
               <p className="text-sm text-amber-800">

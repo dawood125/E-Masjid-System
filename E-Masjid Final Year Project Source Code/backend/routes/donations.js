@@ -9,6 +9,8 @@ router.get('/', ctrl.listPublic);
 router.get('/top-donors', ctrl.topDonors);
 router.get('/summary', ctrl.summary);
 
+router.get('/admin', protect, authorize('admin', 'manager'), ctrl.listAdmin);
+
 router.post('/', protect, authorize('admin'), [
   body('donorName').isString().trim().isLength({ min: 1, max: 100 }).withMessage('Donor name is required'),
   body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),

@@ -19,7 +19,7 @@ async function searchPublic({ query, city }) {
     filter.$or = [{ name: re }, { city: re }, { address: re }];
   }
   if (city) {
-    filter.city = new RegExp('^' + escapeRegex(sanitizeString(city)) + '$', 'i');
+    filter.city = new RegExp(escapeRegex(sanitizeString(city)), 'i');
   }
   return Mosque.find(filter)
     .select('name city address phone email image')

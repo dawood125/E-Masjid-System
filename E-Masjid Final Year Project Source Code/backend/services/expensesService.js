@@ -7,13 +7,20 @@ function toObjectId(id) {
   return mongoose.Types.ObjectId.createFromHexString(id);
 }
 
-async function listPublic({ category, page = 1, limit = 10, mosqueId }) {
+function monthIndex(month) {
+  return new Date(`${month} 1, 2026`).getMonth() + 1;
+}
+
+async function listPublic({ category, month, page = 1, limit = 10, mosqueId }) {
   const query = {};
   if (mosqueId) {
     if (!isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
     query.mosqueId = mosqueId;
   }
   if (category && category !== 'all') query.category = category;
+  if (month && month !== 'all') {
+    query.$expr = { $eq: [{ $month: '$createdAt' }, monthIndex(month)] };
+  }
   const total = await Expense.countDocuments(query);
   const expenses = await Expense.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(Number(limit));
   return {

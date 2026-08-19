@@ -22,6 +22,46 @@ function monthIndex(month) {
   return new Date(`${month} 1, 2026`).getMonth() + 1;
 }
 
+async function listAdmin(query, user) {
+  const { type, month, page = 1, limit = 10, mosqueId } = query;
+  const filter = {};
+  if (user.role === 'manager') {
+    const Mosque = require('../models/Mosque');
+    if (mosqueId) {
+      if (!isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
+      const owned = await Mosque.findOne({ _id: mosqueId, managerId: user._id }).select('_id');
+      if (!owned) throw httpError(403, 'You do not manage this masjid');
+      filter.mosqueId = mosqueId;
+    } else {
+      const managed = await Mosque.find({ managerId: user._id }).select('_id');
+      const ids = managed.map((m) => m._id);
+      if (!ids.length) return { data: [], total: 0, page: 1, totalPages: 0 };
+      filter.mosqueId = { $in: ids };
+    }
+  } else {
+    if (!user.mosqueId) throw httpError(400, 'Your account is not assigned to a mosque');
+    if (mosqueId && String(mosqueId) !== String(user.mosqueId)) {
+      throw httpError(403, 'Cannot view donations for a different mosque');
+    }
+    filter.mosqueId = user.mosqueId;
+  }
+  if (type && type !== 'all') filter.type = new RegExp(type, 'i');
+  if (month && month !== 'all') {
+    filter.$expr = { $eq: [{ $month: '$createdAt' }, monthIndex(month)] };
+  }
+  const total = await Donation.countDocuments(filter);
+  const donations = await Donation.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(Number(limit));
+  return {
+    data: donations,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
 async function listPublic({ type, month, page = 1, limit = 10, mosqueId }) {
   const query = {};
   if (mosqueId) {
@@ -89,6 +129,12 @@ function generateTransactionId(donationId) {
 }
 
 async function createCash(input, user) {
+  if (input.mosqueId && user.mosqueId && String(input.mosqueId) !== String(user.mosqueId)) {
+    throw httpError(403, 'Cannot create donations for a different mosque');
+  }
+  if (user.role !== 'manager' && !user.mosqueId) {
+    throw httpError(400, 'Your account is not assigned to a mosque');
+  }
   return Donation.create({
     ...input,
     donorName: sanitizeString(input.donorName),
@@ -176,6 +222,7 @@ async function remove(id, user) {
 
 module.exports = {
   listPublic,
+  listAdmin,
   aggregateTopDonors,
   aggregateSummary,
   createCash,

@@ -1,5 +1,22 @@
 jest.mock('../../utils/sendEmail', () => jest.fn().mockResolvedValue({ messageId: 'test-mock' }));
 
+const mockStripeSessionCreate = jest.fn();
+const mockStripeConstructEvent = jest.fn();
+
+jest.mock('stripe', () => {
+  const factory = jest.fn(() => ({
+    checkout: {
+      sessions: {
+        create: (...args) => mockStripeSessionCreate(...args),
+      },
+    },
+    webhooks: {
+      constructEvent: (...args) => mockStripeConstructEvent(...args),
+    },
+  }));
+  return factory;
+});
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 
@@ -20,8 +37,10 @@ describe('Donations scope isolation (Phase 8)', () => {
   let adminBUser;
   let donationInA;
   let donationInB;
+  const realStripeKey = process.env.STRIPE_SECRET_KEY;
 
   beforeAll(async () => {
+    process.env.STRIPE_SECRET_KEY = '';
     await mongoose.disconnect().catch(() => {});
     const { MongoMemoryServer } = require('mongodb-memory-server');
     try {
@@ -83,6 +102,8 @@ describe('Donations scope isolation (Phase 8)', () => {
   afterAll(async () => {
     await mongoose.disconnect();
     if (mongod) await mongod.stop();
+    if (realStripeKey) process.env.STRIPE_SECRET_KEY = realStripeKey;
+    else delete process.env.STRIPE_SECRET_KEY;
   });
 
   describe('public listing endpoints', () => {
@@ -168,7 +189,7 @@ describe('Donations scope isolation (Phase 8)', () => {
   });
 
   describe('admin create endpoint', () => {
-    test('POST /api/donations by admin A assigns mosqueId from token, ignoring client mosqueId', async () => {
+    test('POST /api/donations by admin A assigns mosqueId from token when client sends own mosqueId', async () => {
       const res = await request(app)
         .post('/api/donations')
         .set('Authorization', `Bearer ${adminAToken}`)
@@ -177,7 +198,7 @@ describe('Donations scope isolation (Phase 8)', () => {
           amount: 1500,
           type: 'Sadaqah',
           paymentMethod: 'Cash',
-          mosqueId: String(mosqueB._id),
+          mosqueId: String(mosqueA._id),
         });
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
@@ -208,6 +229,90 @@ describe('Donations scope isolation (Phase 8)', () => {
         .set('Authorization', `Bearer ${loginC.body.token}`)
         .send({ donorName: 'Should Fail', amount: 100, type: 'Sadaqah' });
       expect(res.status).toBe(403);
+    });
+
+    test('POST /api/donations with cross-mosque body.mosqueId → 403 (not silent overwrite)', async () => {
+      const res = await request(app)
+        .post('/api/donations')
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({
+          donorName: 'Cross Hack', amount: 100, type: 'Sadaqah', paymentMethod: 'Cash',
+          mosqueId: String(mosqueB._id),
+        });
+      expect(res.status).toBe(403);
+    });
+  });
+
+  describe('admin scoped listing endpoint (/api/donations/admin)', () => {
+    test('GET /api/donations/admin without token → 401', async () => {
+      const res = await request(app).get('/api/donations/admin');
+      expect(res.status).toBe(401);
+    });
+
+    test('GET /api/donations/admin as admin A returns only A donations', async () => {
+      const res = await request(app)
+        .get('/api/donations/admin')
+        .set('Authorization', `Bearer ${adminAToken}`);
+      expect(res.status).toBe(200);
+      const list = res.body.data || [];
+      expect(list.length).toBeGreaterThan(0);
+      const allA = list.every((d) => String(d.mosqueId) === String(mosqueA._id));
+      expect(allA).toBe(true);
+    });
+
+    test('GET /api/donations/admin as admin A with mosqueId=B → 403', async () => {
+      const res = await request(app)
+        .get(`/api/donations/admin?mosqueId=${mosqueB._id}`)
+        .set('Authorization', `Bearer ${adminAToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('GET /api/donations/admin as manager with mosqueId=A → 200', async () => {
+      const sharedManagerLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'mgr@test.com', password: 'pass1234' });
+      const res = await request(app)
+        .get(`/api/donations/admin?mosqueId=${mosqueA._id}`)
+        .set('Authorization', `Bearer ${sharedManagerLogin.body.token}`);
+      expect(res.status).toBe(200);
+    });
+
+    test('GET /api/donations/admin as manager with unmanaged mosqueId → 403', async () => {
+      const otherMosque = await Mosque.create({
+        name: 'Stranger', city: 'Far', managerId: adminAUser._id, admins: [], isActive: true,
+      });
+      const sharedManagerLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'mgr@test.com', password: 'pass1234' });
+      const res = await request(app)
+        .get(`/api/donations/admin?mosqueId=${otherMosque._id}`)
+        .set('Authorization', `Bearer ${sharedManagerLogin.body.token}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('GET /api/donations/admin as manager with no mosqueId → all managed masjids', async () => {
+      const sharedManagerLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'mgr@test.com', password: 'pass1234' });
+      const res = await request(app)
+        .get('/api/donations/admin')
+        .set('Authorization', `Bearer ${sharedManagerLogin.body.token}`);
+      expect(res.status).toBe(200);
+      const list = res.body.data || [];
+      const allInManaged = list.every((d) =>
+        String(d.mosqueId) === String(mosqueA._id) || String(d.mosqueId) === String(mosqueB._id)
+      );
+      expect(allInManaged).toBe(true);
+    });
+
+    test('GET /api/donations/admin as manager with invalid mosqueId → 400', async () => {
+      const sharedManagerLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'mgr@test.com', password: 'pass1234' });
+      const res = await request(app)
+        .get('/api/donations/admin?mosqueId=not-an-object-id')
+        .set('Authorization', `Bearer ${sharedManagerLogin.body.token}`);
+      expect(res.status).toBe(400);
     });
   });
 
@@ -294,6 +399,215 @@ describe('Donations scope isolation (Phase 8)', () => {
           donorName: 'Bad Mosque', amount: 500, type: 'Sadaqah', mosqueId: 'not-an-object-id',
         });
       expect(res.status).toBe(400);
+    });
+  });
+
+  describe('Stripe checkout flow (mocked)', () => {
+    const realStripeKey = process.env.STRIPE_SECRET_KEY;
+    const realStripeWebhook = process.env.STRIPE_WEBHOOK_SECRET;
+
+    beforeAll(() => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_real_looking_key_1234567890';
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret_1234567890';
+    });
+
+    afterAll(() => {
+      if (realStripeKey) process.env.STRIPE_SECRET_KEY = realStripeKey;
+      else delete process.env.STRIPE_SECRET_KEY;
+      if (realStripeWebhook) process.env.STRIPE_WEBHOOK_SECRET = realStripeWebhook;
+      else delete process.env.STRIPE_WEBHOOK_SECRET;
+    });
+
+    beforeEach(() => {
+      mockStripeSessionCreate.mockReset();
+      mockStripeConstructEvent.mockReset();
+      mockStripeSessionCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/test-session-url' });
+    });
+
+    test('POST /api/donations/online returns Stripe checkout URL when Stripe is configured', async () => {
+      const res = await request(app)
+        .post('/api/donations/online')
+        .send({
+          donorName: 'Stripe Donor',
+          amount: 500,
+          type: 'Sadaqah',
+          mosqueId: String(mosqueA._id),
+        });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.url).toBe('https://checkout.stripe.com/test-session-url');
+      expect(mockStripeSessionCreate).toHaveBeenCalledTimes(1);
+      const sessionArg = mockStripeSessionCreate.mock.calls[0][0];
+      expect(sessionArg.mode).toBe('payment');
+      expect(sessionArg.metadata.amount).toBe('500');
+      expect(sessionArg.metadata.mosqueId).toBe(String(mosqueA._id));
+    });
+
+    test('Stripe checkout session passes donor info through metadata', async () => {
+      await request(app)
+        .post('/api/donations/online')
+        .send({
+          donorName: 'Metadata Test',
+          email: 'meta@test.com',
+          phone: '03001234567',
+          amount: 1500,
+          type: 'Zakat',
+          mosqueId: String(mosqueA._id),
+          isAnonymous: true,
+        });
+      expect(mockStripeSessionCreate).toHaveBeenCalledTimes(1);
+      const meta = mockStripeSessionCreate.mock.calls[0][0].metadata;
+      expect(meta.donorName).toBe('Metadata Test');
+      expect(meta.email).toBe('meta@test.com');
+      expect(meta.phone).toBe('03001234567');
+      expect(meta.amount).toBe('1500');
+      expect(meta.type).toBe('Zakat');
+      expect(meta.isAnonymous).toBe('true');
+      expect(meta.mosqueId).toBe(String(mosqueA._id));
+    });
+
+    test('Stripe checkout amount is converted from rupees to smallest unit (paisa)', async () => {
+      await request(app)
+        .post('/api/donations/online')
+        .send({
+          donorName: 'Paisa Test',
+          amount: 250,
+          type: 'Sadaqah',
+          mosqueId: String(mosqueA._id),
+        });
+      const lineItem = mockStripeSessionCreate.mock.calls[0][0].line_items[0];
+      expect(lineItem.price_data.currency).toBe('pkr');
+      expect(lineItem.price_data.unit_amount).toBe(25000);
+    });
+
+    test('POST /api/donations/online with no Stripe still goes to legacy path (no Stripe key)', async () => {
+      const savedKey = process.env.STRIPE_SECRET_KEY;
+      delete process.env.STRIPE_SECRET_KEY;
+      try {
+        const res = await request(app)
+          .post('/api/donations/online')
+          .send({
+            donorName: 'Legacy Donor',
+            amount: 700,
+            type: 'Sadaqah',
+            mosqueId: String(mosqueA._id),
+          });
+        expect([200, 201]).toContain(res.status);
+        expect(mockStripeSessionCreate).not.toHaveBeenCalled();
+        if (res.body.data) {
+          expect(String(res.body.data.mosqueId)).toBe(String(mosqueA._id));
+        }
+      } finally {
+        process.env.STRIPE_SECRET_KEY = savedKey;
+      }
+    });
+  });
+
+  describe('Stripe webhook signature + event handling (mocked)', () => {
+    const realStripeKey = process.env.STRIPE_SECRET_KEY;
+    const realStripeWebhook = process.env.STRIPE_WEBHOOK_SECRET;
+
+    beforeAll(() => {
+      process.env.STRIPE_SECRET_KEY = 'sk_test_real_looking_key_1234567890';
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret_1234567890';
+    });
+
+    afterAll(() => {
+      if (realStripeKey) process.env.STRIPE_SECRET_KEY = realStripeKey;
+      else delete process.env.STRIPE_SECRET_KEY;
+      if (realStripeWebhook) process.env.STRIPE_WEBHOOK_SECRET = realStripeWebhook;
+      else delete process.env.STRIPE_WEBHOOK_SECRET;
+    });
+
+    beforeEach(() => {
+      mockStripeConstructEvent.mockReset();
+      mockStripeSessionCreate.mockReset();
+    });
+
+    test('webhook with invalid signature returns 400', async () => {
+      mockStripeConstructEvent.mockImplementation(() => {
+        throw new Error('No signatures found matching the expected signature for payload');
+      });
+      const payload = JSON.stringify({ type: 'checkout.session.completed', data: { object: {} } });
+      const res = await request(app)
+        .post('/api/donations/webhook')
+        .set('stripe-signature', 'invalid-sig')
+        .set('Content-Type', 'application/json')
+        .send(payload);
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/Webhook Error/i);
+    });
+
+    test('webhook with valid signature + checkout.session.completed records donation', async () => {
+      const checkoutSession = {
+        id: 'cs_test_session_123',
+        payment_intent: 'pi_test_payment_456',
+        metadata: {
+          donorName: 'Webhook Donor',
+          email: 'hook@test.com',
+          phone: '03001234567',
+          amount: '1200',
+          type: 'Zakat',
+          isAnonymous: 'false',
+          mosqueId: String(mosqueA._id),
+        },
+      };
+      mockStripeConstructEvent.mockReturnValue({
+        type: 'checkout.session.completed',
+        data: { object: checkoutSession },
+      });
+
+      const payload = JSON.stringify({ type: 'checkout.session.completed', data: { object: checkoutSession } });
+      const res = await request(app)
+        .post('/api/donations/webhook')
+        .set('stripe-signature', 'valid-sig')
+        .set('Content-Type', 'application/json')
+        .send(payload);
+      expect(res.status).toBe(200);
+      expect(res.body.received).toBe(true);
+
+      const created = await Donation.findOne({ stripePaymentId: 'pi_test_payment_456' });
+      expect(created).toBeTruthy();
+      expect(String(created.mosqueId)).toBe(String(mosqueA._id));
+      expect(created.amount).toBe(1200);
+      expect(created.donorName).toBe('Webhook Donor');
+      expect(created.isAnonymous).toBe(false);
+    });
+
+    test('webhook with valid signature but invalid amount in metadata does not crash', async () => {
+      mockStripeConstructEvent.mockReturnValue({
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs_test_session_bad',
+            payment_intent: 'pi_test_payment_bad',
+            metadata: { donorName: 'Bad', amount: '0', mosqueId: String(mosqueA._id) },
+          },
+        },
+      });
+      const res = await request(app)
+        .post('/api/donations/webhook')
+        .set('stripe-signature', 'valid-sig')
+        .set('Content-Type', 'application/json')
+        .send('{}');
+      expect(res.status).toBe(200);
+      const created = await Donation.findOne({ stripePaymentId: 'pi_test_payment_bad' });
+      expect(created).toBeNull();
+    });
+
+    test('webhook with unknown event type is acknowledged but does not create donation', async () => {
+      mockStripeConstructEvent.mockReturnValue({
+        type: 'payment_intent.payment_failed',
+        data: { object: {} },
+      });
+      const res = await request(app)
+        .post('/api/donations/webhook')
+        .set('stripe-signature', 'valid-sig')
+        .set('Content-Type', 'application/json')
+        .send('{}');
+      expect(res.status).toBe(200);
+      expect(res.body.received).toBe(true);
     });
   });
 });
