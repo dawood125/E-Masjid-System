@@ -3,28 +3,30 @@
 This module covers the **religious scholars management**
 feature on both the admin side and the scholar side:
 
-- **Admin side** (`/admin/scholars`) — create / deactivate
-  scholar accounts, view stats, assign scholars to pending
-  Nikah bookings.
+- **Admin side** (`/admin/scholars`) — create / edit /
+  reset password / deactivate / activate scholars, view
+  stats, mock-assign scholars to pending Nikah bookings.
 - **Scholar side** (`/scholar/dashboard`) — view pending
   Nikah requests for the scholar's masjid, accept or
-  reject each one, view own confirmed ceremonies.
+  reject each one (with a required reason), view own
+  confirmed ceremonies.
 
 The scholar role is one of the five actors in the system
 (community, admin, scholar, committee, manager). They
-log in via `/login` (community login page) using the
-`scholar@emasjid.pk` credentials and are redirected to
-`/scholar/dashboard`.
+log in via `/login` using the `scholar@emasjid.pk`
+credentials and are redirected to `/scholar/dashboard`.
 
 ## Prerequisites
 
 - Backend running on `http://127.0.0.1:5000`
-- Frontend running on `http://localhost:5173`
+- Frontend running on `http://127.0.0.1:5174` (or 5173 —
+  whichever the dev server is on; CORS allows both)
 - `CLIENT_URL` in `backend/.env` matches the frontend
-  port (5173 by default; see `frontend/vite.config.js`)
-- Seeded with `node utils/seed.js` (creates 1 masjid + 1
-  admin + 1 scholar + 1 committee + 1 community + 2 nikah
-  bookings + sample donations/expenses)
+  port
+- Seeded with `node utils/seed.js` (creates 4 masjids:
+  Al-Noor, Al-Rahman, Al-Falah, Al-Taqwa, each with
+  their own admin/scholar/committee/community user plus
+  one nikah booking + sample donations/expenses)
 - Database connected (`MONGODB_URI` set in `.env`)
 
 ## Credentials
@@ -32,8 +34,14 @@ log in via `/login` (community login page) using the
 | Role      | Email                    | Password    |
 | --------- | ------------------------ | ----------- |
 | Manager   | manager@emasjid.pk       | manager123  |
-| Admin     | admin@emasjid.pk         | admin123    |
-| Scholar   | scholar@emasjid.pk       | scholar123  |
+| Admin (Al-Noor)     | admin@emasjid.pk         | admin123    |
+| Admin (Al-Rahman)   | admin.alrahman@emasjid.pk| admin123    |
+| Admin (Al-Falah)    | admin.alfalah@emasjid.pk | admin123    |
+| Admin (Al-Taqwa)    | admin.altaqwa@emasjid.pk | admin123    |
+| Scholar (Al-Noor)   | scholar@emasjid.pk       | scholar123  |
+| Scholar (Al-Rahman) | scholar2@emasjid.pk      | scholar123  |
+| Scholar (Al-Falah)  | scholar3@emasjid.pk      | scholar123  |
+| Scholar (Al-Taqwa)  | scholar4@emasjid.pk      | scholar123  |
 | Committee | committee@emasjid.pk     | committee123|
 | User      | user@emasjid.pk          | user123     |
 
@@ -45,7 +53,7 @@ The scholar account can be logged in from the regular
 
 ### A. Admin scholars page renders
 
-1. Open `http://localhost:5173/admin/login`.
+1. Open `http://127.0.0.1:5174/admin/login`.
 2. Log in as `admin@emasjid.pk` / `admin123`.
 3. From the sidebar, click **Manage Scholars**.
 
@@ -54,11 +62,12 @@ Expected: page loads at `/admin/scholars` with:
 - A blue info card explaining what scholar accounts are
   for ("Religious scholars handle Nikah bookings…")
 - Three stat cards across the top: **Total Scholars**,
-  **Active**, **Total Nikah Performed**
+  **Active**, **Inactive**
 - A grid of registered scholar cards (one per scholar)
   showing name, specialization, email, phone, a per-scholar
   stats block (Nikah Performed / Pending Requests), and
-  three icon buttons (Reset Password, Edit, Deactivate)
+  three icon buttons (Reset Password, Edit, Deactivate
+  or Activate depending on state)
 - A **Pending Nikah Assignments** section below with
   mock booking rows and a per-booking "Assign Scholar"
   dropdown
@@ -80,9 +89,9 @@ Expected: page loads at `/admin/scholars` with:
 4. Click **Create Account**.
 
 Expected: modal closes, a new scholar card appears at the
-top of the grid, success toast appears (ideally showing
-the temp password if backend returns one). The scholar
-appears in the **Active** count.
+top of the grid, success toast appears with the typed
+password and a copy button. The scholar appears in the
+**Active** count.
 
 ### C. Add validation
 
@@ -96,39 +105,72 @@ appears in the **Active** count.
 4. Try Email = `admin@emasjid.pk` (already taken) →
    expect backend error toast.
 
-### D. Reset password (currently mock-only)
+### D. Reset password (BUG-F4 fixed)
 
 1. On a scholar card, click the **key** icon button.
 2. Modal opens with the scholar's name, a New Password
-   field, and Confirm New Password.
+   field, and Confirm New Password (both with show/hide
+   toggles).
 3. Fill in valid values and submit.
 
-Expected (today): modal closes and a warning toast
-appears: "Password reset endpoint is not available yet."
-The reset-password endpoint is not implemented on the
-backend yet — the form is wired but the call is a
-no-op. Documented as deferred.
+Expected: modal closes, success toast appears with the
+new password and a copy button. The next time that
+scholar logs in, they must use the new password (the
+hash is updated via the User model's pre-save hook).
+Backend: `POST /api/scholars/:id/reset-password` with
+`{newPassword: '...'}` → 200.
 
-### E. Edit scholar (currently mock-only)
+### E. Edit scholar (BUG-F2 fixed)
 
 1. On a scholar card, click the **pencil** icon button.
+2. Modal opens pre-filled with current name, email,
+   phone, specialization.
+3. Change the name to `Updated Scholar Name` and
+   specialization to `Updated Specialization`.
+4. Click **Save Changes**.
 
-Expected: an info toast: "Edit scholar details flow is
-mock-only." No actual API call. (Backend doesn't expose
-an edit endpoint either.)
+Expected: modal closes, success toast appears. The
+scholar card now shows the new name and specialization.
+Backend: `PUT /api/scholars/:id` with
+`{name, email, phone, specialization}` → 200.
+
+### E2. Edit validation
+
+1. Open Edit again, clear the **Name** field, click
+   Save → expect backend error toast about name being
+   too short (min 2 chars).
+2. Open Edit, set **Email** to `not-an-email`, click
+   Save → expect backend error toast.
+3. Open Edit, set **Specialization** to `x` (1 char),
+   click Save → expect backend error toast
+   ("Invalid specialization").
 
 ### F. Deactivate a scholar
 
-1. On a scholar card, click the **trash** icon button.
+1. On an Active scholar card, click the **trash** icon
+   button.
 2. (No confirmation prompt in this build — just fires.)
 
 Expected: scholar card stays in the grid but the status
 pill flips to **Inactive**. The Active stat card count
-drops by 1. The deactivated scholar can no longer log in
-— `POST /api/auth/login` returns 403 ("Account is
+drops by 1, the Inactive count rises by 1. The
+deactivated scholar can no longer log in —
+`POST /api/auth/login` returns 403 ("Account is
 deactivated") because `auth.js` blocks inactive users.
+The icon button on the card now reads **Activate**
+instead of **Deactivate**.
 
-### G. Pending Nikah Assignments — assign a scholar
+### F2. Activate a scholar (BUG-F5 fixed)
+
+1. On the deactivated scholar card from step F, click
+   the **Activate** (green) icon button.
+
+Expected: status pill flips back to **Active**. The
+Active count rises by 1, Inactive drops by 1. The icon
+flips back to **Deactivate**. The scholar can now log
+in again.
+
+### G. Pending Nikah Assignments — assign a scholar (mock)
 
 1. Scroll to **Pending Nikah Assignments** at the bottom
    of `/admin/scholars`.
@@ -147,15 +189,15 @@ Tracked for Phase 12 / nikah refactor.)
 
 ### H. Scholar dashboard — view pending requests
 
-1. Open `http://localhost:5173/login`.
-2. Log in as `scholar@emasjid.pk` / `scholar123`.
-3. After login, redirected to `/scholar/dashboard`.
+1. Open `http://127.0.0.1:5174/login`.
+2. Select the **Scholar** role from the role dropdown.
+3. Log in as `scholar@emasjid.pk` / `scholar123`.
+4. After login, redirected to `/scholar/dashboard`.
 
 Expected:
 - Gradient header with greeting
-  ("Assalam-o-Alaikum, Maulana Abdullah!" — name is
-  hardcoded in the JSX, so even the actual logged-in
-  scholar's name shows "Maulana Abdullah". Cosmetic.)
+  ("Assalam-o-Alaikum, Sheikh Muhammad Hassan!") — the
+  name comes from `useAuth().user.name`.
 - Three stat cards: **Pending Requests**,
   **Confirmed This Month**, **Total Ceremonies**
 - **Pending Nikah Requests** table with columns: Booking
@@ -180,17 +222,27 @@ Expected:
 - Backend: `PUT /api/nikah-bookings/:id` with
   `status: 'accepted'` → 200; row updated in DB.
 
-### J. Scholar rejects a booking
+### J. Scholar rejects a booking (BUG-F6 fixed)
 
 1. On `/scholar/dashboard`, click the red **Reject**
    button on a pending row.
-2. (No reason prompt in this build — the rejection reason
-   is hardcoded to "Not available at requested slot" in
-   `Dashboard.jsx`. Cosmetic.)
+2. A browser prompt asks "Reason for rejection:" —
+   enter at least 3 characters (e.g.
+   `Schedule conflict with Jummah prayer`).
+3. Click OK.
 
 Expected: row is removed from Pending. (It does **not**
 appear in My Confirmed — it's just gone.) Warning toast:
-"Booking NKH-XXXXXX rejected."
+"Booking NKH-XXXXXX rejected." The booking's
+`rejectionReason` field is persisted in the DB and
+visible to admins via `GET /api/nikah-bookings`.
+
+### J2. Reject requires a reason
+
+1. Click **Reject** again on another pending row.
+2. Click OK on the prompt without typing → expect error
+   toast: "Please provide a rejection reason."
+3. Type `x` (1 char) → expect same error (min 3 chars).
 
 ### K. Scope — scholar only sees own masjid's bookings
 
@@ -202,6 +254,27 @@ Expected: count = 2 (the 2 seeded bookings for Al-Noor:
 1 pending + 1 already-accepted). No bookings from other
 masjids leak. (`backend/routes/nikahBookings.js` filters
 by `req.user.mosqueId`.)
+
+### K2. Scope — admin only sees own masjid's scholars
+
+1. Log in as `admin@emasjid.pk` (Al-Noor admin), open
+   `/admin/scholars`. Expected: 1 scholar card
+   (`Sheikh Muhammad Hassan`).
+2. Log out, log in as `admin.alrahman@emasjid.pk`
+   (Al-Rahman admin). Expected: 1 scholar card
+   (`Maulana Yousuf Raza`). The Al-Noor scholar is not
+   visible.
+3. Direct API test as Al-Rahman admin:
+   ```bash
+   curl -X PUT http://127.0.0.1:5000/api/scholars/<al-noor-id> \
+     -H "Authorization: Bearer <al-rahman-token>" \
+     -H "Content-Type: application/json" \
+     -d '{"name":"hacked"}'
+   ```
+   Expected: 404, body `{success:false,message:"Scholar
+   not found"}` — the controller scopes by
+   `req.user.mosqueId` so the Al-Noor scholar is
+   invisible.
 
 ### L. Authorization — community role can't create scholars
 
@@ -224,28 +297,46 @@ Expected: response status 403, body
 authorized to access this route"}`. No new scholar
 created.
 
+### L2. Authorization — manager can't manage scholars
+
+1. Log in as `manager@emasjid.pk` / `manager123`.
+2. Try `POST /api/scholars` (same as L).
+
+Expected: 403 — managers manage masjids, not scholars.
+The Scholars nav item is hidden in their layout. See
+Q6 in `questions_asked.md`.
+
 ## Notes
 
 - The Scholars admin page uses `api.getScholars()` on
   mount, which calls `GET /api/scholars` — admin-only.
   Make sure the admin's JWT is in localStorage before
   navigating there.
-- All three stat cards on `/admin/scholars` are computed
-  client-side from the `scholars` array. The "Total Nikah
-  Performed" counter is a deterministic mock per index
-  (`8 + i * 7`), not from real data.
-- The scholar dashboard greeting text is hardcoded
-  ("Maulana Abdullah!") and does not pull the logged-in
-  user's name. Cosmetic — should be fixed in a polish
-  pass but doesn't affect functionality.
-- The seed file only creates 1 masjid (Al-Noor). To
-  exercise cross-mosque flows end-to-end, you need a
-  second masjid in the seed — currently Section K only
-  checks that the scholar sees 2 bookings for their own
-  masjid (a single-masjid isolation test).
-- B1 (CORS misconfig) was the headline bug this phase.
-  The Playwright test catches it because the admin login
-  flow sets `localStorage.authToken` after a successful
-  POST — when CORS blocks the POST, the token never
-  lands, and the guard redirects back to login. CORS
-  errors are visible in browser DevTools console.
+- The three stat cards on `/admin/scholars` are computed
+  client-side from the `scholars` array. Total = array
+  length. Active = `isActive === true`. Inactive =
+  `isActive === false`. (Earlier build had a "Total
+  Nikah Performed" card that was a deterministic mock —
+  removed because it had no real source of truth.)
+- The scholar dashboard greeting now reads
+  `useAuth().user.name`. Cosmetic polish.
+- The seed creates 4 masjids (Al-Noor, Al-Rahman,
+  Al-Falah, Al-Taqwa) so cross-mosque isolation is
+  testable end-to-end.
+- Phase 11 bug summary:
+  - **B1** CORS misconfig — fixed by allowing
+    `127.0.0.1:5174` in addition to `localhost:5173`.
+  - **B2** Backend returned `tempPassword` for new
+    scholars but never sent it — fixed by switching to
+    admin-typed password (no email roundtrip needed for
+    FYP demo).
+  - **F2** Edit modal was mock-only — fixed, modal now
+    pre-fills and saves via `PUT /api/scholars/:id`.
+  - **F4** Reset password was mock-only — fixed, modal
+    now calls `POST /api/scholars/:id/reset-password`.
+  - **F5** No way to reactivate a deactivated scholar
+    — fixed, icon flips between Activate / Deactivate
+    based on `isActive`.
+  - **F6** Reject had no reason — fixed, browser prompt
+    requires ≥3-char reason, persisted as
+    `rejectionReason` on the booking.

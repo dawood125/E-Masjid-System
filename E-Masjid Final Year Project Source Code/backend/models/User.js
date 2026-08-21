@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Invalid email format'],
   },
-  password: { type: String, required: [true, 'Password is required'], minlength: 8, select: false },
+  password: { type: String, required: [true, 'Password is required'], minlength: 6, select: false },
   role: {
     type: String,
     enum: ['community', 'admin', 'scholar', 'manager', 'committee'],
@@ -18,8 +18,6 @@ const userSchema = new mongoose.Schema({
   },
   phone: { type: String },
   specialization: { type: String },
-  // Phase 3.5: Address fields used by the new 2-step registration
-  // (geolocation + city + street address)
   address: { type: String, trim: true, maxlength: 200 },
   city: { type: String, trim: true, maxlength: 80 },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },

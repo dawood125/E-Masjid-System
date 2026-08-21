@@ -1,8 +1,12 @@
-import { createContext, useState, useCallback, useEffect, useRef } from 'react'
+import { createContext, useState, useCallback, useEffect, useRef, useContext } from 'react'
 import api from '../utils/api'
 import { setActiveMosqueId } from '../utils/mosque.js'
 
 export const AuthContext = createContext()
+
+export function useAuth() {
+  return useContext(AuthContext)
+}
 
 function getLogoutRedirectPath(role) {
   switch (role) {

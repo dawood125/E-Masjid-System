@@ -10,25 +10,25 @@ form validates locally (min 6 chars, passwords match) but
 on submit shows: "Password reset endpoint is not available
 yet."
 
-**Decision:** Treat as **out of scope** for now. The form
-is wired as a placeholder; no backend endpoint exists.
+**Decision (updated):** **Implemented end-to-end (BUG-F4
+fixed).** New endpoint `POST /api/scholars/:id/reset-password`
+(admin-only) hashes a new password via the User model's
+pre-save hook and persists it. The frontend modal now
+sends the typed password to that endpoint, copies the new
+password to clipboard, and toasts success.
 
-**Why:**
-- We don't want to grow scope ("we should not increase
-  features or scope because we already have a lot of
-  features for our FYP").
-- The reset-password flow already exists for community
-  users (`forgot-password` + email link). Reusing it for
-  scholar accounts is a natural follow-up, but it's a
-  cross-cutting feature (email integration, token
-  storage) rather than a Scholars-module concern.
-- The current placeholder toast is honest about the gap
-  and doesn't pretend to work.
+**Why the change:**
+- "We have to build every feature end to end working
+  perfectly fine so why you keeping things mock."
+- The reset flow is a real admin operation, not a
+  cross-cutting feature. It belongs in Phase 11.
+- Email/token flow is still a separate concern (out of
+  scope); admin-typed reset is sufficient for FYP demo.
 
-If the supervisor asks for it later, we'd add
-`POST /api/scholars/:id/reset-password` (admin-only,
-returns a one-time token), then a `/reset-password/:token`
-page that already exists for community users.
+**How to apply:** the admin uses the key-icon on each
+scholar card. The modal has two password fields with
+show/hide toggles, a copy button after submit, and a
+success toast with the new password.
 
 ### Q2 — Is "edit scholar details" in scope?
 
@@ -36,15 +36,21 @@ page that already exists for community users.
 shows an info toast: "Edit scholar details flow is
 mock-only."
 
-**Decision:** Same as Q1 — out of scope. The current
-`PUT /api/scholars/:id` already exists and the frontend
-`updateScholar` method is wired (it uses the same call to
-toggle `isActive`). So if edit details becomes a
-requirement, the wiring is one form away.
+**Decision (updated):** **Implemented end-to-end (BUG-F2
+fixed).** `PUT /api/scholars/:id` already accepted an
+extended body for `isActive` toggling; the validator now
+also accepts `name`, `email`, `phone`, `specialization`.
+The frontend Edit modal pre-fills existing values, allows
+edits, saves via the existing `updateScholar` method, and
+toasts success.
 
-**Why:** same scope-discipline reason. The pencil icon
-exists to communicate "this is where edit would go"
-without pretending to work.
+**Why the change:** same reason as Q1 — no mocks for core
+admin operations.
+
+**How to apply:** click the pencil icon, change any of
+name / email / phone / specialization, click Save
+Changes. Server-side validation runs (email format, name
+length, specialization min 2 chars).
 
 ### Q3 — Is "assign scholar to Nikah booking" in scope?
 
@@ -57,9 +63,9 @@ nothing is sent to the backend.
 **Decision:** Treat as **frontend mock**. Document it.
 
 **Why:**
-- The Nikah module (Phase 12 or wherever it lives) is
-  where real assignment happens — the scholar dashboard
-  is where bookings are actually accepted/rejected.
+- The Nikah module (Phase 12) is where real assignment
+  happens — the scholar dashboard is where bookings are
+  actually accepted/rejected.
 - The Scholars page just *visualizes* the queue, not
   drives it. A real implementation would either
   (a) consume `GET /api/nikah-bookings?status=pending`
@@ -107,34 +113,73 @@ nikah bookings. After running the test once, the next run
 sees 0 pending bookings (because the test left them all
 accepted).
 
-**Decision:** No — document it in the manual guide and
-test header instead. Tell the user to `node utils/seed.js`
-before re-running.
+**Decision (updated):** **Yes — auto-reseed at the start
+of the Playwright run.** The test calls
+`node utils/seed.js` via `execSync` before launching the
+browser.
+
+**Why the change:**
+- Phase 11 grew to include Edit / Reset / Activate flows
+  on scholars, plus reject-reason on bookings. The number
+  of state mutations is too high to track manually.
+- The seeder now creates 4 masjids (Al-Noor, Al-Rahman,
+  Al-Falah, Al-Taqwa) each with their own admin/scholar/
+  committee/community — a manual reseed before every run
+  is annoying.
+- Risk of wiping the user's data is the same as before,
+  but Phase 11 is a development/QA phase, not production.
+
+**How to apply:** the Playwright script logs `[INFO]
+Re-seeded database before Playwright run` at the top of
+its output. If reseed fails the test still proceeds but
+prints `[WARN] Re-seed failed:`.
+
+### Q6 — Who is allowed to create/manage scholars?
+
+**Context:** The original plan was for both admins and
+the manager (super admin) to manage scholars. The
+controller's `authorize('admin', 'manager')` middleware
+allowed it. But the manager doesn't belong to a single
+masjid, so which `mosqueId` do new scholars get?
+
+**Decision:** **Scholars route is admin-only.** The
+controller now uses `authorize('admin')`. The manager
+manages masjids (Phase 16) and the global settings, but
+not scholars within a specific masjid.
 
 **Why:**
-- Auto-reseed is risky in a shared dev environment
-  (wipes donations, expenses, fund requests the user
-  might be testing).
-- The Playwright test already resets the booking back to
-  pending at the end of Section 3 (`status: 'pending',
-  scholarId: null`). So as long as the test runs to
-  completion, the next run finds 1 pending again.
-- If the test is interrupted mid-run, a manual reseed
-  is one command away. Cheap.
+- A scholar is a resource tied to one masjid (their
+  booking requests come through that masjid's community
+  members). The manager has no masjid to tie them to.
+- If the manager needs to add a scholar to Masjid A,
+  they should log in as Masjid A's admin, not bypass
+  the admin role.
+- Removing manager from scholars simplifies the
+  controller (no special-case `managerId` lookup vs
+  `user.mosqueId`).
+
+**How to apply:** only `/admin/*` routes can call
+`GET/POST/PUT /api/scholars*`. Manager logins see a
+403 on direct API calls and the Scholars nav item is
+hidden in their layout.
 
 ## Questions deferred (not blocking)
 
-- **Multi-masjid seeder** — covered in B4. If cross-mosque
-  isolation testing is needed, the seeder needs a second
-  masjid + admin + scholar + booking. Not required for
-  Phase 11.
-- **Scholar dashboard name from `useAuth()`** — cosmetic.
-  The greeting is currently hardcoded "Maulana Abdullah!"
-  in `Dashboard.jsx`. Should be `user.name`. Polish pass.
-- **Stats counter sourcing** — the three stat cards on
-  `/admin/scholars` (Total Scholars / Active / Total Nikah
-  Performed) are computed client-side. The first two are
-  accurate; the "Total Nikah Performed" is a deterministic
-  mock (`8 + i * 7` per scholar). Real source of truth
-  would be aggregating `nikahBookings` where
-  `status === 'accepted'`. Polish pass.
+- **Multi-masjid seeder** — **done.** The seeder now
+  creates Al-Noor (default), Al-Rahman, Al-Falah, and
+  Al-Taqwa, each with their own admin/scholar/committee/
+  community user. Cross-mosque isolation is testable.
+- **Scholar dashboard name from `useAuth()`** — **done.**
+  Greeting reads `user.name` from AuthContext via
+  `useAuth()`. The `useAuth` export was added to
+  `AuthContext.jsx` (the hook file at
+  `frontend/src/hooks/useAuth.js` already had its own
+  copy; both coexist).
+- **Stats counter sourcing** — **done.** The "Inactive"
+  stat card now counts `scholar.isActive === false`
+  client-side. The "Total Nikah Performed" card was
+  removed (it was always a deterministic mock and had
+  no real data source — keeping it would be the kind
+  of mock we're trying to remove). The remaining
+  "Total Scholars" and "Active" cards source directly
+  from the loaded list.

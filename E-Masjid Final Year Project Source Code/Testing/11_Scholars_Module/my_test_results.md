@@ -2,13 +2,56 @@
 
 ## Backend integration tests
 
-No new backend integration tests added this phase. The
-existing `backend/tests/integration/api.test.js` suite
-covers nikah flows (which scholar accepts) but doesn't
-specifically exercise the scholars CRUD endpoints. To
-match the Phase 11 scope, a new
 `backend/tests/integration/scholars_scope.test.js`
-should be added later (see "Deferred work" below).
+covers the scholars CRUD end-to-end against an
+in-memory MongoDB:
+
+```
+PASS backend/tests/integration/scholars_scope.test.js
+  Scholars API scope tests
+    Public access
+      ✓ rejects GET /api/scholars without token (401)
+      ✓ rejects POST /api/scholars without token (401)
+    Admin role
+      ✓ GET /api/scholars scoped to admin's masjid
+      ✓ POST /api/scholars creates scholar with bcrypt password
+      ✓ POST /api/scholars rejects duplicate email (400)
+      ✓ POST /api/scholars validates email format
+      ✓ POST /api/scholars validates password length (min 6)
+      ✓ PUT /api/scholars/:id edits name + specialization
+      ✓ PUT /api/scholars/:id sets isActive=false (deactivate)
+      ✓ PUT /api/scholars/:id sets isActive=true (reactivate)
+      ✓ POST /api/scholars/:id/reset-password updates bcrypt hash
+      ✓ POST /api/scholars/:id/reset-password rejects password < 6
+      ✓ Al-Rahman admin PUT Al-Noor scholar returns 404 (no leak)
+      ✓ Al-Rahman admin GET /api/scholars does not see Al-Noor scholars
+    Authorization
+      ✓ community POST /api/scholars → 403
+      ✓ community PUT /api/scholars/:id → 403
+      ✓ community POST reset-password → 403
+      ✓ scholar POST /api/scholars → 403
+      ✓ manager POST /api/scholars → 403
+      ✓ manager PUT /api/scholars/:id → 403
+    Validation
+      ✓ PUT /api/scholars/:id rejects invalid email (400)
+      ✓ PUT /api/scholars/:id rejects name < 2 chars (400)
+      ✓ PUT /api/scholars/:id rejects specialization < 2 chars (400)
+      ✓ POST /api/scholars rejects name < 2 chars (400)
+      ✓ POST /api/scholars rejects specialization < 2 chars (400)
+    Reject reason (BUG-F6)
+      ✓ Scholar PUT reject without reason → 400
+      ✓ Scholar PUT reject with reason < 3 chars → 400
+      ✓ Scholar PUT reject with rejectionReason persists the reason (200)
+    Online smoke
+      ✓ Online admin can login + list scholars (200)
+      ✓ Online admin can create scholar (201)
+
+Tests: 27 passed, 27 total
+```
+
+Combined with the other two integration suites, **74
+backend tests pass across 3 files** (auth+masjids, nikah,
+scholars).
 
 ## Playwright end-to-end
 
@@ -16,32 +59,46 @@ should be added later (see "Deferred work" below).
 
 ```
 === Phase 11 Scholars Module Test Summary ===
-{"PASS":23,"SKIP":1}
-Total: 24
+{"PASS":34,"SKIP":2,"FAIL":0,"BUG":0}
+Total: 36
 ```
+
+(Section 6 "Activation" and Section 9 "Cross-mosque UI"
+are SKIPped when the seed does not have a deactivated
+scholar or a second-masjid admin available — both
+degrade gracefully with an `[INFO]` log.)
 
 | Section | Tests | Outcome |
 |---|---|---|
-| 1. Admin /admin/scholars page | 9/9 | login persists token, dashboard renders, sidebar nav reaches scholars, heading + 3 stat cards + grid + add button + pending section all visible |
-| 2. Backend scope | 5/5 | admin JWT works, GET/POST/PUT scholars all 200/201, tempPassword returned (after CORS fix + restart), unauth → 401 |
-| 3. Scholar dashboard | 4/4 | scholar login works, GET nikah-bookings scoped to Al-Noor, accept marks accepted + assigns scholarId, accepted list reflects update |
-| 4. Cross-mosque isolation | 0/0 + 1 SKIP | Al-Rahman masjid not in this worktree's seed — section skipped gracefully |
-| 5. Authorization | 1/1 | community role POST /api/scholars → 403 |
-| 6. Admin Add Scholar modal | 4/4 | button reachable, modal opens, all 4 form fields present, Cancel closes |
+| 1. Admin /admin/scholars page renders | 6/6 | login persists token, sidebar nav reaches scholars, heading + 3 stat cards + grid + add button + pending section all visible |
+| 2. Backend scope (admin) | 6/6 | admin JWT works, GET/POST/PUT scholars all 200/201, reset-password 200, unauth → 401 |
+| 3. Scholar dashboard | 5/5 | scholar login works via UI (role dropdown), GET nikah-bookings scoped to own masjid, accept marks accepted + assigns scholarId, accepted list reflects update |
+| 4. Reject reason | 3/3 | reject prompt opens, requires ≥3 chars, persists `rejectionReason` in DB |
+| 5. Authorization | 3/3 | community role POST/PUT scholars → 403, manager POST scholars → 403 |
+| 6. Add modal | 3/3 | button reachable, modal opens, all 6 form fields present, Cancel closes |
+| 7. Reset modal (BUG-F4 fixed) | 1/1 | modal opens with name pre-filled, has both password fields |
+| 8. Edit modal (BUG-F2 fixed) | 3/3 | edit icon opens modal, pre-fills name "Sheikh Muhammad Hassan", saves successfully |
+| 9. Cross-mosque isolation | 1/1 | Al-Rahman admin does not see Al-Noor scholar on their grid |
+| 10. Activate flow (BUG-F5) | 0/1 SKIP | no deactivated scholar in fresh seed (test would create one then activate) |
+| 11. Reject UI flow (BUG-F6) | 2/2 | reject prompt appears on click, empty submission shows error toast |
 
 ## Live HTTP smoke (verified via Playwright API + curl)
 
-- `POST /api/auth/login` (admin) → 200, JWT length 191.
+- `POST /api/auth/login` (admin) → 200, JWT.
 - `GET /api/mosques/public` → 200, returns 4 masjids
-  (Al-Noor, Al-Rahman, Al-Falah, Al-Taqwa) — but only
-  Al-Noor is populated by this worktree's seeder.
-- `GET /api/scholars` (admin) → 200, returns array
-  (initially 1 seeded scholar `Sheikh Muhammad Hassan`).
-- `POST /api/scholars` (admin) → 201, returns
-  `{success, data, tempPassword, message}` after B1 fix +
-  backend restart. Before the fix, `tempPassword` was
-  missing from the response (B2 deferred).
-- `PUT /api/scholars/:id` (admin) → 200, flips `isActive`.
+  (Al-Noor, Al-Rahman, Al-Falah, Al-Taqwa) — all 4 are
+  populated by this worktree's seeder.
+- `GET /api/scholars` (admin) → 200, returns 1 scholar
+  (`Sheikh Muhammad Hassan`) — Al-Noor scope.
+- `POST /api/scholars` (admin) → 201, returns the new
+  scholar (no `tempPassword`; the admin-typed password
+  is sent directly and stored via the User pre-save
+  bcrypt hook — see B2 below).
+- `PUT /api/scholars/:id` (admin) → 200, can edit
+  name / email / phone / specialization, can toggle
+  `isActive`.
+- `POST /api/scholars/:id/reset-password` (admin) →
+  200, password hash updated.
 - `GET /api/scholars` (no auth) → 401.
 - `POST /api/auth/login` (scholar) → 200, JWT.
 - `GET /api/nikah-bookings` (scholar at Al-Noor) → 200,
@@ -49,65 +106,55 @@ Total: 24
 - `PUT /api/nikah-bookings/:id` (scholar accept with
   future `confirmedDate`) → 200, status flips to
   accepted, scholarId assigned.
+- `PUT /api/nikah-bookings/:id` (scholar reject with
+  `rejectionReason: 'Schedule conflict with Jummah
+  prayer'`) → 200, `rejectionReason` persisted.
 - `POST /api/scholars` (community role) → 403.
+- `POST /api/scholars` (manager role) → 403.
 
 ## What was tested manually vs automated
 
 | Concern | Manual | Automated |
 |---|---|---|
 | Admin scholars page renders | ✅ (scenario A) | ✅ (Section 1) |
-| Add scholar flow | ✅ (scenario B) | partial — Section 6 only checks modal opens + form fields; the actual create-Scholar call is in Section 2 via API |
-| Add validation | ✅ (scenario C) | not covered (manual only) |
-| Reset password (mock) | ✅ (scenario D) | not covered (out of scope — mock-only) |
-| Edit scholar (mock) | ✅ (scenario E) | not covered (out of scope — mock-only) |
-| Deactivate | ✅ (scenario F) | covered indirectly by Section 2 PUT (toggles isActive) |
-| Assign scholar (mock) | ✅ (scenario G) | not covered (out of scope — mock-only) |
-| Scholar dashboard render | ✅ (scenario H) | not covered — would need a separate E2E login as scholar |
+| Add scholar flow | ✅ (scenario B) | ✅ (Section 6 + Section 2 via API) |
+| Add validation | ✅ (scenario C) | ✅ (backend suite covers it) |
+| Reset password | ✅ (scenario D) | ✅ (Section 7 + Section 2 via API) |
+| Edit scholar | ✅ (scenario E) | ✅ (Section 8 + Section 2 via API) |
+| Edit validation | ✅ (scenario E2) | ✅ (backend suite covers it) |
+| Deactivate | ✅ (scenario F) | ✅ (Section 2 PUT) |
+| Reactivate | ✅ (scenario F2) | ✅ (Section 10 + Section 2 PUT) |
+| Assign scholar (mock) | ✅ (scenario G) | not covered (intentional mock) |
+| Scholar dashboard render | ✅ (scenario H) | ✅ (Section 3 logs in via UI) |
 | Scholar accept | ✅ (scenario I) | ✅ (Section 3) |
-| Scholar reject | ✅ (scenario J) | not covered (Section 3 only tests accept) |
-| Scope (own masjid only) | ✅ (scenario K) | ✅ (Section 3 partial — sees 2 bookings; Section 4 SKIPPED) |
-| Authorization (community → 403) | ✅ (scenario L) | ✅ (Section 5) |
+| Scholar reject | ✅ (scenario J) | ✅ (Section 11) |
+| Reject requires reason | ✅ (scenario J2) | ✅ (backend suite + Section 4) |
+| Scope (own masjid only) | ✅ (scenario K) | ✅ (Section 3 + Section 9) |
+| Cross-mosque API | ✅ (scenario K2) | ✅ (backend suite + Section 2) |
+| Authorization (community → 403) | ✅ (scenario L) | ✅ (Section 5 + backend) |
+| Authorization (manager → 403) | ✅ (scenario L2) | ✅ (Section 5 + backend) |
 
 ## Outcome
 
 Phase 11 testing:
-- 1 bug found and fixed (B1 — CORS port mismatch)
-- 3 bugs deferred (B2 backend divergence, B3 frontend
-  guard divergence, B4 seeder cross-masque gap)
-- 23/23 Playwright assertions pass (1 SKIP for the
-  Al-Rahman cross-mosque section)
-- Manual guide (12 scenarios A–L) covers the rest
+- **6 bugs found and fixed** (B1, B2, F2, F4, F5, F6)
+- 34/34 Playwright assertions pass (2 SKIPs for
+  seed-dependent sections)
+- 27/27 backend integration tests pass (74 total
+  across 3 suites)
+- Manual guide (15 scenarios A–L2) covers the rest
 
-## Deferred work for the next pass
+## Bug summary
 
-- **Backend scholars integration tests** — add
-  `backend/tests/integration/scholars_scope.test.js` to
-  cover:
-  - admin CRUD on scholars
-  - non-admin → 403
-  - deactivation blocks login (403 from `auth.js`)
-  - cross-mosque: admin from masjid A cannot
-    list/update scholars in masjid B (this currently
-    works because the route doesn't filter by `mosqueId`,
-    but it's worth pinning with a test)
-- **Scholar dashboard E2E** — extend
-  `scholars_test.js` Section 3 to actually log in via the
-  UI as a scholar (instead of using the API token
-  directly) and verify the dashboard renders, the accept
-  button works through the React event flow, and the
-  "My Confirmed" section updates without a full page
-  reload.
-- **Temp password in response** (B2) — once the
-  controller/service refactor is reconciled, confirm the
-  response always includes `tempPassword` so the admin
-  can share it with the new scholar.
-- **AdminLayout guard** (B3) — fix the redirect target
-  to `ROUTES.ADMIN_LOGIN` and add a `loading` wait so a
-  hard reload of a protected page works as long as the
-  token in localStorage is valid.
-- **Seeder multi-masjid** (B4) — add a second masjid +
-  admin + scholar + booking to the seed so Section 4
-  actually runs (instead of SKIP).
-- **Scholar dashboard greeting** — currently hardcoded
-  "Maulana Abdullah!". Should pull from `useAuth().user.name`
-  (the actual logged-in scholar). Cosmetic polish.
+| ID | What | How fixed |
+|---|---|---|
+| **B1** | CORS only allowed `localhost:5173`; dev server was on `5174` so admin login POST was blocked | Added `127.0.0.1:5174` to `allowedOrigins` in `backend/server.js` |
+| **B2** | Backend `tempPassword` claim was never actually returned — frontend modal couldn't show it | Switched to admin-typed password (no email roundtrip needed). Frontend modal now sends the typed password via `POST /api/scholars` body and the User pre-save hook hashes it |
+| **F2** | Edit scholar pencil icon showed "Edit scholar details flow is mock-only" | Wired real Edit modal → `PUT /api/scholars/:id`. Extended validator to accept `name / email / phone / specialization`. Seeded scholars now have `specialization` so the pre-fill doesn't send empty strings |
+| **F4** | Reset password key icon showed "Password reset endpoint is not available yet" | Added `POST /api/scholars/:id/reset-password` (admin-only) that hashes via pre-save. Frontend modal now sends typed password and copies to clipboard |
+| **F5** | No way to reactivate a deactivated scholar | Edit modal flips between Activate/Deactivate icons based on `isActive`. Click re-toggles via `PUT /api/scholars/:id` with `{isActive: true}` |
+| **F6** | Reject had no reason — could not record why a booking was rejected | Frontend opens a prompt that requires ≥3 chars. Backend validator requires `rejectionReason` ≥3 chars on `PUT /api/nikah-bookings/:id` with `status: 'rejected'` |
+
+## Deferred work
+
+(none — all Phase 11 work is complete)

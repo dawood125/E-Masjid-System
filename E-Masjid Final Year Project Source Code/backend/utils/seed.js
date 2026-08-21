@@ -35,7 +35,7 @@ const seedDB = async () => {
       name: 'Haji Ahmad', email: 'admin@emasjid.pk', password: 'admin123', role: 'admin', phone: '0300-2222222',
     });
     const scholar = await User.create({
-      name: 'Sheikh Muhammad Hassan', email: 'scholar@emasjid.pk', password: 'scholar123', role: 'scholar', phone: '0300-3333333',
+      name: 'Sheikh Muhammad Hassan', email: 'scholar@emasjid.pk', password: 'scholar123', role: 'scholar', phone: '0300-3333333', specialization: 'Nikah Services',
     });
     const committee1 = await User.create({
       name: 'Haji Muhammad Arif', email: 'committee@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444444',
@@ -54,7 +54,7 @@ const seedDB = async () => {
       name: 'Manager User (Real Email)', email: 'pa672189@gmail.com', password: 'manager123', role: 'manager', phone: '0300-7777777',
     });
     const realEmailScholar = await User.create({
-      name: 'Scholar User (Real Email)', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888',
+      name: 'Scholar User (Real Email)', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888', specialization: 'Nikah Services',
     });
     const realEmailCommittee = await User.create({
       name: 'Committee User (Real Email)', email: 'wb494929@gmail.com', password: 'committee123', role: 'committee', phone: '0300-9999999',
@@ -126,6 +126,46 @@ const seedDB = async () => {
       { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailScholar._id, realEmailCommittee._id] } },
       { mosqueId: mosque._id }
     );
+
+    const scholar2 = await User.create({
+      name: 'Maulana Yousuf Raza', email: 'scholar2@emasjid.pk', password: 'scholar123', role: 'scholar', phone: '0300-3333334', specialization: 'Nikah & Janazah',
+    });
+    const scholar3 = await User.create({
+      name: 'Sheikh Abdul Kareem', email: 'scholar3@emasjid.pk', password: 'scholar123', role: 'scholar', phone: '0300-3333335', specialization: 'Family Counseling',
+    });
+    const scholar4 = await User.create({
+      name: 'Mufti Salman', email: 'scholar4@emasjid.pk', password: 'scholar123', role: 'scholar', phone: '0300-3333336', specialization: 'Nikah Services',
+    });
+
+    const committee2 = await User.create({
+      name: 'Haji Tariq Mehmood', email: 'committee2@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444445',
+    });
+    const committee3 = await User.create({
+      name: 'Haji Rashid Aziz', email: 'committee3@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444446',
+    });
+    const committee4 = await User.create({
+      name: 'Haji Akram Hussain', email: 'committee4@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444447',
+    });
+
+    const user2 = await User.create({
+      name: 'Hamza Iqbal', email: 'user2@emasjid.pk', password: 'user1234', role: 'community', phone: '0300-5555556',
+    });
+    const user3 = await User.create({
+      name: 'Ahmad Raza', email: 'user3@emasjid.pk', password: 'user1234', role: 'community', phone: '0300-5555557',
+    });
+    const user4 = await User.create({
+      name: 'Saad Ahmed', email: 'user4@emasjid.pk', password: 'user1234', role: 'community', phone: '0300-5555558',
+    });
+
+    await User.updateOne({ _id: scholar2._id }, { mosqueId: mosque2._id });
+    await User.updateOne({ _id: scholar3._id }, { mosqueId: mosque3._id });
+    await User.updateOne({ _id: scholar4._id }, { mosqueId: mosque4._id });
+    await User.updateOne({ _id: committee2._id }, { mosqueId: mosque2._id });
+    await User.updateOne({ _id: committee3._id }, { mosqueId: mosque3._id });
+    await User.updateOne({ _id: committee4._id }, { mosqueId: mosque4._id });
+    await User.updateOne({ _id: user2._id }, { mosqueId: mosque2._id });
+    await User.updateOne({ _id: user3._id }, { mosqueId: mosque3._id });
+    await User.updateOne({ _id: user4._id }, { mosqueId: mosque4._id });
 
     // Seed Donations (all 4 masjids)
     const donations = [
@@ -296,6 +336,36 @@ const seedDB = async () => {
         userId: user1._id,
         mosqueId: mosque._id,
       },
+      {
+        groomName: 'Bilal Akhtar',
+        brideName: 'Maryam Bibi',
+        preferredDate: new Date('2026-09-12'),
+        preferredTime: '11:30',
+        contact: '0302-7771122',
+        status: 'pending',
+        userId: user2._id,
+        mosqueId: mosque2._id,
+      },
+      {
+        groomName: 'Faisal Iqbal',
+        brideName: 'Zainab Fatima',
+        preferredDate: new Date('2026-09-20'),
+        preferredTime: '12:00',
+        contact: '0302-8883344',
+        status: 'pending',
+        userId: user3._id,
+        mosqueId: mosque3._id,
+      },
+      {
+        groomName: 'Imran Younas',
+        brideName: 'Sana Tariq',
+        preferredDate: new Date('2026-09-28'),
+        preferredTime: '13:00',
+        contact: '0302-9995566',
+        status: 'pending',
+        userId: user4._id,
+        mosqueId: mosque4._id,
+      },
     ]);
 
     // Seed fund requests
@@ -396,8 +466,17 @@ const seedDB = async () => {
     console.log('  Admin (Al-Falah):   admin3@emasjid.pk / admin123');
     console.log('  Admin (Al-Taqwa):   admin4@emasjid.pk / admin123');
     console.log('  Scholar (Al-Noor):  scholar@emasjid.pk / scholar123');
+    console.log('  Scholar (Al-Rahman): scholar2@emasjid.pk / scholar123');
+    console.log('  Scholar (Al-Falah):  scholar3@emasjid.pk / scholar123');
+    console.log('  Scholar (Al-Taqwa):  scholar4@emasjid.pk / scholar123');
     console.log('  Committee (Al-Noor): committee@emasjid.pk / committee123');
-    console.log('  User (community):   user@emasjid.pk / user1234');
+    console.log('  Committee (Al-Rahman): committee2@emasjid.pk / committee123');
+    console.log('  Committee (Al-Falah):  committee3@emasjid.pk / committee123');
+    console.log('  Committee (Al-Taqwa):  committee4@emasjid.pk / committee123');
+    console.log('  User (Al-Noor):   user@emasjid.pk / user1234');
+    console.log('  User (Al-Rahman): user2@emasjid.pk / user1234');
+    console.log('  User (Al-Falah):  user3@emasjid.pk / user1234');
+    console.log('  User (Al-Taqwa):  user4@emasjid.pk / user1234');
     console.log('\n📧 Real-email accounts (for forgot-password cross-role testing — receive real Gmail):');
     console.log('  Admin:     dawood.bhatti8812@gmail.com / admin123');
     console.log('  Manager:   pa672189@gmail.com / manager123   (role: manager — NOT managing any mosque in this seed)');

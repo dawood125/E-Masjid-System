@@ -12,14 +12,31 @@ function randomCompletedCount(seedIndex) {
   return 8 + seedIndex * 7
 }
 
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+  }
+  const el = document.createElement('textarea')
+  el.value = text
+  el.style.position = 'fixed'
+  el.style.opacity = '0'
+  document.body.appendChild(el)
+  el.select()
+  try { document.execCommand('copy') } catch (e) {}
+  document.body.removeChild(el)
+  return Promise.resolve()
+}
+
 export default function Scholars() {
   const { showToast } = useUI()
 
   const [scholars, setScholars] = useState([])
   const [assignments, setAssignments] = useState(ASSIGNMENT_MOCKS)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
   const [selectedScholar, setSelectedScholar] = useState(null)
+  const [revealedPassword, setRevealedPassword] = useState(null)
   const [showAddPassword, setShowAddPassword] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
   const [newScholar, setNewScholar] = useState({
@@ -30,10 +47,8 @@ export default function Scholars() {
     password: '',
     confirmPassword: '',
   })
-  const [resetForm, setResetForm] = useState({
-    password: '',
-    confirmPassword: '',
-  })
+  const [editForm, setEditForm] = useState({ name: '', phone: '', specialization: '', email: '' })
+  const [resetForm, setResetForm] = useState({ password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -57,9 +72,21 @@ export default function Scholars() {
 
   const totalCompletedNikah = scholars.reduce((sum, _, index) => sum + randomCompletedCount(index), 0)
 
+  const openEditScholar = (scholar) => {
+    setSelectedScholar(scholar)
+    setEditForm({
+      name: scholar.name || '',
+      email: scholar.email || '',
+      phone: scholar.phone || '',
+      specialization: scholar.specialization || '',
+    })
+    setIsEditModalOpen(true)
+  }
+
   const openResetPassword = (scholar) => {
     setSelectedScholar(scholar)
     setResetForm({ password: '', confirmPassword: '' })
+    setRevealedPassword(null)
     setIsResetModalOpen(true)
   }
 
@@ -82,8 +109,9 @@ export default function Scholars() {
         email: newScholar.email,
         phone: newScholar.phone,
         specialization: newScholar.specialization || 'Nikah Services',
+        password: newScholar.password,
       })
-      const created = { ...res.data, id: res.data._id || res.data.id, isActive: true }
+      const created = { ...res.data, isActive: true }
       setScholars((prev) => [created, ...prev])
       setIsAddModalOpen(false)
       setNewScholar({
@@ -95,7 +123,7 @@ export default function Scholars() {
         confirmPassword: '',
       })
       if (res.tempPassword) {
-        showToast(`Scholar created. Temp password: ${res.tempPassword}`, 'success')
+        showToast(`Scholar created. Login password: ${res.tempPassword}`, 'success')
       } else {
         showToast('Scholar account created successfully.', 'success')
       }
@@ -104,7 +132,29 @@ export default function Scholars() {
     }
   }
 
-  const submitResetPassword = (event) => {
+  const submitEditScholar = async (event) => {
+    event.preventDefault()
+    if (!selectedScholar) return
+
+    try {
+      const res = await api.updateScholar(selectedScholar.id, {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        specialization: editForm.specialization,
+      })
+      setScholars((prev) =>
+        prev.map((item) => (item.id === selectedScholar.id ? { ...item, ...res.data, id: item.id } : item))
+      )
+      setIsEditModalOpen(false)
+      setSelectedScholar(null)
+      showToast(`${editForm.name} updated.`, 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to update scholar.', 'error')
+    }
+  }
+
+  const submitResetPassword = async (event) => {
     event.preventDefault()
 
     if (resetForm.password.length < 6) {
@@ -117,8 +167,14 @@ export default function Scholars() {
       return
     }
 
-    setIsResetModalOpen(false)
-    showToast('Password reset endpoint is not available yet.', 'warning')
+    try {
+      const res = await api.resetScholarPassword(selectedScholar.id, resetForm.password)
+      setRevealedPassword(res.newPassword)
+      setResetForm({ password: '', confirmPassword: '' })
+      showToast(`Password reset for ${selectedScholar.name}. Share the new password with them.`, 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to reset password.', 'error')
+    }
   }
 
   const assignScholar = (bookingId, scholarId) => {
@@ -132,14 +188,18 @@ export default function Scholars() {
     showToast(`${bookingId} assigned to ${scholar?.name || 'scholar'}.`, 'success')
   }
 
-  const deleteScholar = (scholar) => {
+  const toggleActive = (scholar) => {
     ;(async () => {
       try {
-        const res = await api.updateScholar(scholar.id, { isActive: false })
+        const next = !scholar.isActive
+        const res = await api.updateScholar(scholar.id, { isActive: next })
         setScholars((prev) =>
-          prev.map((item) => (item.id === scholar.id ? { ...item, ...res.data, id: item.id, isActive: false } : item))
+          prev.map((item) => (item.id === scholar.id ? { ...item, ...res.data, id: item.id, isActive: next } : item))
         )
-        showToast(`${scholar.name} marked inactive.`, 'success')
+        showToast(
+          next ? `${scholar.name} re-activated.` : `${scholar.name} marked inactive.`,
+          'success'
+        )
       } catch (err) {
         showToast(err.message || 'Failed to update scholar.', 'error')
       }
@@ -192,8 +252,8 @@ export default function Scholars() {
           <p className="mt-2 text-2xl font-bold text-emerald-700">{activeCount}</p>
         </article>
         <article className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Nikah Performed</p>
-          <p className="mt-2 text-2xl font-bold text-amber-700">{totalCompletedNikah}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inactive</p>
+          <p className="mt-2 text-2xl font-bold text-amber-700">{scholars.length - activeCount}</p>
         </article>
       </div>
 
@@ -265,22 +325,31 @@ export default function Scholars() {
                     type="button"
                     onClick={() => openResetPassword(scholar)}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 text-amber-700 hover:bg-amber-50"
+                    title="Reset password"
                   >
                     <i className="material-icons-round text-base">key</i>
                   </button>
                   <button
                     type="button"
-                    onClick={() => showToast('Edit scholar details flow is mock-only.', 'info')}
+                    onClick={() => openEditScholar(scholar)}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
+                    title="Edit scholar"
                   >
                     <i className="material-icons-round text-base">edit</i>
                   </button>
                   <button
                     type="button"
-                    onClick={() => deleteScholar(scholar)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => toggleActive(scholar)}
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+                      scholar.isActive
+                        ? 'border-red-200 text-red-600 hover:bg-red-50'
+                        : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                    }`}
+                    title={scholar.isActive ? 'Deactivate' : 'Activate'}
                   >
-                    <i className="material-icons-round text-base">delete</i>
+                    <i className="material-icons-round text-base">
+                      {scholar.isActive ? 'delete' : 'check_circle'}
+                    </i>
                   </button>
                 </div>
               </div>
@@ -459,6 +528,77 @@ export default function Scholars() {
         </div>
       )}
 
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
+                <i className="material-icons-round text-primary-700">edit</i>
+                Edit Scholar
+              </h3>
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+
+            <form onSubmit={submitEditScholar} className="space-y-4 px-6 py-5">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Full Name *</span>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Email *</span>
+                <input
+                  type="email"
+                  required
+                  value={editForm.email}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, email: event.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Phone *</span>
+                <input
+                  type="tel"
+                  required
+                  value={editForm.phone}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, phone: event.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Specialization</span>
+                <input
+                  type="text"
+                  value={editForm.specialization}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, specialization: event.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                />
+              </label>
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
@@ -467,62 +607,100 @@ export default function Scholars() {
                 <i className="material-icons-round text-primary-700">key</i>
                 Reset Password
               </h3>
-              <button type="button" onClick={() => setIsResetModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <button type="button" onClick={() => { setIsResetModalOpen(false); setRevealedPassword(null) }} className="text-gray-500 hover:text-gray-700">
                 <i className="material-icons-round">close</i>
               </button>
             </div>
 
-            <form onSubmit={submitResetPassword} className="space-y-4 px-6 py-5">
+            <div className="space-y-4 px-6 py-5">
               <p className="text-sm text-gray-600">
                 Reset password for <span className="font-semibold text-gray-900">{selectedScholar?.name}</span>
               </p>
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">New Password *</span>
-                <div className="relative">
-                  <input
-                    type={showResetPassword ? 'text' : 'password'}
-                    minLength={6}
-                    required
-                    value={resetForm.password}
-                    onChange={(event) => setResetForm((prev) => ({ ...prev, password: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-primary-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowResetPassword((prev) => !prev)}
-                    className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-                  >
-                    <i className="material-icons-round text-base">{showResetPassword ? 'visibility_off' : 'visibility'}</i>
-                  </button>
+              {!revealedPassword && (
+                <form onSubmit={submitResetPassword} className="space-y-4">
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-gray-700">New Password *</span>
+                    <div className="relative">
+                      <input
+                        type={showResetPassword ? 'text' : 'password'}
+                        minLength={6}
+                        required
+                        value={resetForm.password}
+                        onChange={(event) => setResetForm((prev) => ({ ...prev, password: event.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-primary-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPassword((prev) => !prev)}
+                        className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+                      >
+                        <i className="material-icons-round text-base">{showResetPassword ? 'visibility_off' : 'visibility'}</i>
+                      </button>
+                    </div>
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-gray-700">Confirm New Password *</span>
+                    <input
+                      type="password"
+                      minLength={6}
+                      required
+                      value={resetForm.confirmPassword}
+                      onChange={(event) => setResetForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    />
+                  </label>
+
+                  <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => { setIsResetModalOpen(false); setRevealedPassword(null) }}
+                      className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
+                      Reset Password
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {revealedPassword && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-sm font-semibold text-emerald-900">Password updated successfully</p>
+                    <p className="mt-2 text-xs text-emerald-800">Share this new password with the scholar through a secure channel (in person, WhatsApp, etc.).</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <code className="flex-1 break-all rounded-md bg-white px-3 py-2 font-mono text-sm text-gray-900 ring-1 ring-emerald-200">
+                        {revealedPassword}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await copyToClipboard(revealedPassword)
+                          showToast('Copied to clipboard.', 'success')
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+                      >
+                        <i className="material-icons-round text-sm">content_copy</i>
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => { setIsResetModalOpen(false); setRevealedPassword(null) }}
+                      className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Confirm New Password *</span>
-                <input
-                  type="password"
-                  minLength={6}
-                  required
-                  value={resetForm.confirmPassword}
-                  onChange={(event) => setResetForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-
-              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsResetModalOpen(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
-                  Reset Password
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       )}

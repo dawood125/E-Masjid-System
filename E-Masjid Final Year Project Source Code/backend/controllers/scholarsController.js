@@ -12,10 +12,20 @@ const listScholars = tryOrNext(async (req, res) => {
 });
 
 const createScholar = tryOrNext(async (req, res) => {
-  const scholar = await svc.create(req.body, req.user);
+  const result = await svc.create(req.body, req.user);
+  const { scholar } = result;
   res.status(201).json({
     success: true,
-    data: { id: scholar._id, name: scholar.name, email: scholar.email, phone: scholar.phone },
+    data: {
+      id: scholar._id,
+      name: scholar.name,
+      email: scholar.email,
+      phone: scholar.phone,
+      specialization: scholar.specialization,
+      mosqueId: scholar.mosqueId,
+      isActive: scholar.isActive,
+    },
+    tempPassword: result.password,
     message: 'Scholar account created',
   });
 });
@@ -25,4 +35,14 @@ const updateScholar = tryOrNext(async (req, res) => {
   res.json({ success: true, data: scholar });
 });
 
-module.exports = { listScholars, createScholar, updateScholar };
+const resetScholarPassword = tryOrNext(async (req, res) => {
+  const { password } = req.body;
+  const result = await svc.resetPassword(req.params.id, password, req.user);
+  res.json({
+    success: true,
+    newPassword: result.password,
+    message: 'Password has been reset. Share the new password with the scholar.',
+  });
+});
+
+module.exports = { listScholars, createScholar, updateScholar, resetScholarPassword };

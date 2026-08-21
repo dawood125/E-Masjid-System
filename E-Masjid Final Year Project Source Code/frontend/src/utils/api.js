@@ -28,7 +28,6 @@ class ApiService {
     const response = await fetch(`${this.baseURL}${endpoint}`, options)
     const data = await response.json()
 
-    // (we keep /api/auth/reset-password/:token below — handled per-call)
     if (response.status === 401 && !this.NO_REDIRECT_ENDPOINTS.includes(endpoint) && !endpoint.startsWith('/api/auth/reset-password/')) {
       localStorage.removeItem('authToken')
       localStorage.removeItem('user')
@@ -44,8 +43,6 @@ class ApiService {
     }
 
     if (!response.ok) {
-      // Attach the full response data to the error so pages can show
-      // per-field validation messages (data.errors from express-validator).
       const err = new Error(data.message || 'Request failed')
       err.errors = Array.isArray(data.errors) ? data.errors : null
       err.status = response.status
@@ -54,7 +51,6 @@ class ApiService {
     return data
   }
 
-  // Auth
   login(email, password) { return this.request('POST', '/api/auth/login', { email, password }) }
   register(data) { return this.request('POST', '/api/auth/register', data) }
   forgotPassword(email) { return this.request('POST', '/api/auth/forgot-password', { email }) }
@@ -62,7 +58,6 @@ class ApiService {
   getMe() { return this.request('GET', '/api/auth/me') }
   refreshToken() { return this.request('POST', '/api/auth/refresh-token') }
 
-  // Donations
   getDonations(params = '') { return this.request('GET', `/api/donations${params ? '?' + params : ''}`) }
   getTopDonors(params = '') { return this.request('GET', `/api/donations/top-donors${params ? '?' + params : ''}`) }
   getDonationSummary(params = '') { return this.request('GET', `/api/donations/summary${params ? '?' + params : ''}`) }
@@ -71,7 +66,6 @@ class ApiService {
   deleteDonation(id) { return this.request('DELETE', `/api/donations/${id}`) }
   createOnlineDonation(data) { return this.request('POST', '/api/donations/online', data) }
 
-  // Expenses
   getExpenses(params = '') { return this.request('GET', `/api/expenses${params ? '?' + params : ''}`) }
   getExpenseSummary(params = '') { return this.request('GET', `/api/expenses/summary${params ? '?' + params : ''}`) }
   createExpense(data) { return this.request('POST', '/api/expenses', data) }
@@ -108,7 +102,6 @@ class ApiService {
     return data
   }
 
-  // Events
   getEvents(params = '') { return this.request('GET', `/api/events${params ? '?' + params : ''}`) }
   getAdminEvents(params = '') { return this.request('GET', `/api/events/admin${params ? '?' + params : ''}`) }
   getEvent(id) { return this.request('GET', `/api/events/${id}`) }
@@ -119,21 +112,15 @@ class ApiService {
   deleteEvent(id) { return this.request('DELETE', `/api/events/${id}`) }
   registerForEvent(id) { return this.request('POST', `/api/events/${id}/register`) }
 
-  // Announcements
   getAnnouncements(params = '') { return this.request('GET', `/api/announcements${params ? '?' + params : ''}`) }
-  // Phase 6 (BUG-ANN-012): admin-side GET that force-scopes to req.user.mosqueId
-  // on the backend. SuperAdmin can pass ?mosqueId=... to choose. Prevents an
-  // unscoped admin from seeing another masjid's announcements.
   getAdminAnnouncements(params = '') { return this.request('GET', `/api/announcements/admin${params ? '?' + params : ''}`) }
   createAnnouncement(data) { return this.request('POST', '/api/announcements', data) }
   updateAnnouncement(id, data) { return this.request('PUT', `/api/announcements/${id}`, data) }
   deleteAnnouncement(id) { return this.request('DELETE', `/api/announcements/${id}`) }
 
-  // Prayer Times
   getPrayerTimes(params = '') { return this.request('GET', `/api/prayer-times${params ? '?' + params : ''}`) }
   updatePrayerTimes(data) { return this.request('PUT', '/api/prayer-times', data) }
 
-  // Marketing (Phase 4.5)
   getMarketingStats() { return this.request('GET', '/api/marketing/stats') }
   getMarketingImpact() { return this.request('GET', '/api/marketing/impact') }
   getMarketingFeaturedCampaign() { return this.request('GET', '/api/marketing/featured-campaign') }
@@ -141,7 +128,6 @@ class ApiService {
   getMarketingTestimonials() { return this.request('GET', '/api/marketing/testimonials') }
   getMarketingHeroSlides() { return this.request('GET', '/api/marketing/hero-slides') }
 
-  // Admin Marketing CRUD (Phase 4.5)
   adminListCampaigns() { return this.request('GET', '/api/admin/marketing/campaigns') }
   adminCreateCampaign(data) { return this.request('POST', '/api/admin/marketing/campaigns', data) }
   adminUpdateCampaign(id, data) { return this.request('PUT', `/api/admin/marketing/campaigns/${id}`, data) }
@@ -155,17 +141,15 @@ class ApiService {
   adminUpdateHeroSlide(id, data) { return this.request('PUT', `/api/admin/marketing/hero-slides/${id}`, data) }
   adminDeleteHeroSlide(id) { return this.request('DELETE', `/api/admin/marketing/hero-slides/${id}`) }
 
-  // Nikah Bookings
   getNikahBookings() { return this.request('GET', '/api/nikah-bookings') }
   createNikahBooking(data) { return this.request('POST', '/api/nikah-bookings', data) }
   updateNikahBooking(id, data) { return this.request('PUT', `/api/nikah-bookings/${id}`, data) }
 
-  // Scholars
   getScholars() { return this.request('GET', '/api/scholars') }
   createScholar(data) { return this.request('POST', '/api/scholars', data) }
   updateScholar(id, data) { return this.request('PUT', `/api/scholars/${id}`, data) }
+  resetScholarPassword(id, password) { return this.request('POST', `/api/scholars/${id}/reset-password`, { password }) }
 
-  // Mosques
   getMosques() { return this.request('GET', '/api/mosques') }
   getPublicMosques() { return this.request('GET', '/api/mosques/public') }
   searchMosques(params = '') { return this.request('GET', `/api/mosques/search${params ? '?' + params : ''}`) }
@@ -173,9 +157,6 @@ class ApiService {
   createMosque(data) { return this.request('POST', '/api/mosques', data) }
   updateMosque(id, data) { return this.request('PUT', `/api/mosques/${id}`, data) }
 
-  // Super Admin (Manager) onboarding flow — used by the Manager panel to
-  // list masjids/admins across all masjids they manage and to create the
-  // first admin of a new masjid.
   getSuperAdminMosques() { return this.request('GET', '/api/super-admin/mosques') }
   getSuperAdminAdmins() { return this.request('GET', '/api/super-admin/admins') }
   getSuperAdminUsers(role = '') {
@@ -188,12 +169,10 @@ class ApiService {
     return this.request('POST', '/api/super-admin/users', data)
   }
 
-  // Fund Requests
   getFundRequests(params = '') { return this.request('GET', `/api/fund-requests${params ? '?' + params : ''}`) }
   createFundRequest(data) { return this.request('POST', '/api/fund-requests', data) }
   reviewFundRequest(id, data) { return this.request('PUT', `/api/fund-requests/${id}`, data) }
 
-  // Committee
   getCommitteeMembers() { return this.request('GET', '/api/committee') }
   createCommitteeMember(data) { return this.request('POST', '/api/committee', data) }
   updateCommitteeMember(id, data) { return this.request('PUT', `/api/committee/${id}`, data) }

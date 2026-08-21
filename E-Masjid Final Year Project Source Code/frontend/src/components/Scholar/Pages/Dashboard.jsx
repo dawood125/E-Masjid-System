@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
+import { useAuth } from '../../../context/AuthContext.jsx'
 import api from '../../../utils/api.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 
@@ -12,8 +13,11 @@ function getDaysLeft(dateString) {
 
 export default function ScholarDashboard() {
   const { showToast } = useUI()
+  const { user } = useAuth()
   const [bookings, setBookings] = useState([])
   const [selectedBookingId, setSelectedBookingId] = useState(null)
+  const [rejectModalBookingId, setRejectModalBookingId] = useState(null)
+  const [rejectReason, setRejectReason] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -51,6 +55,7 @@ export default function ScholarDashboard() {
   )
 
   const selectedBooking = pendingBookings.find((booking) => booking.id === selectedBookingId) || null
+  const rejectModalBooking = bookings.find((booking) => booking.id === rejectModalBookingId) || null
 
   const acceptRequest = async (id) => {
     try {
@@ -68,19 +73,34 @@ export default function ScholarDashboard() {
     }
   }
 
-  const rejectRequest = async (id) => {
+  const openRejectModal = (id) => {
+    setRejectModalBookingId(id)
+    setRejectReason('')
+  }
+
+  const submitReject = async () => {
+    if (!rejectModalBooking) return
+    const trimmed = rejectReason.trim()
+    if (!trimmed) {
+      showToast('Please provide a reason for rejection.', 'warning')
+      return
+    }
     try {
-      const res = await api.updateNikahBooking(id, {
+      const res = await api.updateNikahBooking(rejectModalBooking.id, {
         status: 'rejected',
-        rejectionReason: 'Not available at requested slot',
+        rejectionReason: trimmed,
       })
-      setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, ...res.data, id } : booking)))
-      showToast(`Booking ${String(id).slice(-6)} rejected.`, 'warning')
+      setBookings((prev) => prev.map((booking) => (booking.id === rejectModalBooking.id ? { ...booking, ...res.data, id: rejectModalBooking.id } : booking)))
+      showToast(`Booking ${String(rejectModalBooking.id).slice(-6)} rejected.`, 'warning')
+      setRejectModalBookingId(null)
+      setRejectReason('')
       setSelectedBookingId(null)
     } catch (err) {
       showToast(err.message || 'Failed to reject booking.', 'error')
     }
   }
+
+  const greetingName = user?.name || 'Scholar'
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -90,7 +110,7 @@ export default function ScholarDashboard() {
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">
               <span className="block text-base font-normal text-white/80">Assalam-o-Alaikum,</span>
-              Maulana Abdullah!
+              {greetingName}!
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-white/90 sm:text-base">
               Manage Nikah ceremony requests, review pending submissions, and confirm upcoming ceremonies.
@@ -120,7 +140,7 @@ export default function ScholarDashboard() {
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">{acceptedBookings.length}</p>
-            <p className="text-sm text-gray-600">Confirmed This Month</p>
+            <p className="text-sm text-gray-600">Confirmed Upcoming</p>
           </div>
         </article>
 
@@ -129,7 +149,7 @@ export default function ScholarDashboard() {
             <i className="material-icons-round">favorite</i>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">24</p>
+            <p className="text-2xl font-bold text-gray-900">{acceptedBookings.length}</p>
             <p className="text-sm text-gray-600">Total Ceremonies</p>
           </div>
         </article>
@@ -190,7 +210,7 @@ export default function ScholarDashboard() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => rejectRequest(booking.id)}
+                        onClick={() => openRejectModal(booking.id)}
                         className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
                       >
                         Reject
@@ -236,7 +256,7 @@ export default function ScholarDashboard() {
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => rejectRequest(booking.id)}
+                  onClick={() => openRejectModal(booking.id)}
                   className="flex-1 rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white"
                 >
                   Reject
@@ -281,8 +301,10 @@ export default function ScholarDashboard() {
               <div className="flex-1">
                 <h4 className="text-base font-bold text-gray-900">Nikah: {booking.groomName} & {booking.brideName}</h4>
                 <p className="mt-1 text-sm text-gray-600">Time: {formatTime(booking.confirmedTime || booking.preferredTime)}</p>
-                <p className="text-sm text-gray-600">Location: Masjid Al-Noor, Main Hall</p>
                 <p className="text-sm text-gray-600">Contact: {booking.contact}</p>
+                {booking.rejectionReason && (
+                  <p className="mt-1 text-sm text-red-700">Note: {booking.rejectionReason}</p>
+                )}
               </div>
 
               <div className="text-sm font-semibold text-emerald-700">In {getDaysLeft(booking.confirmedDate || booking.preferredDate)} days</div>
@@ -318,10 +340,6 @@ export default function ScholarDashboard() {
               <div><span className="font-semibold text-gray-500">Contact:</span> {selectedBooking.contact}</div>
               <div><span className="font-semibold text-gray-500">Requested Date:</span> {formatDate(selectedBooking.preferredDate)}</div>
               <div><span className="font-semibold text-gray-500">Preferred Time:</span> {formatTime(selectedBooking.preferredTime)}</div>
-              <div><span className="font-semibold text-gray-500">Venue:</span> Masjid Al-Noor Main Hall</div>
-              <div className="sm:col-span-2">
-                <span className="font-semibold text-gray-500">Additional Notes:</span> Expected guests: 50-60. Please confirm parking support.
-              </div>
             </div>
 
             <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
@@ -334,7 +352,7 @@ export default function ScholarDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => rejectRequest(selectedBooking.id)}
+                onClick={() => openRejectModal(selectedBooking.id)}
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
               >
                 Reject
@@ -346,6 +364,58 @@ export default function ScholarDashboard() {
               >
                 Accept
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rejectModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
+                <i className="material-icons-round text-red-600">cancel</i>
+                Reject Booking
+              </h3>
+              <button type="button" onClick={() => setRejectModalBookingId(null)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-600">
+                Reject booking <span className="font-mono font-semibold text-gray-900">NKH-{String(rejectModalBooking.id).slice(-6).toUpperCase()}</span> for {rejectModalBooking.groomName} & {rejectModalBooking.brideName}?
+              </p>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Reason for rejection *</span>
+                <textarea
+                  rows={4}
+                  required
+                  value={rejectReason}
+                  onChange={(event) => setRejectReason(event.target.value)}
+                  placeholder="e.g. Schedule conflict with Jummah prayer on the requested date."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                />
+                <span className="block text-xs text-gray-500">The applicant will see this reason in their booking status.</span>
+              </label>
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setRejectModalBookingId(null)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={submitReject}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Reject Booking
+                </button>
+              </div>
             </div>
           </div>
         </div>

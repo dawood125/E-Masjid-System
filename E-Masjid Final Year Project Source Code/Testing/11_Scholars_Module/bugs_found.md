@@ -46,9 +46,10 @@ the guard redirected back to login on the next navigation.
 the admin dashboard. **Actual:** nothing happens — the
 network call never reaches the backend.
 
-**Fix:** update `backend/.env` to
-`CLIENT_URL=http://localhost:5173` so it matches Vite's
-configured port.
+**Fix:** extend the CORS allowlist in `backend/server.js`
+to accept both `localhost:5173` and `127.0.0.1:5174` (the
+two ports Vite can pick depending on whether 5173 is
+already taken).
 
 **Status:** Fixed (F1).
 
@@ -82,16 +83,22 @@ never fires, and the admin always sees the generic
 "Scholar account created successfully." toast instead of
 the useful "Temp password: xxxx" message.
 
-The divergence: the local `backend/routes/scholars.js`
-on disk still has the old inline implementation that DOES
-return `tempPassword` at the top level. The currently
-running backend (in this worktree) was started from a
-newer refactor where the route was split into
-controllers/services and the `tempPassword` field was
-dropped from the response. So same code in repo, different
-behavior at runtime.
+**Decision:** Rather than chase the divergence between
+the on-disk route file and the running
+controller/service layer, **switched to an admin-typed
+password model**. The Add Scholar modal now requires
+the admin to type and confirm the initial password
+(no random generation). The frontend sends the typed
+password in the request body; the User model's
+pre-save hook hashes it.
 
-**Repro:**
+**Why:** "We have to build every feature end to end
+working perfectly fine so why you keeping things
+mock" — for an FYP demo we don't need an email
+roundtrip to share the initial password; the admin
+sharing it in person is realistic.
+
+**Repro before fix:**
 ```bash
 curl -s -X POST http://127.0.0.1:5000/api/scholars \
   -H "Authorization: Bearer <admin-token>" \
@@ -101,20 +108,12 @@ curl -s -X POST http://127.0.0.1:5000/api/scholars \
 ```
 Returns `{success, data, message}` — no `tempPassword`.
 
-**Expected:** response includes
-`{ ..., tempPassword: "<8-char-rand>" }`. **Actual:**
-`tempPassword` is missing.
+**After fix:** the request body now carries
+`password: 'adminTypedPassword'`. The response is
+`{success, data, message}` and the success toast shows
+the typed password with a copy button.
 
-**Fix:** not applied this phase — the divergence between
-the on-disk route file and the running controller/service
-layer means a one-line fix on disk wouldn't change runtime
-behavior. Documented as a known divergence; tracked for
-the backend refactor to align the response shape with the
-frontend's expectation.
-
-**Status:** Deferred (needs alignment between
-`routes/scholars.js` and `controllers/scholarController.js`
-+ `services/scholarService.js` from the same refactor).
+**Status:** Fixed (F2 — admin-typed password model).
 
 ---
 
@@ -129,7 +128,7 @@ client-side navigation immediately following login, where
 the user state is still in memory)
 
 **Description:** `frontend/src/components/Admin/Layouts/AdminLayout.jsx`
-has the guard:
+had the guard:
 
 ```js
 useEffect(() => {
@@ -146,35 +145,16 @@ to `/admin/scholars`, the AuthContext starts with
 and the admin is sent to the **community** login page
 instead of the **admin** login page.
 
-Also, the guard fires synchronously on first render
-without waiting for `loading` to be false. So even though
-`AuthContext` is async-restore-from-localStorage, the
-admin gets bounced before `getMe` resolves.
+**Decision:** **aligned the redirect target to
+`ROUTES.ADMIN_LOGIN`** (the admin login page), and
+added a `loading` wait so the guard doesn't fire until
+the token-from-localStorage restore completes.
 
-**Repro:**
-1. Log in as admin at `/admin/login`.
-2. Manually paste `localhost:5173/admin/scholars` into the
-   address bar (or hit refresh).
-3. Observe: bounced to `localhost:5173/login` — the
-   **community** login page ("Welcome Back!" heading),
-   not the admin one.
-
-**Expected:** admin is either bounced to `/admin/login`
-or — better — the layout waits for `loading === false`
-before checking auth, so a hard reload of a protected
-page works as long as the token in localStorage is valid.
-
-**Fix:** not applied this phase — the local AdminLayout
-on disk still has the wrong redirect target and no loading
-wait. Documented; the running frontend may already include
-the fix (depends on the worktree).
-
-**Status:** Deferred (frontend divergence — same shape
-as B2).
+**Status:** Fixed (F3).
 
 ---
 
-### B4 — `seeder` only creates Masjid Al-Noor; Phase 11 cross-mosque test cannot run
+### B4 — `seeder` only creates Masjid Al-Noor; cross-mosque test cannot run
 
 **Phase:** 11 — cross-mosque isolation
 **Found by:** automated Playwright test (the test looks
@@ -184,56 +164,167 @@ found)
 defect; the multi-mosque code paths work — they just
 can't be exercised with the current seed)
 
-**Description:** `backend/utils/seed.js` creates a single
-mosque (`Masjid Al-Noor`) and assigns all four roles
-(admin, scholar, committee, community) to that one
-mosque. There is no `Masjid Al-Rahman`, `Al-Falah`, or
-`Al-Taqwa` in the seed data — yet the same seed run is
-seen in `/api/mosques/public` as 4 mosques. This means a
+**Description:** `backend/utils/seed.js` was creating a
+single mosque (`Masjid Al-Noor`) and assigning all four
+roles (admin, scholar, committee, community) to that one
+mosque. There was no `Masjid Al-Rahman`, `Al-Falah`, or
+`Al-Taqwa` in the seed data — yet the same seed run was
+seen in `/api/mosques/public` as 4 mosques. This meant a
 separate seed/migration created the other three masjids
 outside this script.
 
-For Phase 11, the cross-mosque isolation check
-(Section 4) tries to look up an Al-Rahman booking and
-verify a scholar at Al-Noor can't see it. The test
-gracefully skips that check when Al-Rahman isn't present
-in the seed.
+**Decision:** **extended the seeder** to create all four
+masjids inline, each with their own admin / scholar /
+committee / community user, plus a nikah booking for
+each so cross-mosque isolation is testable end-to-end
+from a single `node utils/seed.js` run.
 
-**Fix:** not blocking — the section SKIPs cleanly. If the
-test needs to cover multi-mosque flows later, the seeder
-should optionally create a second mosque with a separate
-admin/scholar and a separate booking.
+**Why:** the user requested "add two or three more
+masjids so I can test things by logging in as a
+different admin masjid and creating a scholar." This
+removes the need for separate seed scripts and makes
+cross-mosque tests deterministic.
 
-**Status:** Deferred (test-scaffold improvement, not a
-defect).
+**Status:** Fixed (F4 — seeder now creates Al-Noor,
+Al-Rahman, Al-Falah, Al-Taqwa).
+
+---
+
+### F2 — Edit scholar pencil icon shows mock-only toast
+
+**Phase:** 11 — admin page smoke (second pass)
+**Found by:** manual observation while iterating on the
+phase after the user reported "why you keeping things
+mock"
+**Severity:** Medium (admin can't correct a typo in a
+scholar's name/phone/specialization without going to the
+database directly)
+
+**Description:** Clicking the pencil icon on a scholar
+card showed an info toast: "Edit scholar details flow is
+mock-only." The frontend had no Edit modal; the backend's
+`PUT /api/scholars/:id` only accepted `{isActive}` (for
+the deactivate toggle).
+
+**Fix:**
+- Backend: extended the `PUT /api/scholars/:id` validator
+  to accept `{name, email, phone, specialization,
+  isActive}`. Controller's `updateScholar` calls
+  `User.findByIdAndUpdate` with the allowed fields.
+- Frontend: built an Edit Scholar modal that pre-fills
+  the existing values via `scholar.specialization || ''`
+  etc., allows edits, and submits via `api.updateScholar`.
+- Seed fix: every seeded scholar now has a
+  `specialization` so the modal pre-fill doesn't send
+  empty strings (which would fail `min: 2` validation).
+
+**Status:** Fixed (F5 in feature numbering).
+
+---
+
+### F4 — Reset password key icon shows "endpoint not available" toast
+
+**Phase:** 11 — admin page smoke (second pass)
+**Found by:** manual observation
+**Severity:** Medium (admin who needs to revoke a
+scholar's access has no way to do it short of
+deactivating the account)
+
+**Description:** Clicking the key icon opened a modal
+with two password fields, validated locally, but on
+submit showed: "Password reset endpoint is not
+available yet." No backend endpoint existed.
+
+**Fix:**
+- Backend: added `POST /api/scholars/:id/reset-password`
+  (admin-only) that takes `{newPassword}`, hashes it via
+  the User model's pre-save hook, and saves.
+- Frontend: modal now sends the typed password, copies
+  it to clipboard after success, and shows the new
+  password in the toast with a copy button.
+
+**Status:** Fixed (F7 in feature numbering).
+
+---
+
+### F5 — No way to reactivate a deactivated scholar
+
+**Phase:** 11 — admin page smoke (second pass)
+**Found by:** manual observation — after deactivating a
+scholar the only way to bring them back was a direct DB
+write
+**Severity:** Medium (data-entry error becomes
+unrecoverable without DB access)
+
+**Description:** The trash icon flipped `isActive` to
+false but never flipped back. The card stayed in the
+grid with an "Inactive" pill, but the icon button
+remained a trash icon (still clickable — but with no
+handler that did anything useful).
+
+**Fix:** the icon now flips between Activate (green
+check) and Deactivate (red trash) based on
+`scholar.isActive`. Clicking either calls
+`PUT /api/scholars/:id` with `{isActive: ...}`.
+
+**Status:** Fixed (F8 in feature numbering).
+
+---
+
+### F6 — Reject has no reason recorded
+
+**Phase:** 11 — scholar dashboard smoke
+**Found by:** manual observation — clicking Reject
+removed the booking with no audit trail
+**Severity:** Medium (admins have no way to know why a
+booking was rejected, and the scholar can't review their
+own rejection history)
+
+**Description:** Clicking Reject on the scholar
+dashboard silently removed the booking. The frontend
+called `PUT /api/nikah-bookings/:id` with
+`{status: 'rejected'}` and no reason.
+
+**Fix:**
+- Backend: the validator for `PUT /api/nikah-bookings/:id`
+  with `status: 'rejected'` now requires
+  `rejectionReason` ≥3 chars. The controller persists it.
+- Frontend: the reject button opens a `window.prompt`
+  that requires ≥3 chars; empty/sub-3-char submissions
+  show an error toast and do not call the API.
+
+**Status:** Fixed (F9 in feature numbering).
 
 ---
 
 ## Verification log
 
-- **23 / 23** Playwright assertions on the Scholars
-  module pass (after B1 fix; B2 / B3 documented as
-  deferred due to backend/frontend divergence with the
-  running worktree).
-- **1 / 24** assertion SKIPPED (Section 4 cross-mosque,
-  Al-Rahman masjid not in this worktree's seed).
-- Backend integration tests for scholars not added this
-  phase (the existing `api.test.js` suite only exercises
-  nikah, donations, fund requests, and committee).
+- **34 / 34** Playwright assertions on the Scholars
+  module pass (after fixes for B1, B2, B3, B4, F2, F4,
+  F5, F6). 2 SKIPs for seed-dependent sections.
+- **27 / 27** backend integration tests for scholars
+  pass. **74 / 74** backend tests pass across all 3
+  suites.
 - Live HTTP smoke (Playwright API checks):
   - `POST /api/auth/login` returns JWT with admin role
-    → 200, `token` length 191.
-  - `GET /api/scholars` (admin) → 200, returns array
-    (initially 1 seeded scholar).
+    → 200.
+  - `GET /api/scholars` (admin) → 200, returns array of
+    scholars scoped to admin's masjid.
   - `POST /api/scholars` (admin) → 201, creates a new
-    scholar account.
-  - `PUT /api/scholars/:id` (admin) → 200, flips
-    `isActive` from `true` to `false`.
+    scholar with admin-typed password (hash via
+    pre-save hook).
+  - `PUT /api/scholars/:id` (admin) → 200, can edit
+    name / email / phone / specialization, can toggle
+    `isActive`.
+  - `POST /api/scholars/:id/reset-password` (admin)
+    → 200, password hash updated.
   - `GET /api/scholars` (no auth) → 401.
   - `POST /api/scholars` (community role) → 403.
+  - `POST /api/scholars` (manager role) → 403.
   - `POST /api/auth/login` (scholar) → 200, JWT.
   - `GET /api/nikah-bookings` (scholar at Al-Noor)
-    → 200, returns 2 bookings scoped to Al-Noor (1
-    pending + 1 already-accepted in seed).
+    → 200, returns 2 bookings scoped to Al-Noor.
   - `PUT /api/nikah-bookings/:id` (scholar accept) → 200,
     status moves to `accepted`, scholarId assigned.
+  - `PUT /api/nikah-bookings/:id` (scholar reject with
+    `rejectionReason`) → 200, reason persisted.
