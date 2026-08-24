@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
@@ -13,6 +13,14 @@ export default function Login() {
   const { showToast } = useUI()
   const navigate = useNavigate()
   useForceLogoutOnMount()
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem('logoutNotice')
+    if (notice) {
+      sessionStorage.removeItem('logoutNotice')
+      showToast(notice, 'error')
+    }
+  }, [showToast])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

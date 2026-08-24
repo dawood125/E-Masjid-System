@@ -34,7 +34,7 @@ function resolveFromName() {
   return process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'E-Masjid System';
 }
 
-const sendEmail = async ({ to, subject, html, text }) => {
+const sendEmail = async ({ to, subject, html, text, replyTo }) => {
   if (!to) throw new Error('sendEmail: `to` is required');
   if (!subject) throw new Error('sendEmail: `subject` is required');
   if (!html && !text) throw new Error('sendEmail: `html` or `text` is required');
@@ -46,13 +46,15 @@ const sendEmail = async ({ to, subject, html, text }) => {
   const fromName = resolveFromName();
 
   const transporter = nodemailer.createTransport(buildSmtpTransportOptions());
-  const info = await transporter.sendMail({
+  const mail = {
     from: `"${fromName}" <${fromEmail}>`,
     to,
     subject,
     html: html || (text ? `<p>${text}</p>` : undefined),
     text: text || (html ? html.replace(/<[^>]+>/g, '') : undefined),
-  });
+  };
+  if (replyTo) mail.replyTo = replyTo;
+  const info = await transporter.sendMail(mail);
   return { provider: 'smtp', messageId: info.messageId, statusCode: 200 };
 };
 

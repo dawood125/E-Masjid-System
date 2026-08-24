@@ -297,14 +297,66 @@ called `PUT /api/nikah-bookings/:id` with
 
 ---
 
+### F7 — Deactivating a scholar does not log them out
+
+**Phase:** 11 — manual smoke after F5 fix
+**Found by:** manual reproduction — log in as scholar in
+one tab, deactivate from admin tab, refresh scholar tab.
+Scholar dashboard still rendered.
+**Severity:** High (security — a deactivated account
+retains access to in-flight sessions; admin cannot
+forcibly revoke an account without invalidating JWTs
+server-side, which JWTs can't do)
+
+**Description:** `backend/middleware/auth.js` `protect`
+verified the JWT and loaded the user, but did NOT
+check `req.user.isActive`. So a scholar who logged in
+before being deactivated still had a valid token in
+localStorage and could keep hitting protected endpoints
+(`/api/auth/me`, `/api/nikah-bookings`, etc.). Only
+`POST /api/auth/login` blocked inactive users (via the
+service layer check in `authService.loginUser`).
+
+**Repro:**
+1. Tab A: log in as `scholar@emasjid.pk` at `/login`,
+   land on `/scholar/dashboard`.
+2. Tab B: log in as `admin@emasjid.pk`, go to
+   `/admin/scholars`, deactivate the scholar.
+3. Tab A: click any nav item or refresh.
+4. Observe: dashboard still renders; the next API call
+   returns 200 because `protect` only checks JWT, not
+   `isActive`.
+
+**Expected:** the deactivated scholar's next API call
+returns 401; `api.js` clears localStorage and redirects
+to `/login`; the login page shows a toast explaining
+why.
+
+**Fix:**
+- Backend: added `if (req.user.isActive === false)
+  return 401` to `protect` middleware in
+  `backend/middleware/auth.js`.
+- Frontend: `api.js` now stores the 401 message in
+  `sessionStorage.logoutNotice` before redirecting;
+  `Login.jsx` and `AdminLogin.jsx` read it on mount
+  and show a toast ("Account is deactivated. Please
+  contact your administrator.").
+
+**Status:** Fixed (F10 in feature numbering). 4 new
+backend tests in `scholars_scope.test.js` cover the
+behavior (me, nikah-bookings, refresh-token,
+reactivation restores access).
+
+---
+
 ## Verification log
 
 - **34 / 34** Playwright assertions on the Scholars
   module pass (after fixes for B1, B2, B3, B4, F2, F4,
-  F5, F6). 2 SKIPs for seed-dependent sections.
-- **27 / 27** backend integration tests for scholars
-  pass. **74 / 74** backend tests pass across all 3
-  suites.
+  F5, F6, F7). 2 SKIPs for seed-dependent sections.
+- **31 / 31** backend integration tests for scholars
+  pass (added 4 F7 tests). **78 / 78** backend tests
+  pass across all 3 suites.
 - Live HTTP smoke (Playwright API checks):
   - `POST /api/auth/login` returns JWT with admin role
     → 200.

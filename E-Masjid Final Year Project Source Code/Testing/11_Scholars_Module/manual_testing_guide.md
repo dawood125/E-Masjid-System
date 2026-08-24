@@ -71,7 +71,7 @@ Expected: page loads at `/admin/scholars` with:
 - A **Pending Nikah Assignments** section below with
   mock booking rows and a per-booking "Assign Scholar"
   dropdown
-
+passed
 ### B. Add a new scholar
 
 1. From `/admin/scholars`, click **Add New Scholar**
@@ -169,6 +169,21 @@ Expected: status pill flips back to **Active**. The
 Active count rises by 1, Inactive drops by 1. The icon
 flips back to **Deactivate**. The scholar can now log
 in again.
+
+### F3. Deactivation kicks logged-in scholar out (BUG-F7 fixed)
+
+1. Tab A: open `http://127.0.0.1:5174/login`, log in as
+   `scholar@emasjid.pk` / `scholar123`. Land on
+   `/scholar/dashboard`.
+2. Tab B: open `http://127.0.0.1:5174/admin/login`, log
+   in as `admin@emasjid.pk` / `admin123`. Go to
+   `/admin/scholars`, deactivate the scholar (trash icon).
+3. Tab A: click any nav link or refresh the page.
+
+Expected in Tab A: the next API call returns 401, the
+frontend clears localStorage and redirects to `/login`,
+and the login page shows a toast: "Account is
+deactivated. Please contact your administrator."
 
 ### G. Pending Nikah Assignments — assign a scholar (mock)
 
@@ -340,3 +355,7 @@ Q6 in `questions_asked.md`.
   - **F6** Reject had no reason — fixed, browser prompt
     requires ≥3-char reason, persisted as
     `rejectionReason` on the booking.
+  - **F7** Deactivating a scholar did not log them out
+    — fixed, `protect` middleware now checks
+    `isActive` and returns 401; login page shows a
+    toast with the reason.

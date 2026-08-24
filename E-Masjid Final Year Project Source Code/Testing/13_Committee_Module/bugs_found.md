@@ -1,4 +1,28 @@
-# 12 Committee Module � bugs found
+# 13 Committee Voting Module — bugs found
 
-**Status:** Not started (blocked until prior phases complete)
+| ID | What | How fixed |
+|---|---|---|
+| **B13-1** | `Committee/Pages/Dashboard.jsx` used the old single-reviewer pattern: one "Approve" / "Reject" button per request that called `PUT /api/fund-requests/:id` with `status: 'approved'` or `'rejected'` — there was no notion of per-member votes, no tally, and no way for multiple committee members to weigh in | Replaced the review form with `castVote`: each committee member independently picks **Approve** or **Reject** with an optional note. One entry per member (re-vote replaces the previous). New `POST /api/fund-requests/:id/vote` endpoint returns the updated tally. |
+| **B13-2** | `Admin/Pages/FundRequests.jsx` (and the old `Committee` dashboard via the legacy `PUT /:id`) had no admin-only finalization step — the first committee member to act would lock the decision for the whole masjid, leaving the other members no way to register disagreement | Added `POST /api/fund-requests/:id/finalize` (admin-only). The committee votes freely; the admin reads the tally and finalizes after the committee meeting. Tied votes need an explicit `overrideStatus`. |
+| **B13-3** | The `FundRequest` model had no `votes[]` or `finalizedBy` fields; the committee vote data didn't exist anywhere | Added `voteSchema` sub-document + `votes[]`, `finalizedBy`, `finalizedAt`, `finalNote`. Kept the legacy `reviewedBy`/`reviewNote` fields so existing data still parses (backward compat). |
+| **B13-4** | The requester was informed on every legacy single-reviewer `PUT /:id` call (and would have been informed per-vote in any naive implementation), so they could tell who voted what — pressure on committee members | `notifyRequester` now fires **only after `finalize`** (admin-only). Per-vote emails are not sent. |
+| **B13-5** | `create()` honored any `mosqueId` the user submitted — a community user could create a fund request "for" a different masjid | `create()` now ignores the body's `mosqueId` and uses `user.mosqueId`. Sending a mismatched `mosqueId` returns `400 Cannot create a request for another mosque`. Covered by `fund_voting.test.js > community cannot submit for another mosque`. |
+| **B13-6** | The committee dashboard's committee cards only showed the **requesterName** in the heading, so a Playwright that targeted the requester-name text leaked across `<div>` boundaries and double-clicked the wrong card's vote button | Targeted cards via `page.getByRole('heading', { name: requesterName })` then `xpath=ancestor::div[contains(@class, "rounded-2xl")]` so each Cast-vote click is scoped to exactly one card. |
+| **B13-7** | `finalize()` had a `findById` + `findByIdAndUpdate` race window — two simultaneous finalize calls from a flaky admin click could both succeed, leaving the request finalized by two "finalizers" with two timestamps | Replaced with `findOneAndUpdate({ _id, status: 'pending' }, ...)` so the atomic guard means only one of the two wins; the other gets `409 Request is already finalized`. Covered by `fund_voting.test.js > two simultaneous finalize attempts`. |
+| **B13-8** | `castVote()` had the same race window — a fast-firing double-click could land two `POST /:id/vote` requests for two different members, but if both landed from the *same* member they would have produced two entries | `castVote()` now uses `findOneAndUpdate({ _id, status: 'pending' }, ...)`. Re-votes replace the member's previous entry (one slot per member) regardless of race order; voting on an already-finalized request returns `409`. |
+| **B13-9** | The legacy `PUT /api/fund-requests/:id` was used by the now-obsolete single-reviewer UI — once the committee dashboard switched to `voteFundRequest`, that endpoint was orphaned but remained a security concern (committee member could still call it and finalize without admin oversight) | Kept the legacy endpoint as **committee|admin** authorized, but it only sets `reviewedBy`/`reviewNote` and does *not* flip `status`. To transition a request out of `pending` today you must use `finalizeFundRequest`. The committee dashboard no longer calls the legacy PUT. |
+| **B13-10** | After finalize, `MyRequests.jsx` was still rendering the *legacy* `reviewedBy.name` and `reviewNote` (which are unset for the vote flow), so a finalized request looked indistinguishable from a still-pending one | Replaced the legacy card with a "Final Decision" card showing `finalizedBy?.name`, `finalizedAt`, and `finalNote`. Approved requests get an extra green-line *"Please visit the mosque office during working hours to collect your assistance."* |
+| **B13-11** | `Admin/Pages/FundRequests.jsx` had no tally in the table — the admin only saw *pending / approved / rejected* status with no idea which committee members had voted yet | Added a "Votes" column: `2✓ · 1✗` with a yellow `TIED` pill when counts are equal. The Finalize button now only appears when the tally has at least one vote. |
 
+## Verification
+
+Each fix is covered by:
+- A backend integration test in
+  `backend/tests/integration/fund_voting.test.js` (30 tests,
+  covering public access, mosque scope, voting, finalize, ties, races, deactivation).
+- A Playwright E2E assertion in
+  `Testing/13_Committee_Voting_Module/committee_voting_test.js`
+  (10 sections covering submit → 3 distinct votes → tally → finalize →
+  requester feedback).
+- A manual scenario in
+  `Testing/13_Committee_Voting_Module/manual_testing_guide.md`.

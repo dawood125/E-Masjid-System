@@ -417,4 +417,64 @@ describe('Scholars module scope + behavior (Phase 11)', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe('deactivation mid-session kicks logged-in user out (BUG-F7 fix)', () => {
+    let liveScholarId;
+    let liveScholarToken;
+
+    beforeAll(async () => {
+      const created = await request(app)
+        .post('/api/scholars')
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({ name: 'Live Scholar', email: 'live@t.com', specialization: 'Nikah', password: 'livepw1234' });
+      liveScholarId = created.body.data.id;
+
+      const login = await request(app).post('/api/auth/login').send({ email: 'live@t.com', password: 'livepw1234' });
+      liveScholarToken = login.body.token;
+    });
+
+    test('deactivated scholar token cannot hit /api/auth/me', async () => {
+      const before = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${liveScholarToken}`);
+      expect(before.status).toBe(200);
+
+      await request(app)
+        .put(`/api/scholars/${liveScholarId}`)
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({ isActive: false });
+
+      const after = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${liveScholarToken}`);
+      expect(after.status).toBe(401);
+      expect(after.body.message).toMatch(/deactivated/i);
+    });
+
+    test('deactivated scholar token cannot hit scholar-scoped routes (nikah bookings)', async () => {
+      const after = await request(app)
+        .get('/api/nikah-bookings')
+        .set('Authorization', `Bearer ${liveScholarToken}`);
+      expect(after.status).toBe(401);
+    });
+
+    test('deactivated scholar token cannot refresh itself', async () => {
+      const after = await request(app)
+        .post('/api/auth/refresh-token')
+        .set('Authorization', `Bearer ${liveScholarToken}`);
+      expect(after.status).toBe(401);
+    });
+
+    test('reactivated scholar can resume all calls with the same token', async () => {
+      await request(app)
+        .put(`/api/scholars/${liveScholarId}`)
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({ isActive: true });
+
+      const me = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${liveScholarToken}`);
+      expect(me.status).toBe(200);
+    });
+  });
 });

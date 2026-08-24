@@ -1,2 +1,20 @@
-﻿# Placeholder - to be filled during Phase testing
+# 15 Committee Account Module — questions asked
 
+These are the design questions that came up while verifying the admin
+CRUD for committee accounts + the deactivate-mid-vote edge case.
+
+| # | Question | Decision |
+|---|---|---|
+| **Q1** | Should the admin see committee members from other masjids? | **No.** `GET /api/committee` filters by `role: 'committee', mosqueId: user.mosqueId`. The service layer (`committeeService.js#listForAdmin`) does the filtering before the query reaches Mongo. Covered by the cross-mosque test in Section 7 of the Playwright test. |
+| **Q2** | Can an admin of Al-Rahman delete or deactivate an Al-Noor committee member? | **No.** Both `PUT /:id` and `DELETE /:id` look up the user with `{ _id, role: 'committee', mosqueId: user.mosqueId }`. A mismatched `mosqueId` returns 404 — the user effectively does not exist from this admin's perspective. Covered by the backend suite (`admin cannot update member of another mosque` / `admin cannot delete member of another mosque`). |
+| **Q3** | Should the temp password be visible to the admin in the create response? | **Yes (in the toast).** The backend returns the random temp password; the frontend surfaces it via `showToast(\`Temp password: ${res.tempPassword}\`)`. This is intentional because there is no email infra for the seed environment; in production the same temp password is also emailed to the member. |
+| **Q4** | Can the admin toggle `isActive` directly from the table? | **Yes.** The status pill in the table is itself a button that calls `PUT /:id` with `{ isActive: !current.isActive }`. Toggling immediately reflects the new status in the row + a *"Status updated"* toast. |
+| **Q5** | What happens if an admin deactivates a committee member who has already cast a vote on an open request? | **The existing vote stays recorded** (it's already in the `votes[]` array). **The committee member cannot change that vote** — the auth middleware (`protect`) returns 401 *"Account is deactivated"* on the next request, which the `castVote` route then short-circuits. **They are also skipped by `notifyCommittee`** when a new fund request arrives (it filters `isActive: true`). **They cannot log in again** until reactivated. Covered by the deactivate-mid-vote test in Section 6 of the Playwright test + 5 dedicated tests in the backend suite. |
+| **Q6** | Does reactivating a member restore their previous vote? | **The previous vote is unchanged** (never deleted), and they can now vote again — re-votes replace. The atomic guard in `castVote` only requires `status: 'pending'` on the fund request, not that the member was continuously active. Covered by `re-activated member can vote again on the same request` in the backend suite. |
+| **Q7** | Can a committee member self-deactivate? | **No.** Only `admin` role can hit `PUT /api/committee/:id`. The route's `authorize('admin')` middleware blocks any committee token from reaching the controller. |
+| **Q8** | Is the email field unique across all masjids? | **Yes (across the entire system).** The `User.email` schema has `unique: true`, and `committeeService#create` returns 400 *"Email already registered"* if any user (any role, any mosque) has that email. Verified by Section 3 of the Playwright test. |
+| **Q9** | Should the admin see deleted members in the list? | **No.** `DELETE /api/committee/:id` actually deletes the user document (it's a `findOneAndDelete`), so it disappears from `GET /api/committee` immediately. Covered by Section 8 of the Playwright test. |
+| **Q10** | Should deactivation be a soft-delete (set `isActive: false`) or a hard-delete (`findOneAndDelete`)? | **Soft-delete for status toggle, hard-delete for the delete button.** The status pill is a soft-toggle (`isActive: false`) so the member's history (votes, audit logs) is preserved. The trash button is a hard-delete for when the admin wants to permanently remove a member — they will not appear in the list or receive committee emails anymore. |
+
+All ten decisions are reflected in the live UI / backend code; none of
+them required new features or scope expansion.

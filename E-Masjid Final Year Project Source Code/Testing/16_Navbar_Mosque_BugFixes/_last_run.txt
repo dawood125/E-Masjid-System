@@ -1,0 +1,29 @@
+﻿
+=== Phase 16 Navbar + Mosque-context bug-fix verification ===
+
+Issue 1: logged-out navbar with a selected mosque renders cleanly at lg (1280px)
+  [PASS] 1.1 Navbar fits in single row at 1280px logged-out with mosque selected — navHeight=81 links=6
+
+Issue 1 followup: 1100px viewport stays single-line logged-out + mosque selected
+  [info] mosque selector hidden at 1100px logged-out (B16-1 fix: only shown at xl=1280+ when logged-out)
+  [PASS] 1.2 Navbar single-row at 1100px — navHeight=81
+
+Issue 2: login auto-selects user.mosqueId in navbar
+  [PASS] 2.1 Navbar auto-selects user.mosqueId on login — header shows Al-Noor after login as user@emasjid.pk (regardless of pre-select state rahmanBefore=false)
+
+Issue 4: switching active mosque refetches MyRequests list
+  [PASS] 4.1 MyRequests refetches after navbar mosque switch — calls: 2 → 3
+
+Issue 4b: Admin FundRequests is scoped to admin.mosqueId
+  [PASS] 4.2 Admin FundRequests scoped to admin.mosqueId (no public mosque selector in admin panel) — GETs=2 hasSelector=false — correct UX: admins stay scoped to their own masjid
+
+Issue 4c: Committee Dashboard is scoped to committee.mosqueId
+  [PASS] 4.3 Committee Dashboard scoped to committee.mosqueId (no public mosque selector in committee panel) — GETs=5 hasSelector=false — correct UX: committee members stay scoped to their own masjid
+
+Issue 3: server console logs all committee emails when a request is submitted
+  [INFO] 3.1 POST /api/fund-requests returns 201 (server logs `notifyCommittee` line) — check server stdout for [notifyCommittee] entries
+  → Server should now log: [notifyCommittee] members=N emails=committee@emasjid.pk,wb494929@gmail.com,...
+
+=== Phase 16 Summary ===
+{"PASS":6,"INFO":1}
+Total: 7

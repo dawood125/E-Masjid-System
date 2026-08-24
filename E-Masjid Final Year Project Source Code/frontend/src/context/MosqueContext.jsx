@@ -1,6 +1,7 @@
-import { createContext, useState, useCallback, useEffect, useRef } from 'react'
+import { createContext, useState, useCallback, useEffect, useRef, useContext } from 'react'
 import api from '../utils/api'
 import { getActiveMosqueId, setActiveMosqueId, clearActiveMosqueId } from '../utils/mosque.js'
+import { AuthContext } from './AuthContext.jsx'
 
 export const MosqueContext = createContext()
 
@@ -18,10 +19,21 @@ export const MosqueContext = createContext()
  *   gets a fresh auto-pick of the first active mosque.
  */
 export function MosqueProvider({ children }) {
+  const { user } = useContext(AuthContext)
   const [activeMosqueId, setActiveMosqueIdState] = useState(() => getActiveMosqueId() || '')
   const [mosques, setMosques] = useState([])
   const [loading, setLoading] = useState(true)
   const hasHydratedRef = useRef(false)
+
+  // When a logged-in user changes (login / logout), force the active mosque
+  // to match their account's home masjid. Without this, localStorage was
+  // updated by AuthContext but the React state stayed stale.
+  useEffect(() => {
+    if (user?.mosqueId) {
+      setActiveMosqueIdState(user.mosqueId)
+      setActiveMosqueId(user.mosqueId)
+    }
+  }, [user?._id, user?.mosqueId])
 
   // Load the public list of active mosques on mount.
   useEffect(() => {

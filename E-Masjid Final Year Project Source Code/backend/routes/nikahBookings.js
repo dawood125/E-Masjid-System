@@ -7,7 +7,9 @@ const ctrl = require('../controllers/nikahBookingsController');
 
 router.get('/', protect, ctrl.listBookings);
 
-router.post('/', protect, [
+router.get('/availability', protect, ctrl.getAvailability);
+
+router.post('/', protect, authorize('community'), [
   body('groomName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Groom name is required'),
   body('brideName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Bride name is required'),
   body('preferredDate').isISO8601().withMessage('Valid preferredDate is required'),
@@ -24,5 +26,12 @@ router.put('/:id', protect, authorize('scholar', 'admin'), [
   body('rejectionReason').optional().isString().trim().isLength({ min: 3, max: 500 }).withMessage('Invalid rejectionReason'),
   handleValidation,
 ], ctrl.reviewBooking);
+
+router.put('/:id/assign', protect, authorize('admin'), [
+  body('scholarId').isMongoId().withMessage('Valid scholarId is required'),
+  handleValidation,
+], ctrl.assignBooking);
+
+router.put('/:id/cancel', protect, authorize('community'), ctrl.cancelBooking);
 
 module.exports = router;

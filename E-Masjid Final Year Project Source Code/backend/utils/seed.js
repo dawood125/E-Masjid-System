@@ -38,7 +38,7 @@ const seedDB = async () => {
       name: 'Sheikh Muhammad Hassan', email: 'scholar@emasjid.pk', password: 'scholar123', role: 'scholar', phone: '0300-3333333', specialization: 'Nikah Services',
     });
     const committee1 = await User.create({
-      name: 'Haji Muhammad Arif', email: 'committee@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444444',
+      name: 'Haji Muhammad Arif', email: 'committee@emasjid.pk', password: 'committee123', role: 'committee', phone: '0300-4444444', isActive: false,
     });
     const user1 = await User.create({
       name: 'Abdullah Ahmed', email: 'user@emasjid.pk', password: 'user1234', role: 'community', phone: '0300-5555555',
@@ -57,7 +57,16 @@ const seedDB = async () => {
       name: 'Scholar User (Real Email)', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888', specialization: 'Nikah Services',
     });
     const realEmailCommittee = await User.create({
-      name: 'Committee User (Real Email)', email: 'wb494929@gmail.com', password: 'committee123', role: 'committee', phone: '0300-9999999',
+      name: 'Committee Jack (Friend #1)', email: 'jackcanada333@gmail.com', password: 'committee123', role: 'committee', phone: '0301-1110001',
+    });
+    const realEmailCommittee2 = await User.create({
+      name: 'Committee Jack (Friend #2)', email: 'jackcanada111@gmail.com', password: 'committee123', role: 'committee', phone: '0301-1110002',
+    });
+    const realEmailCommittee3 = await User.create({
+      name: 'Committee Motivation4 (Friend)', email: 'motivation4@gmail.com', password: 'committee123', role: 'committee', phone: '0301-1110003',
+    });
+    const realEmailCommittee4 = await User.create({
+      name: 'Committee Haseeb (Friend)', email: 'haseeb102323@gmail.com', password: 'committee123', role: 'committee', phone: '0301-1110004',
     });
 
     // ====================================================================
@@ -123,7 +132,7 @@ const seedDB = async () => {
     // with NO mosques — role updated earlier; intentionally orphan so the
     // "manager with zero managed masjids" 400 code path is exercised.)
     await User.updateMany(
-      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailScholar._id, realEmailCommittee._id] } },
+      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailScholar._id, realEmailCommittee._id, realEmailCommittee2._id, realEmailCommittee3._id, realEmailCommittee4._id] } },
       { mosqueId: mosque._id }
     );
 
@@ -481,7 +490,10 @@ const seedDB = async () => {
     console.log('  Admin:     dawood.bhatti8812@gmail.com / admin123');
     console.log('  Manager:   pa672189@gmail.com / manager123   (role: manager — NOT managing any mosque in this seed)');
     console.log('  Scholar:   dawoodah85@gmail.com / scholar123');
-    console.log('  Committee: wb494929@gmail.com / committee123');
+    console.log('  Committee (Al-Noor, Gmail #1): jackcanada333@gmail.com / committee123');
+    console.log('  Committee (Al-Noor, Gmail #2): jackcanada111@gmail.com / committee123');
+    console.log('  Committee (Al-Noor, Gmail #3): motivation4@gmail.com / committee123');
+    console.log('  Committee (Al-Noor, Gmail #4): haseeb102323@gmail.com / committee123');
     console.log('\n🕌 Seeded masjids (all in Sheikhupura, all under ONE super admin):');
     console.log('  - Masjid Al-Noor    (Civil Lines)    — admin: admin@emasjid.pk');
     console.log('  - Masjid Al-Rahman  (Model Town)     — admin: admin2@emasjid.pk');

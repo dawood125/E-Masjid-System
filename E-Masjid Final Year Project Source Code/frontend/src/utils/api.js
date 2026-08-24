@@ -38,6 +38,10 @@ class ApiService {
       else if (path.startsWith('/manager')) redirectPath = '/manager/login'
       else if (path.startsWith('/committee')) redirectPath = '/committee/login'
 
+      try {
+        sessionStorage.setItem('logoutNotice', data.message || 'Session expired')
+      } catch (e) {}
+
       window.location.href = redirectPath
       throw new Error(data.message || 'Session expired')
     }
@@ -90,6 +94,9 @@ class ApiService {
       if (path.startsWith('/admin')) redirectPath = '/admin/login'
       else if (path.startsWith('/manager')) redirectPath = '/manager/login'
       else if (path.startsWith('/committee')) redirectPath = '/committee/login'
+      try {
+        sessionStorage.setItem('logoutNotice', data.message || 'Session expired')
+      } catch (e) {}
       window.location.href = redirectPath
       throw new Error(data.message || 'Session expired')
     }
@@ -142,8 +149,13 @@ class ApiService {
   adminDeleteHeroSlide(id) { return this.request('DELETE', `/api/admin/marketing/hero-slides/${id}`) }
 
   getNikahBookings() { return this.request('GET', '/api/nikah-bookings') }
+  getNikahAvailability(from, to) {
+    return this.request('GET', `/api/nikah-bookings/availability?from=${from}&to=${to}`)
+  }
   createNikahBooking(data) { return this.request('POST', '/api/nikah-bookings', data) }
   updateNikahBooking(id, data) { return this.request('PUT', `/api/nikah-bookings/${id}`, data) }
+  assignNikahBooking(id, scholarId) { return this.request('PUT', `/api/nikah-bookings/${id}/assign`, { scholarId }) }
+  cancelNikahBooking(id) { return this.request('PUT', `/api/nikah-bookings/${id}/cancel`) }
 
   getScholars() { return this.request('GET', '/api/scholars') }
   createScholar(data) { return this.request('POST', '/api/scholars', data) }
@@ -172,6 +184,8 @@ class ApiService {
   getFundRequests(params = '') { return this.request('GET', `/api/fund-requests${params ? '?' + params : ''}`) }
   createFundRequest(data) { return this.request('POST', '/api/fund-requests', data) }
   reviewFundRequest(id, data) { return this.request('PUT', `/api/fund-requests/${id}`, data) }
+  voteFundRequest(id, data) { return this.request('POST', `/api/fund-requests/${id}/vote`, data) }
+  finalizeFundRequest(id, data) { return this.request('POST', `/api/fund-requests/${id}/finalize`, data) }
 
   getCommitteeMembers() { return this.request('GET', '/api/committee') }
   createCommitteeMember(data) { return this.request('POST', '/api/committee', data) }

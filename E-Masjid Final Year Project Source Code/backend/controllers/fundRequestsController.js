@@ -21,4 +21,14 @@ const review = tryOrNext(async (req, res) => {
   res.json({ success: true, data: item });
 });
 
-module.exports = { create, list, review };
+const vote = tryOrNext(async (req, res) => {
+  const item = await svc.castVote(req.params.id, req.body, req.user);
+  res.json({ success: true, data: item });
+});
+
+const finalize = tryOrNext(async (req, res) => {
+  const item = await svc.finalize(req.params.id, req.body, req.user);
+  res.json({ success: true, data: item });
+});
+
+module.exports = { create, list, review, vote, finalize };

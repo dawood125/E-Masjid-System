@@ -1,4 +1,27 @@
-# 09 Nikah Booking Module � bugs found
+# 12 Nikah Booking Module — bugs found
 
-**Status:** Not started (blocked until prior phases complete)
+| ID | What | How fixed |
+|---|---|---|
+| **B12-1** | `Admin/Pages/Scholars.jsx` "Pending Nikah Assignments" used hardcoded `ASSIGNMENT_MOCKS = [NKH-2025-0058, 0061, 0065]` — the dropdown just filtered the array in memory, never called the backend | Removed the mock. Section now reads from `api.getNikahBookings()`, filters to `pending && !scholarId`, and calls the new `PUT /api/nikah-bookings/:id/assign` (admin-only) on dropdown change. Row is removed from the list only after the backend confirms |
+| **B12-2** | `Admin/Pages/Dashboard.jsx` "Pending Nikah" stat card counted `mockNikahBookings` from `frontend/src/mocks/index.js` — completely unrelated to the actual DB | Replaced import with `api.getNikahBookings()` and filter to `status === 'pending'` on the client. Count is now mosque-scoped via the backend's `listForCaller` |
+| **B12-3** | `User/Pages/MyBookings.jsx` `cancelPending()` showed toast "Cancellation endpoint is not available yet. Please contact admin." | Added new `PUT /api/nikah-bookings/:id/cancel` (community-only, own booking, pending only). Service marks the booking as `rejected` with `rejectionReason: 'Cancelled by applicant'`. MyBookings now calls it through a confirmation prompt and the row updates in place |
+| **B12-4** | `User/Pages/MyBookings.jsx` greeting was hardcoded `"Assalam-o-Alaikum, Muhammad Ahmed!"` for every user | Read from `useAuth().user.name` with `there` fallback. Same pattern the Scholar dashboard already uses |
+| **B12-5** | `User/Pages/MyBookings.jsx` had dead View Details / Edit / Download buttons that did nothing | Removed (see Q2 in `questions_asked.md`). The Cancel Booking button stays for pending rows |
+| **B12-6** | No backend endpoint for admin to assign a scholar to a pending booking — the UI dropdown had nothing to call | Added `backend/services/nikahService.js#assignScholar` (admin-only, same mosque, pending only, scholar must be active and in same masjid), exposed via `PUT /api/nikah-bookings/:id/assign`. Validates scholar role, mosque match, and active state — returns 400 with clear messages on each violation |
+| **B12-7** | `Admin/Pages/Dashboard.jsx` greeting was hardcoded `"Assalam-o-Alaikum, Haji Ahmad"` even after Phase 11 mock-data sweep — caught by Playwright Section 7 when targeting the second `<h1>` (the dashboard greeting, not the AdminLayout header) | Now reads `{user?.name \|\| 'Admin'}` from `useAuth()` — same pattern Scholar dashboard and MyBookings use |
+| **B12-8** | `User/Pages/NikahBooking.jsx` success modal displayed the raw Mongo `_id` as "Booking ID" while `Scholars.jsx` and `Scholar/Dashboard.jsx` format the same field as `NKH-{last6.toUpperCase()}` — inconsistent UX | Same `String(bookingId).slice(-6).toUpperCase()` formatting as the other two surfaces |
+| **B12-9** | `frontend/src/App.jsx` had no `/admin/dashboard` route — Playwright Section 7 navigated there and the catchall `<Route path="*" element={<Navigate to="/" replace />} />` redirected to `/`, so the AdminLayout rendered but the outlet was empty. Section 6's `Pending Nikah stat card renders` assertion silently passed because the layout's header still showed "Admin Dashboard" but the cards were missing | Added `<Route path="dashboard" element={<AdminDashboard />} />` under `/admin/*` |
+| **B12-10** | `frontend/src/App.jsx` had no `/scholar/dashboard` route — Playwright Section 4 navigated to `/scholar/dashboard` and the catchall redirected to `/`, which then redirected (via `protectedRoute`) to `/login`. The test recorded `rows=0` because it was on the Login page, not the scholar dashboard | Added `<Route path="dashboard" element={<ScholarDashboard />} />` under `/scholar/*` |
+| **B12-11** | `frontend/src/components/User/SlotPicker.jsx#toDayKey` used `d.toISOString().slice(0,10)`. In Pakistan (UTC+5), setting `setHours(0,0,0,0)` on a date then slicing the ISO string produces the *previous* day. Clicking the day cell that *visually* read "Wed 26 Aug" stored `2026-08-25`, then re-converting that string on the next render shifted it again to `2026-08-24`, so the wrong day cell was highlighted and Playwright Section 9 found no booked slot for the day the test had just clicked | Replaced `toDayKey` with local-Date components (`getFullYear`, `getMonth`, `getDate`) so the stored day key matches the visible cell — both for the day cells rendered and the comparison used to mark `selected` |
+| **B12-12** | `SlotPicker` exposed only a fixed 14-day window starting today. A user with a confirmed booking several weeks out (or anyone wanting to plan a future Nikah more than two weeks ahead) could not navigate to that date from the UI | Added an `offset` state + chevron `previous / next 2 weeks` buttons and a `MMM d – MMM d, yyyy` range label. The `availability` fetch is keyed on `range.from / range.to` so the booked-slot map refreshes as the user pages forward |
 
+## Verification
+
+Each fix is covered by:
+- A backend integration test in
+  `backend/tests/integration/nikah_scope.test.js`
+  (where applicable)
+- A Playwright E2E assertion in
+  `Testing/12_Nikah_Booking_Module/nikah_test.js`
+- A manual scenario in
+  `Testing/12_Nikah_Booking_Module/manual_testing_guide.md`

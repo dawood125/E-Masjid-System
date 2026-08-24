@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
-
-const ASSIGNMENT_MOCKS = [
-  { id: 'NKH-2025-0058', couple: 'Ahmad Ali & Fatima', date: 'June 25, 2025' },
-  { id: 'NKH-2025-0061', couple: 'Bilal Khan & Ayesha', date: 'June 28, 2025' },
-  { id: 'NKH-2025-0065', couple: 'Zain Ahmed & Maryam', date: 'July 01, 2025' },
-]
+import { formatDate } from '../../../utils/formatters.js'
 
 function randomCompletedCount(seedIndex) {
   return 8 + seedIndex * 7
@@ -31,7 +26,7 @@ export default function Scholars() {
   const { showToast } = useUI()
 
   const [scholars, setScholars] = useState([])
-  const [assignments, setAssignments] = useState(ASSIGNMENT_MOCKS)
+  const [assignments, setAssignments] = useState([])
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
@@ -50,15 +45,30 @@ export default function Scholars() {
   const [editForm, setEditForm] = useState({ name: '', phone: '', specialization: '', email: '' })
   const [resetForm, setResetForm] = useState({ password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(true)
+  const [assigningId, setAssigningId] = useState(null)
+
+  const loadScholars = async () => {
+    const res = await api.getScholars()
+    const list = Array.isArray(res.data) ? res.data : []
+    return list.map((item) => ({ ...item, id: item._id || item.id, isActive: item.isActive }))
+  }
+
+  const loadAssignments = async () => {
+    const res = await api.getNikahBookings()
+    const list = Array.isArray(res.data) ? res.data : []
+    return list
+      .filter((b) => b.status === 'pending' && !b.scholarId)
+      .map((item) => ({ ...item, id: item._id || item.id }))
+  }
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
-        const res = await api.getScholars()
+        const [scholarList, assignmentList] = await Promise.all([loadScholars(), loadAssignments()])
         if (!mounted) return
-        const list = Array.isArray(res.data) ? res.data : []
-        setScholars(list.map((item) => ({ ...item, id: item._id || item.id })))
+        setScholars(scholarList)
+        setAssignments(assignmentList)
       } catch (err) {
         showToast(err.message || 'Failed to load scholars.', 'error')
       } finally {
@@ -177,15 +187,25 @@ export default function Scholars() {
     }
   }
 
-  const assignScholar = (bookingId, scholarId) => {
-    if (!scholarId) {
+  const assignScholar = async (bookingId, scholarId) => {
+    if (!scholarId || assigningId === bookingId) return
+
+    const scholar = scholars.find((item) => item.id === scholarId)
+    if (!scholar || !scholar.isActive) {
+      showToast('Scholar must be active before assigning.', 'warning')
       return
     }
 
-    const scholar = scholars.find((item) => item.id === scholarId)
-
-    setAssignments((prev) => prev.filter((item) => item.id !== bookingId))
-    showToast(`${bookingId} assigned to ${scholar?.name || 'scholar'}.`, 'success')
+    setAssigningId(bookingId)
+    try {
+      await api.assignNikahBooking(bookingId, scholarId)
+      setAssignments((prev) => prev.filter((item) => item.id !== bookingId))
+      showToast(`Booking NKH-${String(bookingId).slice(-6).toUpperCase()} assigned to ${scholar.name}.`, 'success')
+    } catch (err) {
+      showToast(err.message || 'Failed to assign scholar.', 'error')
+    } finally {
+      setAssigningId(null)
+    }
   }
 
   const toggleActive = (scholar) => {
@@ -394,22 +414,25 @@ export default function Scholars() {
                   <i className="material-icons-round">favorite</i>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">Booking #{assignment.id}</h4>
+                  <h4 className="font-semibold text-gray-900">
+                    Booking NKH-{String(assignment.id).slice(-6).toUpperCase()}
+                  </h4>
                   <p className="text-sm text-gray-600">
-                    {assignment.couple} - {assignment.date}
+                    {assignment.groomName} & {assignment.brideName} - {formatDate(assignment.preferredDate)} at {assignment.preferredTime}
                   </p>
                 </div>
               </div>
 
               <select
                 defaultValue=""
+                disabled={assigningId === assignment.id}
                 onChange={(event) => assignScholar(assignment.id, event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none disabled:opacity-60"
               >
-                <option value="">Assign Scholar</option>
+                <option value="">{assigningId === assignment.id ? 'Assigning...' : 'Assign Scholar'}</option>
                 {scholars.map((scholar) => (
-                  <option key={scholar.id} value={scholar.id}>
-                    {scholar.name}
+                  <option key={scholar.id} value={scholar.id} disabled={!scholar.isActive}>
+                    {scholar.name}{scholar.isActive ? '' : ' (inactive)'}
                   </option>
                 ))}
               </select>

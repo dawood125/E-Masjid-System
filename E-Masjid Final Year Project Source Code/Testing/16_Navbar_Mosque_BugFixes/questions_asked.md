@@ -1,0 +1,19 @@
+# 16 Navbar + Mosque-context bug fixes — questions asked
+
+These are the design questions that came up while verifying four
+post-Phase-15 bugs discovered during manual testing of the navbar and
+the mosque-aware data flow.
+
+| # | Question | Decision |
+|---|---|---|
+| **Q1** | When the user is logged out and selects a mosque, the navbar at lg (1024-1279px) breakpoint wraps into two rows because logo + 4 nav links + 2 dropdowns + mosque selector + 2 auth buttons exceed the available width — should we hide the mosque selector at lg, or restructure the layout? | **Hide the mosque selector at lg when logged out** (only show at xl). When logged in the avatar is small enough that the selector fits at lg. The mosque is still reachable via the mobile-menu button below lg. |
+| **Q2** | When a user logs in, should the navbar auto-select their home masjid even if they had previously picked a different one? | **Yes.** `MosqueContext` now listens to `AuthContext.user.mosqueId` and overrides the active mosque when the user logs in. Without this fix, `localStorage.activeMosqueId` was updated by `AuthContext` but the React state was stale. |
+| **Q3** | The community fund-request form sends `mosqueId: activeMosqueId` — if the user picks a different masjid after login, the form fails with 400 *"Cannot create a request for another mosque"*. Should we block the form or force user.mosqueId? | **The 400 is correct security** — community can only submit for their own masjid. With Q2 fixed, after login `activeMosqueId === user.mosqueId`, so the form always succeeds. If the user manually switches after login (rare), they get a 400 — by design. |
+| **Q4** | When the user switches mosques in the navbar, should `/my-requests`, `/admin/fund-requests`, `/committee` refetch the data? | **Yes, always refetch.** Even for community users (whose list is scoped to themselves, so the data is unchanged) the page should react visually. Pages now include `activeMosqueId` in the `useEffect` dependency array. |
+| **Q5** | For committee / admin pages, the API uses `req.user.mosqueId` (from JWT, fixed), not `req.query.activeMosqueId`. So switching mosque in the navbar doesn't actually change the API response. Is that a bug? | **No, by design.** The mosque selector in the navbar is a *UI hint* about which masjid the user is acting for. The backend always uses the JWT's `mosqueId` for security. If a manager needs to act across masjids, they use the manager dashboard's masjids table (out of scope for this fix). |
+| **Q6** | Why is `notifyCommittee` not sending emails to all 4 Al-Noor committee members? | The most likely root cause is a **stale local DB** — the user hadn't re-run `node utils/seed.js` after Phase 13 added the 3 real-Gmail accounts. We added diagnostic console.log to `notifyCommittee` so future debugging is one console line away: `[notifyCommittee] members=N emails=...`. |
+| **Q7** | Should the email send result be visible in the response body to the requester? | **No.** The `notifyCommittee` function runs after the FundRequest document is already saved and the API has returned 201 to the user. We don't want a slow SMTP call to delay the response or block on email failure. Failures are logged to console. |
+| **Q8** | Should the diagnostic logging spam the production logs? | **No.** The `[notifyCommittee]` log is one line per request, not per recipient. In production it can be downgraded to `info` or removed behind a `DEBUG_EMAILS` flag. For our testing environment, keeping it visible is the right tradeoff. |
+
+All eight decisions are reflected in the live code; none of them
+required new features or scope expansion.

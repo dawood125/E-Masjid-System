@@ -4,6 +4,7 @@ import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate, formatCurrency } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 
 const statusConfig = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-800', icon: 'schedule', label: 'Pending Review' },
@@ -11,8 +12,20 @@ const statusConfig = {
   rejected: { bg: 'bg-red-100', text: 'text-red-800', icon: 'cancel', label: 'Rejected' },
 }
 
+const tally = (req) => {
+  const votes = req.votes || []
+  let approve = 0
+  let reject = 0
+  votes.forEach((v) => {
+    if (v.vote === 'approve') approve += 1
+    else if (v.vote === 'reject') reject += 1
+  })
+  return { approve, reject, total: approve + reject }
+}
+
 export default function MyRequests() {
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -35,13 +48,12 @@ export default function MyRequests() {
 
     load()
     return () => { mounted = false }
-  }, [showToast])
+  }, [showToast, activeMosqueId])
 
   const totalLabel = useMemo(() => `${requests.length} request(s) found`, [requests.length])
 
   return (
     <div className="bg-primary-50 min-h-screen">
-      {/* Page Header */}
       <section className="relative py-16 bg-gradient-to-br from-[#064e3b] to-[#047857] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.15),transparent_60%)]" />
         <div className="container relative z-10">
@@ -52,7 +64,6 @@ export default function MyRequests() {
 
       <section className="py-12">
         <div className="container max-w-4xl">
-          {/* Action Bar */}
           <div className="flex items-center justify-between mb-8">
             <p className="text-gray-600">{loading ? 'Loading...' : totalLabel}</p>
             <Link to={ROUTES.FUND_REQUEST} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
@@ -72,6 +83,8 @@ export default function MyRequests() {
             <div className="space-y-5">
               {requests.map((req) => {
                 const status = statusConfig[req.status]
+                const t = tally(req)
+                const decided = req.status !== 'pending'
                 return (
                   <div key={req._id || req.id} className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
                     <div className="p-6">
@@ -95,18 +108,49 @@ export default function MyRequests() {
                         </div>
                       </div>
 
-                      {/* Review Info */}
-                      {req.status !== 'pending' && req.reviewNote && (
+                      {!decided && t.total > 0 && (
+                        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Committee is reviewing</p>
+                          <div className="mt-2 flex items-center gap-3 text-sm">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 font-semibold text-green-800">
+                              <i className="material-icons-round text-sm">thumb_up</i>
+                              {t.approve}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 font-semibold text-red-800">
+                              <i className="material-icons-round text-sm">thumb_down</i>
+                              {t.reject}
+                            </span>
+                            <span className="text-gray-500">of {t.total} vote(s)</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {!decided && t.total === 0 && (
+                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+                          <i className="material-icons-round text-amber-600">hourglass_top</i>
+                          <p className="text-sm text-amber-800">Committee has not started voting yet. We will email you once a final decision is made.</p>
+                        </div>
+                      )}
+
+                      {decided && (
                         <div className={`mt-4 rounded-xl p-4 ${req.status === 'approved' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
                           <div className="flex items-center gap-2 mb-2">
                             <i className={`material-icons-round text-base ${req.status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
                               {req.status === 'approved' ? 'verified' : 'info'}
                             </i>
                             <span className="text-sm font-semibold text-gray-700">
-                              Committee Decision {req.reviewedBy?.name && `by ${req.reviewedBy.name}`}
+                              Final Decision
+                              {(req.finalizedBy?.name || req.reviewedBy?.name) && ` by ${req.finalizedBy?.name || req.reviewedBy?.name}`}
+                              <span className="ml-2 text-xs text-gray-500">{formatDate(req.finalizedAt || req.updatedAt)}</span>
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600">{req.reviewNote}</p>
+                          {(req.finalNote || req.reviewNote) && <p className="text-sm text-gray-600">{req.finalNote || req.reviewNote}</p>}
+                          {req.status === 'approved' && (
+                            <p className="mt-2 text-xs text-green-700">
+                              <i className="material-icons-round align-middle text-sm">place</i>
+                              {' '}Please visit the mosque office during working hours to collect your assistance.
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

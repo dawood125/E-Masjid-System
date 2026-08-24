@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatDate, formatCurrency } from '../../../utils/formatters.js'
+import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 
 const statusConfig = {
@@ -12,13 +14,36 @@ const statusConfig = {
 export default function CommitteeDashboard() {
   const [requests, setRequests] = useState([])
   const [filter, setFilter] = useState('all')
-  const [reviewingId, setReviewingId] = useState(null)
-  const [reviewNote, setReviewNote] = useState('')
+  const [votingId, setVotingId] = useState(null)
+  const [voteNote, setVoteNote] = useState('')
+  const { user } = useAuth()
   const { showToast } = useUI()
+  const { activeMosqueId } = useMosque()
   const [loading, setLoading] = useState(true)
+  const [submittingId, setSubmittingId] = useState(null)
 
   const filtered = useMemo(() => (filter === 'all' ? requests : requests.filter(r => r.status === filter)), [filter, requests])
   const pendingCount = useMemo(() => requests.filter(r => r.status === 'pending').length, [requests])
+
+  const tally = (req) => {
+    const votes = req.votes || []
+    let approve = 0
+    let reject = 0
+    let mineAppro = false
+    let mineReject = false
+    const myId = String(user?._id || '')
+    votes.forEach((v) => {
+      const memberId = String(v.member?._id || v.member || '')
+      if (v.vote === 'approve') {
+        approve += 1
+        if (myId && memberId === myId) mineAppro = true
+      } else if (v.vote === 'reject') {
+        reject += 1
+        if (myId && memberId === myId) mineReject = true
+      }
+    })
+    return { approve, reject, total: approve + reject, myVote: mineAppro ? 'approve' : mineReject ? 'reject' : null }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -39,44 +64,41 @@ export default function CommitteeDashboard() {
 
     load()
     return () => { mounted = false }
-  }, [showToast])
+  }, [showToast, activeMosqueId])
 
-  const handleReview = async (id, decision) => {
-    if (!reviewNote.trim()) {
-      showToast('Please provide a reason for your decision', 'warning')
-      return
-    }
+  const handleVote = async (id, decision) => {
+    setSubmittingId(id)
     try {
-      const res = await api.reviewFundRequest(id, { status: decision, reviewNote: reviewNote.trim() })
+      const res = await api.voteFundRequest(id, { vote: decision, note: voteNote.trim() })
       const updated = res.data
       setRequests((prev) => prev.map((r) => (r._id === id ? updated : r)))
-      setReviewingId(null)
-      setReviewNote('')
-      showToast(`Request ${decision}!`, decision === 'approved' ? 'success' : 'info')
+      setVotingId(null)
+      setVoteNote('')
+      showToast(`Vote recorded: ${decision}`, 'success')
     } catch (e) {
-      showToast(e.message || 'Failed to update request', 'error')
+      showToast(e.message || 'Failed to record vote', 'error')
+    } finally {
+      setSubmittingId(null)
     }
   }
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Header */}
       <div className="rounded-2xl bg-gradient-to-br from-[#064e3b] to-[#047857] p-8 text-white relative overflow-hidden">
         <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-[#d4af37]/10" />
         <div className="relative z-10">
           <p className="text-[#d4af37] text-sm font-semibold uppercase tracking-wider">Committee Dashboard</p>
-          <h1 className="mt-2 font-primary text-3xl font-bold">Fund Request Review</h1>
-          <p className="mt-2 text-white/80">Review and process Zakat/Sadaqah fund requests from community members</p>
+          <h1 className="mt-2 font-primary text-3xl font-bold">Fund Request Voting</h1>
+          <p className="mt-2 text-white/80">Cast your vote on every pending request. The admin will finalize after the committee meeting.</p>
           {pendingCount > 0 && (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500/20 border border-amber-400/30 px-4 py-2">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-sm font-semibold text-amber-200">{pendingCount} pending request(s) need review</span>
+              <span className="text-sm font-semibold text-amber-200">{pendingCount} pending request(s) need votes</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Pending', count: requests.filter(r => r.status === 'pending').length, color: 'amber', icon: 'schedule' },
@@ -97,7 +119,6 @@ export default function CommitteeDashboard() {
         ))}
       </div>
 
-      {/* Filter */}
       <div className="flex items-center gap-2">
         {['all', 'pending', 'approved', 'rejected'].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${filter === f ? 'bg-[#047857] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
@@ -106,7 +127,6 @@ export default function CommitteeDashboard() {
         ))}
       </div>
 
-      {/* Requests List */}
       <div className="space-y-4">
         {loading ? (
           <div className="rounded-2xl bg-white border border-gray-200 p-12 text-center">
@@ -120,6 +140,8 @@ export default function CommitteeDashboard() {
           </div>
         ) : filtered.map((req) => {
           const status = statusConfig[req.status]
+          const t = tally(req)
+          const decided = req.status !== 'pending'
           return (
             <div key={req._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="p-6">
@@ -148,42 +170,85 @@ export default function CommitteeDashboard() {
                   </div>
                 </div>
 
-                {/* Review Info */}
-                {req.status !== 'pending' && req.reviewNote && (
-                  <div className={`mt-4 rounded-xl p-4 ${req.status === 'approved' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">
-                      Decision by {req.reviewerName}
-                    </p>
-                    <p className="text-sm text-gray-600">{req.reviewNote}</p>
+                {!decided && (
+                  <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 font-semibold text-green-800">
+                          <i className="material-icons-round text-sm">thumb_up</i>
+                          {t.approve} approve
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 font-semibold text-red-800">
+                          <i className="material-icons-round text-sm">thumb_down</i>
+                          {t.reject} reject
+                        </span>
+                        <span className="text-gray-500">{t.total} vote(s) recorded</span>
+                      </div>
+                      {t.myVote && (
+                        <span className="text-xs font-semibold text-[#047857]">
+                          Your vote: {t.myVote.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    {(req.votes || []).length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(req.votes || []).map((v, idx) => {
+                          const memberName = v.member?.name || `Member ${idx + 1}`
+                          return (
+                            <span key={`${String(v.member?._id || v.member || idx)}-${idx}`} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${v.vote === 'approve' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                              <i className="material-icons-round text-sm">{v.vote === 'approve' ? 'check' : 'close'}</i>
+                              {memberName}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Review Actions for Pending */}
-                {req.status === 'pending' && (
+                {decided && (
+                  <div className={`mt-4 rounded-xl p-4 ${req.status === 'approved' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">
+                      Final decision by {req.finalizedBy?.name || 'Admin'}
+                    </p>
+                    {req.finalNote && <p className="text-sm text-gray-600">{req.finalNote}</p>}
+                    {(req.votes || []).length > 0 && (
+                      <p className="mt-2 text-xs text-gray-500">{t.approve} approve · {t.reject} reject among {t.total} committee member(s)</p>
+                    )}
+                  </div>
+                )}
+
+                {!decided && (
                   <div className="mt-5 border-t border-gray-100 pt-5">
-                    {reviewingId === req._id ? (
+                    {votingId === req._id ? (
                       <div className="space-y-3 animate-fade-in">
                         <textarea
                           rows={3}
                           className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:ring-2 focus:ring-[#047857] focus:border-transparent"
-                          placeholder="Provide your reason/notes for this decision..."
-                          value={reviewNote}
-                          onChange={e => setReviewNote(e.target.value)}
+                          placeholder="Optional note: what you saw during investigation..."
+                          value={voteNote}
+                          onChange={e => setVoteNote(e.target.value)}
+                          disabled={submittingId === req._id}
                         />
                         <div className="flex flex-wrap gap-2">
-                          <button onClick={() => handleReview(req._id, 'approved')} className="btn bg-green-600 text-white hover:bg-green-700">
-                            <i className="material-icons-round text-lg">check_circle</i>Approve
+                          <button onClick={() => handleVote(req._id, 'approve')} disabled={submittingId === req._id} className="btn bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                            <i className="material-icons-round text-lg">thumb_up</i>Approve
                           </button>
-                          <button onClick={() => handleReview(req._id, 'rejected')} className="btn bg-red-600 text-white hover:bg-red-700">
-                            <i className="material-icons-round text-lg">cancel</i>Reject
+                          <button onClick={() => handleVote(req._id, 'reject')} disabled={submittingId === req._id} className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                            <i className="material-icons-round text-lg">thumb_down</i>Reject
                           </button>
-                          <button onClick={() => { setReviewingId(null); setReviewNote('') }} className="btn btn-secondary">Cancel</button>
+                          <button onClick={() => { setVotingId(null); setVoteNote('') }} disabled={submittingId === req._id} className="btn btn-secondary">Cancel</button>
                         </div>
+                        {t.myVote && (
+                          <p className="text-xs text-gray-500">
+                            You already voted <strong>{t.myVote.toUpperCase()}</strong>. Submitting again will replace your previous vote.
+                          </p>
+                        )}
                       </div>
                     ) : (
-                      <button onClick={() => setReviewingId(req._id)} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
-                        <i className="material-icons-round text-lg">rate_review</i>
-                        Review Request
+                      <button onClick={() => setVotingId(req._id)} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
+                        <i className="material-icons-round text-lg">how_to_vote</i>
+                        {t.myVote ? 'Change my vote' : 'Cast my vote'}
                       </button>
                     )}
                   </div>

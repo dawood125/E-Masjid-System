@@ -21,4 +21,20 @@ const reviewBooking = tryOrNext(async (req, res) => {
   res.json({ success: true, data: updated });
 });
 
-module.exports = { listBookings, createBooking, reviewBooking };
+const assignBooking = tryOrNext(async (req, res) => {
+  const updated = await svc.assignScholar(req.params.id, req.body.scholarId, req.user);
+  res.json({ success: true, data: updated });
+});
+
+const cancelBooking = tryOrNext(async (req, res) => {
+  const updated = await svc.cancelByApplicant(req.params.id, req.user);
+  res.json({ success: true, data: updated });
+});
+
+const getAvailability = tryOrNext(async (req, res) => {
+  const { from, to } = req.query;
+  const data = await svc.availability({ user: req.user, from, to });
+  res.json({ success: true, data });
+});
+
+module.exports = { listBookings, createBooking, reviewBooking, assignBooking, cancelBooking, getAvailability };

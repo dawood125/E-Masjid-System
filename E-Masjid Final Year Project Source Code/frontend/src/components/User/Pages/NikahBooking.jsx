@@ -1,19 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
-
-const timeSlots = [
-  { value: '10:00', label: '10:00 AM - After Ishraq' },
-  { value: '11:00', label: '11:00 AM' },
-  { value: '12:00', label: '12:00 PM - Before Zuhr' },
-  { value: '14:00', label: '02:00 PM - After Zuhr' },
-  { value: '15:00', label: '03:00 PM' },
-  { value: '16:00', label: '04:00 PM - Before Asr' },
-  { value: '17:00', label: '05:00 PM - After Asr' },
-  { value: '20:00', label: '08:00 PM - After Maghrib' },
-]
+import SlotPicker from '../SlotPicker.jsx'
 
 const requirements = [
   'CNIC of Groom & Bride (Original + Copy)',
@@ -40,10 +30,12 @@ export default function NikahBooking() {
   const [bookingId, setBookingId] = useState('')
   const { showToast } = useUI()
 
-  const minDate = useMemo(() => new Date().toISOString().slice(0, 10), [])
-
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!formData.ceremonyDate || !formData.ceremonyTime) {
+      showToast('Please choose both a date and a time slot.', 'warning')
+      return
+    }
     setLoading(true)
 
     try {
@@ -169,22 +161,15 @@ export default function NikahBooking() {
                   <i className="material-icons-round text-[#047857]">event</i>
                   Preferred Schedule
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Date of Ceremony <span className="text-red-500">*</span></label>
-                    <input type="date" min={minDate} className="form-input" required value={formData.ceremonyDate} onChange={(e) => setFormData((p) => ({ ...p, ceremonyDate: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="form-label">Preferred Time <span className="text-red-500">*</span></label>
-                    <select className="form-select" required value={formData.ceremonyTime} onChange={(e) => setFormData((p) => ({ ...p, ceremonyTime: e.target.value }))}>
-                      <option value="" disabled>Select a time slot</option>
-                      {timeSlots.map((slot) => (
-                        <option key={slot.value} value={slot.value}>{slot.label}</option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-gray-500 inline-flex items-center gap-1"><i className="material-icons-round text-sm">info</i>Please arrive 30 minutes before your slot.</p>
-                  </div>
-                </div>
+                <SlotPicker
+                  value={{ date: formData.ceremonyDate, time: formData.ceremonyTime }}
+                  onChange={({ date, time }) =>
+                    setFormData((p) => ({ ...p, ceremonyDate: date, ceremonyTime: time !== undefined ? time : p.ceremonyTime }))
+                  }
+                />
+                <p className="mt-3 inline-flex items-center gap-1 text-xs text-gray-500">
+                  <i className="material-icons-round text-sm">info</i>Please arrive 30 minutes before your slot. Already-confirmed slots are disabled.
+                </p>
               </div>
 
               <div>
@@ -247,7 +232,7 @@ export default function NikahBooking() {
             <p className="mt-3 text-gray-600 leading-relaxed">
               Your Nikah booking request has been submitted successfully. Our team will review your application and contact you within 24-48 hours.
             </p>
-            <p className="mt-3 text-sm text-gray-700">Booking ID: <span className="font-semibold text-[#047857]">{bookingId}</span></p>
+            <p className="mt-3 text-sm text-gray-700">Booking ID: <span className="font-semibold text-[#047857]">NKH-{String(bookingId).slice(-6).toUpperCase()}</span></p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link to={ROUTES.MY_BOOKINGS} className="btn btn-primary bg-[#047857]">View My Bookings</Link>
               <button type="button" className="btn btn-secondary" onClick={closeSuccess}>Done</button>

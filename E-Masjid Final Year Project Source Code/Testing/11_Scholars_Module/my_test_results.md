@@ -53,6 +53,24 @@ Combined with the other two integration suites, **74
 backend tests pass across 3 files** (auth+masjids, nikah,
 scholars).
 
+### Mid-session deactivation (BUG-F7)
+
+After the F7 fix, four more tests verify the protect
+middleware now rejects deactivated users mid-session:
+
+```
+    describe('deactivation mid-session kicks logged-in user out (BUG-F7 fix)')
+      ✓ deactivated scholar token cannot hit /api/auth/me
+      ✓ deactivated scholar token cannot hit scholar-scoped routes (nikah bookings)
+      ✓ deactivated scholar token cannot refresh itself
+      ✓ reactivated scholar can resume all calls with the same token
+
+Tests: 31 passed, 31 total
+```
+
+Combined total across the three suites: **78 backend
+tests pass**.
+
 ## Playwright end-to-end
 
 `Testing/11_Scholars_Module/scholars_test.js`:
@@ -137,10 +155,10 @@ degrade gracefully with an `[INFO]` log.)
 ## Outcome
 
 Phase 11 testing:
-- **6 bugs found and fixed** (B1, B2, F2, F4, F5, F6)
+- **7 bugs found and fixed** (B1, B2, F2, F4, F5, F6, F7)
 - 34/34 Playwright assertions pass (2 SKIPs for
   seed-dependent sections)
-- 27/27 backend integration tests pass (74 total
+- 31/31 backend integration tests pass (78 total
   across 3 suites)
 - Manual guide (15 scenarios A–L2) covers the rest
 
@@ -154,6 +172,7 @@ Phase 11 testing:
 | **F4** | Reset password key icon showed "Password reset endpoint is not available yet" | Added `POST /api/scholars/:id/reset-password` (admin-only) that hashes via pre-save. Frontend modal now sends typed password and copies to clipboard |
 | **F5** | No way to reactivate a deactivated scholar | Edit modal flips between Activate/Deactivate icons based on `isActive`. Click re-toggles via `PUT /api/scholars/:id` with `{isActive: true}` |
 | **F6** | Reject had no reason — could not record why a booking was rejected | Frontend opens a prompt that requires ≥3 chars. Backend validator requires `rejectionReason` ≥3 chars on `PUT /api/nikah-bookings/:id` with `status: 'rejected'` |
+| **F7** | Deactivating a scholar did not log them out — JWTs were valid until expiry | `protect` middleware now checks `req.user.isActive === false` and returns 401. Frontend stores the 401 message in `sessionStorage.logoutNotice` and the login page shows it as a toast |
 
 ## Deferred work
 

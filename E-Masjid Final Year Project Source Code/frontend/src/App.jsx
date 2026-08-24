@@ -83,6 +83,7 @@ function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="donations" element={<DonationsExpenses />} />
               <Route path="prayer-times" element={<AdminPrayerTimes />} />
               <Route path="events" element={<AdminEvents />} />
@@ -96,6 +97,7 @@ function App() {
             {/* Scholar Routes */}
             <Route path="/scholar/*" element={<ScholarLayout />}>
               <Route index element={<ScholarDashboard />} />
+              <Route path="dashboard" element={<ScholarDashboard />} />
             </Route>
 
             {/* Manager Routes */}

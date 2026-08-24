@@ -21,6 +21,14 @@ export default function AdminLogin() {
     }
   }, [isAuthenticated, user, navigate])
 
+  useEffect(() => {
+    const notice = sessionStorage.getItem('logoutNotice')
+    if (notice) {
+      sessionStorage.removeItem('logoutNotice')
+      showToast(notice, 'error')
+    }
+  }, [showToast])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

@@ -20,4 +20,16 @@ router.post('/', protect, authorize('community'), [
 
 router.put('/:id', protect, authorize('committee', 'admin'), ctrl.review);
 
+router.post('/:id/vote', protect, authorize('committee'), [
+  body('vote').isIn(['approve', 'reject']).withMessage('vote must be approve or reject'),
+  body('note').optional().isString().isLength({ max: 1000 }),
+  handleValidation,
+], ctrl.vote);
+
+router.post('/:id/finalize', protect, authorize('admin'), [
+  body('overrideStatus').optional().isIn(['approved', 'rejected']).withMessage('overrideStatus must be approved or rejected'),
+  body('finalNote').optional().isString().isLength({ max: 1000 }),
+  handleValidation,
+], ctrl.finalize);
+
 module.exports = router;

@@ -27,7 +27,15 @@
       "Bash(node -e \"const m=require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI, {serverSelectionTimeoutMS: 6000}\\).then\\(\\(\\)=>{console.log\\('OK'\\);process.exit\\(0\\)}\\).catch\\(e=>{console.log\\('FAIL',e.message\\);process.exit\\(1\\)}\\)\")",
       "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const m=require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI, {serverSelectionTimeoutMS: 6000}\\).then\\(\\(\\)=>{console.log\\('MONGO_OK'\\);process.exit\\(0\\)}\\).catch\\(e=>{console.log\\('MONGO_FAIL',e.message\\);process.exit\\(1\\)}\\)\")",
       "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const m=require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI, {serverSelectionTimeoutMS: 10000}\\).then\\(\\(\\)=>{console.log\\('MONGO_OK'\\);setTimeout\\(\\(\\)=>{m.connection.db.admin\\(\\).ping\\(\\).then\\(r=>{console.log\\('PING',r\\);process.exit\\(0\\)}\\).catch\\(e=>{console.log\\('PING_FAIL',e.message\\);process.exit\\(1\\)}\\)}, 1000\\)}\\).catch\\(e=>{console.log\\('MONGO_FAIL',e.message\\);process.exit\\(1\\)}\\)\")",
-      "Bash(curl -s -m 3 http://localhost:5000/api/health)"
+      "Bash(curl -s -m 3 http://localhost:5000/api/health)",
+      "PowerShell(Set-Location 'd:\\\\College data\\\\Seven semster\\\\Project data\\\\Git hub data\\\\E-Masjid Final Year Project Source Code\\\\backend'; $env:MONGODB_URI='mongodb://127.0.0.1:27017/emasjid'; node utils/seed.js 2>&1 | Out-Null; Set-Location '..'; $env:SKIP_RESEED='1'; node Testing/12_Nikah_Booking_Module/nikah_test.js 2>&1 | Select-String 'DEBUG|Booked slot')",
+      "PowerShell(Set-Location 'd:\\\\College data\\\\Seven semster\\\\Project data\\\\Git hub data\\\\E-Masjid Final Year Project Source Code\\\\backend'; $env:MONGODB_URI='mongodb://127.0.0.1:27017/emasjid'; node utils/seed.js 2>&1 | Out-Null; Set-Location '..'; $env:SKIP_RESEED='1'; node Testing/12_Nikah_Booking_Module/nikah_test.js 2>&1 | Tee-Object 'playwright-run13.log' | Out-Null)",
+      "Bash(node -e \"const m = require\\('mongoose'\\); m.connect\\('mongodb://127.0.0.1:27017/emasjid'\\).then\\(async \\(\\) => { const Booking = require\\('./backend/models/NikahBooking'\\); const b = await Booking.findOne\\({ groomName: /e2e groom/i }\\); console.log\\('booking:', JSON.stringify\\(b, null, 2\\)\\); process.exit\\(0\\); }\\);\")",
+      "Bash(powershell -Command \"Get-Process -Id 17148 | Select-Object Id,ProcessName,StartTime\")",
+      "Bash(MONGODB_URI=mongodb://127.0.0.1:27017/emasjid node -e \"const m = require\\('mongoose'\\); m.connect\\(process.env.MONGODB_URI\\).then\\(async \\(\\) => { const NikahBooking = require\\('./models/NikahBooking'\\); const b = await NikahBooking.findOne\\({ groomName: 'E2E Groom' }\\).lean\\(\\); console.log\\(JSON.stringify\\(b, null, 2\\)\\); process.exit\\(0\\); }\\);\")",
+      "Bash(nohup npm run dev)",
+      "Bash(echo \"started $!\")",
+      "PowerShell($p = Get-NetTCPConnection -LocalPort 5000,5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach \\($procId in $p\\) { try { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue; Write-Host \"Killed PID $procId\" } catch {} })"
     ]
   }
 }

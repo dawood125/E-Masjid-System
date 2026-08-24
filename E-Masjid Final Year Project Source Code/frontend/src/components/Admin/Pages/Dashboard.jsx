@@ -3,9 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { useAuth } from '../../../hooks/useAuth.js'
-import {
-  mockNikahBookings,
-} from '../../../mocks'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
 
@@ -54,6 +51,7 @@ export default function Dashboard() {
   const [donations, setDonations] = useState([])
   const [expenses, setExpenses] = useState([])
   const [events, setEvents] = useState([])
+  const [nikahBookings, setNikahBookings] = useState([])
   const [summary, setSummary] = useState({ totalDonations: 0, totalExpenses: 0, balance: 0 })
 
   useEffect(() => {
@@ -62,10 +60,11 @@ export default function Dashboard() {
     const params = mosqueId ? `mosqueId=${mosqueId}` : ''
     ;(async () => {
       try {
-        const [donationRes, expenseRes, eventsRes, donationSummaryRes, expenseSummaryRes] = await Promise.all([
+        const [donationRes, expenseRes, eventsRes, nikahRes, donationSummaryRes, expenseSummaryRes] = await Promise.all([
           api.getDonations(params),
           api.getExpenses(params),
           api.getEvents(params),
+          api.getNikahBookings(),
           api.getDonationSummary(params),
           api.getExpenseSummary(params),
         ])
@@ -73,9 +72,11 @@ export default function Dashboard() {
         const donationList = Array.isArray(donationRes.data) ? donationRes.data : []
         const expenseList = Array.isArray(expenseRes.data) ? expenseRes.data : []
         const eventList = Array.isArray(eventsRes.data) ? eventsRes.data : []
+        const nikahList = Array.isArray(nikahRes.data) ? nikahRes.data : []
         setDonations(donationList.map((d) => ({ ...d, id: d._id || d.id, date: d.createdAt || d.date })))
         setExpenses(expenseList.map((e) => ({ ...e, id: e._id || e.id, date: e.createdAt || e.date })))
         setEvents(eventList.map((e) => ({ ...e, id: e._id || e.id })))
+        setNikahBookings(nikahList)
         const totalDonations = donationSummaryRes.data?.totalDonations || 0
         const totalExpenses = expenseSummaryRes.data?.totalExpenses || 0
         setSummary({ totalDonations, totalExpenses, balance: totalDonations - totalExpenses })
@@ -94,8 +95,8 @@ export default function Dashboard() {
   })
 
   const pendingNikahCount = useMemo(
-    () => mockNikahBookings.filter((booking) => booking.status === 'pending').length,
-    []
+    () => nikahBookings.filter((booking) => booking.status === 'pending').length,
+    [nikahBookings]
   )
 
   const upcomingEventsCount = useMemo(() => {
@@ -125,7 +126,7 @@ export default function Dashboard() {
     <div className="space-y-8 animate-fade-in-up">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary-800">Assalam-o-Alaikum, Haji Ahmad</h1>
+          <h1 className="text-3xl font-bold text-primary-800">Assalam-o-Alaikum, {user?.name || 'Admin'}</h1>
           <p className="text-sm text-gray-500">{todayLabel}</p>
         </div>
         <Link

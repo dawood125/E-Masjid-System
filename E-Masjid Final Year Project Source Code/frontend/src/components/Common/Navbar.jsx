@@ -60,6 +60,109 @@ function DropdownMenu({ label, items, isActive, closeMobileMenu: closeMobileFn }
   )
 }
 
+function UserAvatarMenu({ user, logout }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const name = user?.name || 'User'
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'U'
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        title={name}
+        aria-label="Account menu"
+        className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#047857] to-[#064e3b] text-sm font-bold text-white shadow-sm transition-all duration-150 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-300"
+      >
+        <span aria-hidden="true">{initials}</span>
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-2 w-60 rounded-xl border border-gray-200 bg-white py-2 shadow-xl animate-fade-in z-[70]">
+          <div className="border-b border-gray-100 px-4 py-3">
+            <p className="text-sm font-semibold text-gray-900 truncate" title={name}>{name}</p>
+            <p className="text-xs text-gray-500 truncate" title={user?.email || ''}>{user?.email || ''}</p>
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#047857]">
+              {user?.role || 'member'}
+            </p>
+          </div>
+
+          <div className="py-1">
+            {user?.role === 'admin' && (
+              <Link
+                to={ROUTES.ADMIN}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-[#047857]"
+              >
+                <i className="material-icons-round text-lg text-gray-400">dashboard</i>
+                Admin Dashboard
+              </Link>
+            )}
+            {user?.role === 'scholar' && (
+              <Link
+                to={ROUTES.SCHOLAR}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-[#047857]"
+              >
+                <i className="material-icons-round text-lg text-gray-400">auto_stories</i>
+                Scholar Dashboard
+              </Link>
+            )}
+            {user?.role === 'committee' && (
+              <Link
+                to={ROUTES.COMMITTEE}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-[#047857]"
+              >
+                <i className="material-icons-round text-lg text-gray-400">groups</i>
+                Committee Panel
+              </Link>
+            )}
+            {user?.role === 'community' && (
+              <Link
+                to={ROUTES.MY_BOOKINGS}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-primary-50 hover:text-[#047857]"
+              >
+                <i className="material-icons-round text-lg text-gray-400">bookmark</i>
+                My Bookings
+              </Link>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                logout()
+                setOpen(false)
+              }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            >
+              <i className="material-icons-round text-lg">logout</i>
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
   const { toggleMobileMenu, mobileMenuOpen, closeMobileMenu } = useUI()
@@ -119,14 +222,14 @@ export default function Navbar() {
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-[60] border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-white shadow-sm'}`} style={{ overflow: 'visible' }}>
-      <div className="container h-20 flex items-center gap-2 lg:gap-4">
+      <div className="container min-h-20 py-2 flex flex-wrap items-center gap-x-2 gap-y-2 lg:flex-nowrap lg:gap-4">
         {/* Logo */}
-        <Link to={ROUTES.HOME} className="flex items-center gap-3 shrink-0 min-w-0">
+        <Link to={ROUTES.HOME} className="flex items-center gap-3 shrink-0 basis-auto min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#047857] to-[#064e3b] shadow-md">
             <i className="material-icons-round text-white text-[26px]">mosque</i>
           </div>
-          <div className="hidden sm:flex flex-col min-w-0 max-w-[10rem]">
-            <span className="font-primary text-lg lg:text-xl font-bold leading-tight text-[#064e3b] truncate" title={activeMosque?.name || 'E-Masjid'}>
+          <div className="hidden sm:flex flex-col min-w-0 max-w-[7rem] lg:max-w-[7rem] xl:max-w-[12rem]">
+            <span className="font-primary text-base lg:text-lg font-bold leading-tight text-[#064e3b] truncate" title={activeMosque?.name || 'E-Masjid'}>
               {activeMosque?.name || 'E-Masjid'}
             </span>
             <span className="text-xs font-medium text-gray-500 truncate" title={activeMosque?.city || 'Select a mosque'}>
@@ -136,7 +239,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation — shown at lg+ (1024px) */}
-        <nav className="hidden lg:flex items-center gap-1 flex-1 min-w-0 justify-end">
+        <nav className="hidden lg:flex items-center gap-1 flex-1 min-w-0 justify-end flex-nowrap">
           {primaryLinks.map((link) => (
             <Link
               key={link.path}
@@ -171,15 +274,15 @@ export default function Navbar() {
           />
         </nav>
 
-        {/* Mosque Selector — hidden below xl, shows at xl+ only (to keep room for nav links at lg) */}
+        {/* Mosque Selector — shows at lg when logged in (compact), at xl only when logged out */}
         {mosques.length > 0 && (
-          <div className="hidden xl:flex items-center gap-2 shrink min-w-0 relative" style={{ zIndex: 70 }}>
+          <div className={`items-center gap-2 shrink min-w-0 relative order-3 lg:order-none w-full lg:w-auto mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 ${isAuthenticated ? 'hidden lg:flex' : 'hidden xl:flex'}`} style={{ zIndex: 70 }}>
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Mosque</span>
             <button
               type="button"
               onClick={() => setIsMosqueModalOpen(true)}
               title={activeMosque ? `${activeMosque.name} (${activeMosque.city})` : 'Select a mosque'}
-              className="min-w-0 w-36 2xl:w-48 truncate rounded-lg border border-gray-300 bg-white pl-2 pr-7 py-2 text-sm text-gray-700 text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="min-w-0 w-32 2xl:w-48 truncate rounded-lg border border-gray-300 bg-white pl-2 pr-7 py-2 text-sm text-gray-700 text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               {activeMosque ? `${activeMosque.name}` : 'Select a mosque'}
             </button>
@@ -188,38 +291,17 @@ export default function Navbar() {
         )}
 
         {/* Auth Buttons — always visible at sm+, never shrink */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
+        <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0 order-2 lg:order-none">
           {isAuthenticated ? (
             <div className="hidden lg:flex items-center gap-2 shrink-0 min-w-0">
-              <span className="hidden xl:inline text-sm font-medium text-gray-700 truncate max-w-[10rem]" title={user?.name || 'User'}>
-                {user?.name || 'User'}
-              </span>
-              <button
-                onClick={() => {
-                  logout()
-                  closeMobileMenu()
-                }}
-                className="btn btn-secondary btn-sm"
-              >
-                Logout
-              </button>
-              {user?.role === 'admin' && (
-                <Link to={ROUTES.ADMIN} className="btn btn-primary btn-sm">
-                  Admin
-                </Link>
-              )}
-              {user?.role === 'scholar' && (
-                <Link to={ROUTES.SCHOLAR} className="btn btn-primary btn-sm">
-                  Dashboard
-                </Link>
-              )}
+              <UserAvatarMenu user={user} logout={logout} />
             </div>
           ) : (
-            <div className="hidden lg:flex items-center gap-2 shrink-0">
-              <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm">
+            <div className="hidden lg:flex items-center gap-1.5 shrink-0">
+              <Link to={ROUTES.LOGIN} className="btn btn-secondary btn-sm whitespace-nowrap px-3 py-1.5 text-sm">
                 Login
               </Link>
-              <Link to={ROUTES.REGISTER} className="btn btn-primary btn-sm">
+              <Link to={ROUTES.REGISTER} className="btn btn-primary btn-sm whitespace-nowrap px-3 py-1.5 text-sm">
                 Register
               </Link>
             </div>
@@ -342,6 +424,24 @@ export default function Navbar() {
 
               {isAuthenticated && (
                 <div className="mt-4 pt-4 border-t">
+                  <div className="mb-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#047857] to-[#064e3b] text-sm font-bold text-white">
+                      {(user?.name || 'U')
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join('')
+                        .toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900">{user?.name || 'User'}</p>
+                      <p className="truncate text-xs text-gray-500">{user?.email || ''}</p>
+                    </div>
+                    <span className="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#047857]">
+                      {user?.role || 'member'}
+                    </span>
+                  </div>
                   <button
                     onClick={() => {
                       logout()

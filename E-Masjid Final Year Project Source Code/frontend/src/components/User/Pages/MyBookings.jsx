@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import { useAuth } from '../../../context/AuthContext.jsx'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate } from '../../../utils/formatters.js'
@@ -29,17 +30,24 @@ function statusMeta(status) {
 
 export default function MyBookings() {
   const { showToast } = useUI()
+  const { user } = useAuth()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [cancellingId, setCancellingId] = useState(null)
+
+  const loadBookings = async () => {
+    const res = await api.getNikahBookings()
+    const list = Array.isArray(res.data) ? res.data : []
+    return list.map((item) => ({ ...item, id: item._id || item.id }))
+  }
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
-        const res = await api.getNikahBookings()
+        const list = await loadBookings()
         if (!mounted) return
-        const list = Array.isArray(res.data) ? res.data : []
-        setBookings(list.map((item) => ({ ...item, id: item._id || item.id })))
+        setBookings(list)
       } catch (err) {
         showToast(err.message || 'Failed to load booking status.', 'error')
       } finally {
@@ -52,16 +60,33 @@ export default function MyBookings() {
   const stats = useMemo(() => {
     const pending = bookings.filter((b) => b.status === 'pending').length
     const accepted = bookings.filter((b) => b.status === 'accepted').length
+    const rejected = bookings.filter((b) => b.status === 'rejected').length
     return {
       total: bookings.length,
       pending,
       accepted,
+      rejected,
     }
   }, [bookings])
 
-  const cancelPending = () => {
-    showToast('Cancellation endpoint is not available yet. Please contact admin.', 'warning')
+  const cancelPending = async (id) => {
+    if (!id || cancellingId === id) return
+    const ok = window.confirm('Cancel this booking? This action cannot be undone.')
+    if (!ok) return
+
+    setCancellingId(id)
+    try {
+      const res = await api.cancelNikahBooking(id)
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...res.data, id } : b)))
+      showToast(`Booking NKH-${String(id).slice(-6).toUpperCase()} cancelled.`, 'warning')
+    } catch (err) {
+      showToast(err.message || 'Failed to cancel booking.', 'error')
+    } finally {
+      setCancellingId(null)
+    }
   }
+
+  const greetingName = user?.name || 'there'
 
   return (
     <div className="bg-white">
@@ -86,7 +111,7 @@ export default function MyBookings() {
                   <i className="material-icons-round text-3xl">person</i>
                 </div>
                 <div>
-                  <h2 className="font-primary text-2xl font-bold text-gray-900">Assalam-o-Alaikum, Muhammad Ahmed!</h2>
+                  <h2 className="font-primary text-2xl font-bold text-gray-900">Assalam-o-Alaikum, {greetingName}!</h2>
                   <p className="text-gray-600">Here are your Nikah booking requests and current status.</p>
                 </div>
               </div>
@@ -103,6 +128,10 @@ export default function MyBookings() {
                 <div>
                   <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
                   <div className="text-xs text-gray-500 uppercase">Accepted</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+                  <div className="text-xs text-gray-500 uppercase">Rejected</div>
                 </div>
               </div>
             </div>
@@ -171,20 +200,16 @@ export default function MyBookings() {
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4">
                     <span className="text-sm text-gray-600">Submitted on <strong>{formatDate(booking.preferredDate)}</strong></span>
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" className="btn btn-secondary btn-sm">View Details</button>
-                      {booking.status === 'pending' && (
-                        <>
-                          <button type="button" className="btn btn-secondary btn-sm">Edit</button>
-                          <button type="button" className="btn btn-sm border border-red-400 text-red-600 hover:bg-red-50" onClick={() => cancelPending(booking.id)}>
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      {booking.status === 'accepted' && (
-                        <button type="button" className="btn btn-primary btn-sm bg-[#047857]">Download</button>
-                      )}
-                    </div>
+                    {booking.status === 'pending' && (
+                      <button
+                        type="button"
+                        className="btn btn-sm border border-red-400 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        disabled={cancellingId === booking.id}
+                        onClick={() => cancelPending(booking.id)}
+                      >
+                        {cancellingId === booking.id ? 'Cancelling...' : 'Cancel Booking'}
+                      </button>
+                    )}
                   </div>
                 </article>
               )
