@@ -7,32 +7,48 @@ function tryOrNext(fn) {
 }
 
 const stats = tryOrNext(async (req, res) => {
-  const data = await svc.aggregateStats();
+  const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
+  if (!mosqueId) {
+    return res.json({ success: true, data: { yearsServing: 0, totalDonationsPKR: 0, activeRequests: 0, familiesHelped: 0 } });
+  }
+  const data = await svc.aggregateStats(mosqueId);
   res.json({ success: true, data });
 });
 
 const impact = tryOrNext(async (req, res) => {
-  const data = await svc.aggregateImpact();
+  const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
+  if (!mosqueId) {
+    return res.json({ success: true, data: { prayersTracked: 0, studentsTaught: 0, nikahHosted: 0, familiesSupported: 0 } });
+  }
+  const data = await svc.aggregateImpact(mosqueId);
   res.json({ success: true, data });
 });
 
 const featured = tryOrNext(async (req, res) => {
-  const data = await svc.featuredCampaign();
+  const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
+  if (!mosqueId) return res.json({ success: true, data: null });
+  const data = await svc.featuredCampaign(mosqueId);
   res.json({ success: true, data: data || null });
 });
 
 const campaigns = tryOrNext(async (req, res) => {
-  const data = await svc.listCampaigns();
+  const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
+  if (!mosqueId) return res.json({ success: true, data: [] });
+  const data = await svc.listCampaigns(mosqueId);
   res.json({ success: true, data });
 });
 
 const testimonials = tryOrNext(async (req, res) => {
-  const data = await svc.listTestimonials();
+  const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
+  if (!mosqueId) return res.json({ success: true, data: [] });
+  const data = await svc.listTestimonials(mosqueId);
   res.json({ success: true, data });
 });
 
 const heroSlides = tryOrNext(async (req, res) => {
-  const data = await svc.listHeroSlides();
+  const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
+  if (!mosqueId) return res.json({ success: true, data: [] });
+  const data = await svc.listHeroSlides(mosqueId);
   res.json({ success: true, data });
 });
 

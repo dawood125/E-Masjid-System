@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../utils/api.js'
 import { ROUTES } from '../../utils/constants.js'
+import { useMosque } from '../../hooks/useMosque.js'
 
 /**
  * Featured campaign: a single large donation CTA card with a progress bar.
  * Phase 4.5: Now fetched from GET /api/marketing/featured-campaign. If no
  * campaign is featured, the section is hidden entirely (clean fallback).
+ * Phase 4.5 (re-verify 2026-08-24): scoped to the active masjid selected in
+ * the navbar so each masjid's homepage shows only its own featured campaign.
+ * Phase 4.5 (post-feedback 2026-08-25): donorCount removed from the UI — it
+ * was manual bookkeeping the admin had to keep up-to-date. The card now
+ * shows only raised/target PKR + days left.
  */
 function formatPKR(n) {
   return 'PKR ' + Number(n || 0).toLocaleString('en-PK')
@@ -15,16 +21,16 @@ function formatPKR(n) {
 export default function FeaturedCampaign() {
   const [campaign, setCampaign] = useState(null)
   const [loaded, setLoaded] = useState(false)
+  const { activeMosqueId } = useMosque()
 
   useEffect(() => {
     let mounted = true
-    api.getMarketingFeaturedCampaign()
+    api.getMarketingFeaturedCampaign(activeMosqueId)
       .then((res) => { if (mounted) { setCampaign(res.data); setLoaded(true) } })
       .catch(() => { if (mounted) setLoaded(true) })
     return () => { mounted = false }
-  }, [])
+  }, [activeMosqueId])
 
-  // Hide section entirely if no featured campaign
   if (loaded && !campaign) return null
   if (!campaign) return null
 
@@ -41,13 +47,16 @@ export default function FeaturedCampaign() {
       />
 
       <div className="container relative">
+        <div className="text-center mb-12">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white">
+            <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
+            Featured Campaign
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white">
-              <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
-              Featured Campaign
-            </span>
-            <h2 className="mt-4 font-primary text-3xl md:text-5xl font-bold leading-tight">
+            <h2 className="font-primary text-3xl md:text-5xl font-bold leading-tight">
               {campaign.title}
             </h2>
             {campaign.subtitle && (
@@ -57,12 +66,12 @@ export default function FeaturedCampaign() {
             )}
             <div className="mt-6 flex flex-wrap items-center gap-5 text-sm text-white/80">
               <span className="inline-flex items-center gap-2">
-                <i className="material-icons-round text-base text-[#d4af37]">group</i>
-                {campaign.donorCount || 0} donors
-              </span>
-              <span className="inline-flex items-center gap-2">
                 <i className="material-icons-round text-base text-[#d4af37]">schedule</i>
                 {campaign.daysLeft || 0} days left
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <i className="material-icons-round text-base text-[#d4af37]">volunteer_activism</i>
+                {pct}% funded
               </span>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">

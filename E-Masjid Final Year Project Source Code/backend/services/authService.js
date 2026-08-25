@@ -49,6 +49,13 @@ async function loginUser({ email, password }) {
 
   if (!user.isActive) throw httpError(403, 'Account is deactivated');
 
+  if (user.mosqueId && ['admin', 'scholar', 'committee'].includes(user.role)) {
+    const mosque = await Mosque.findById(user.mosqueId).select('isActive name');
+    if (mosque && mosque.isActive === false) {
+      throw httpError(403, `Your masjid (${mosque.name}) is currently deactivated. Please contact your manager.`);
+    }
+  }
+
   return { user, token: tokenForUser(user) };
 }
 

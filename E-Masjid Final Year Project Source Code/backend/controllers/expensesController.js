@@ -11,6 +11,11 @@ const listExpenses = tryOrNext(async (req, res) => {
   res.json({ success: true, ...page });
 });
 
+const listAdmin = tryOrNext(async (req, res) => {
+  const page = await svc.listAdmin(req.query, req.user);
+  res.json({ success: true, ...page });
+});
+
 const summary = tryOrNext(async (req, res) => {
   const totals = await svc.aggregateSummary({ mosqueId: req.query.mosqueId });
   res.json({ success: true, data: totals });
@@ -31,4 +36,4 @@ const removeExpense = tryOrNext(async (req, res) => {
   res.json({ success: true, message: 'Expense deleted' });
 });
 
-module.exports = { listExpenses, summary, createExpense, updateExpense, removeExpense };
+module.exports = { listExpenses, listAdmin, summary, createExpense, updateExpense, removeExpense };

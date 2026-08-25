@@ -22,9 +22,16 @@ const heroSlideSchema = new mongoose.Schema({
   link: { type: String, trim: true }, // Optional CTA link
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
+  mosqueId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Mosque',
+    required: true,
+    index: true,
+  },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 heroSlideSchema.index({ isActive: 1, order: 1 });
+heroSlideSchema.index({ mosqueId: 1, isActive: 1, order: 1 });
 
 module.exports = mongoose.model('HeroSlide', heroSlideSchema);

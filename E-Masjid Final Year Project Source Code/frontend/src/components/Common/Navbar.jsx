@@ -442,6 +442,46 @@ export default function Navbar() {
                       {user?.role || 'member'}
                     </span>
                   </div>
+                  {user?.role === 'admin' && (
+                    <Link
+                      to={ROUTES.ADMIN}
+                      onClick={closeMobileMenu}
+                      className="mb-2 flex items-center gap-3 rounded-lg bg-primary-50 px-5 py-3.5 text-base font-semibold text-[#047857] transition-colors duration-150 hover:bg-primary-100"
+                    >
+                      <i className="material-icons-round text-lg">dashboard</i>
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  {user?.role === 'scholar' && (
+                    <Link
+                      to={ROUTES.SCHOLAR}
+                      onClick={closeMobileMenu}
+                      className="mb-2 flex items-center gap-3 rounded-lg bg-primary-50 px-5 py-3.5 text-base font-semibold text-[#047857] transition-colors duration-150 hover:bg-primary-100"
+                    >
+                      <i className="material-icons-round text-lg">auto_stories</i>
+                      Scholar Dashboard
+                    </Link>
+                  )}
+                  {user?.role === 'committee' && (
+                    <Link
+                      to={ROUTES.COMMITTEE}
+                      onClick={closeMobileMenu}
+                      className="mb-2 flex items-center gap-3 rounded-lg bg-primary-50 px-5 py-3.5 text-base font-semibold text-[#047857] transition-colors duration-150 hover:bg-primary-100"
+                    >
+                      <i className="material-icons-round text-lg">groups</i>
+                      Committee Panel
+                    </Link>
+                  )}
+                  {user?.role === 'community' && (
+                    <Link
+                      to={ROUTES.MY_BOOKINGS}
+                      onClick={closeMobileMenu}
+                      className="mb-2 flex items-center gap-3 rounded-lg bg-primary-50 px-5 py-3.5 text-base font-semibold text-[#047857] transition-colors duration-150 hover:bg-primary-100"
+                    >
+                      <i className="material-icons-round text-lg">bookmark</i>
+                      My Bookings
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       logout()

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
+import { useMosque } from '../../hooks/useMosque.js'
 
 /**
  * Community testimonials: portrait cards with circular photos + a quote.
@@ -8,9 +9,13 @@ import api from '../../utils/api.js'
  * the admin panel). Falls back to a single placeholder card if the DB is
  * empty so the section is never completely blank.
  *
- * Each testimonial record stores: name, role, quote, photo URL. Photos can
- * be the default Gemini-generated images in /public/assets/images/testimonials/
- * OR any other URL (e.g. an uploaded image).
+ * Phase 4.5 (re-verify 2026-08-24): scoped to the active masjid so the
+ * testimonials reflect the masjid selected in the navbar.
+ *
+ * Phase 4.5 (post-feedback 2026-08-25): slider with arrows + dots so any
+ * number of testimonials can be browsed. Previously `.slice(0, 3)` silently
+ * dropped any extra testimonials past the 3rd — admin couldn't tell from
+ * the homepage that the others existed.
  */
 
 const PLACEHOLDER_TESTIMONIALS = [
@@ -36,21 +41,63 @@ function QuoteMark() {
   )
 }
 
+function ChevronLeft(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" />
+    </svg>
+  )
+}
+function ChevronRight(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+    </svg>
+  )
+}
+
 export default function Testimonials() {
   const [items, setItems] = useState([])
   const [loaded, setLoaded] = useState(false)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [perPage, setPerPage] = useState(3)
+  const [paused, setPaused] = useState(false)
+  const timerRef = useRef(null)
+  const { activeMosqueId } = useMosque()
 
   useEffect(() => {
     let mounted = true
-    api.getMarketingTestimonials()
+    api.getMarketingTestimonials(activeMosqueId)
       .then((res) => { if (mounted) { setItems(res.data || []); setLoaded(true) } })
       .catch(() => { if (mounted) setLoaded(true) })
     return () => { mounted = false }
+  }, [activeMosqueId])
+
+  useEffect(() => {
+    function handleResize() {
+      const w = window.innerWidth
+      setPerPage(w < 768 ? 1 : 3)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // If no testimonials yet, show the placeholder
   const display = items.length > 0 ? items : PLACEHOLDER_TESTIMONIALS
   const isPlaceholder = items.length === 0
+  const totalPages = Math.max(1, Math.ceil(display.length / perPage))
+  const safePageIndex = Math.min(pageIndex, totalPages - 1)
+
+  const next = useCallback(() => setPageIndex((i) => (i + 1) % totalPages), [totalPages])
+  const prev = useCallback(() => setPageIndex((i) => (i - 1 + totalPages) % totalPages), [totalPages])
+
+  useEffect(() => {
+    if (paused || totalPages <= 1) return
+    timerRef.current = setInterval(next, 6000)
+    return () => clearInterval(timerRef.current)
+  }, [paused, next, totalPages])
+
+  const visible = display.slice(safePageIndex * perPage, safePageIndex * perPage + perPage)
 
   return (
     <section className="py-20 bg-primary-50">
@@ -73,34 +120,70 @@ export default function Testimonials() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7">
-          {display.slice(0, 3).map((t, i) => (
-            <figure
-              key={t._id || t.name}
-              className="group relative overflow-hidden rounded-2xl bg-white p-7 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border border-gray-100"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <QuoteMark />
+        <div
+          className="relative"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7">
+            {visible.map((t, i) => (
+              <figure
+                key={t._id || t.name}
+                className="group relative overflow-hidden rounded-2xl bg-white p-7 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border border-gray-100"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <QuoteMark />
 
-              <blockquote className="relative text-gray-700 leading-relaxed italic min-h-[7.5rem]">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
+                <blockquote className="relative text-gray-700 leading-relaxed italic min-h-[7.5rem]">
+                  &ldquo;{t.quote}&rdquo;
+                </blockquote>
 
-              <figcaption className="mt-6 flex items-center gap-3 pt-5 border-t border-gray-100">
-                <img
-                  src={t.photo}
-                  alt={t.name}
-                  className="h-14 w-14 rounded-full object-cover ring-2 ring-[#047857]/20"
-                  loading="lazy"
-                  onError={(e) => { e.currentTarget.src = '/assets/images/testimonials/testimonial-1.jpg' }}
-                />
-                <div className="min-w-0">
-                  <p className="font-bold text-[#064e3b] truncate">{t.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{t.role}</p>
-                </div>
-              </figcaption>
-            </figure>
-          ))}
+                <figcaption className="mt-6 flex items-center gap-3 pt-5 border-t border-gray-100">
+                  <img
+                    src={t.photo}
+                    alt={t.name}
+                    className="h-14 w-14 rounded-full object-cover ring-2 ring-[#047857]/20"
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.src = '/assets/images/testimonials/testimonial-1.jpg' }}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-bold text-[#064e3b] truncate">{t.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{t.role}</p>
+                  </div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <>
+              <button
+                onClick={prev}
+                className="absolute left-0 md:-left-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white text-[#047857] shadow-lg border border-gray-200 flex items-center justify-center hover:bg-primary-50 transition-colors"
+                aria-label="Previous testimonials"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={next}
+                className="absolute right-0 md:-right-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white text-[#047857] shadow-lg border border-gray-200 flex items-center justify-center hover:bg-primary-50 transition-colors"
+                aria-label="Next testimonials"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+
+              <div className="mt-8 flex justify-center gap-2">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPageIndex(i)}
+                    className={`h-2 rounded-full transition-all ${i === safePageIndex ? 'w-8 bg-[#d4af37]' : 'w-2 bg-gray-300 hover:bg-gray-400'}`}
+                    aria-label={`Go to testimonials page ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </section>

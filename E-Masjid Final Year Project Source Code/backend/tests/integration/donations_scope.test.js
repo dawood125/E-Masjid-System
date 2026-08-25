@@ -575,7 +575,7 @@ describe('Donations scope isolation (Phase 8)', () => {
       expect(created.isAnonymous).toBe(false);
     });
 
-    test('webhook with valid signature but invalid amount in metadata does not crash', async () => {
+    test('webhook with valid signature but invalid amount in metadata returns 500 (so Stripe retries)', async () => {
       mockStripeConstructEvent.mockReturnValue({
         type: 'checkout.session.completed',
         data: {
@@ -591,7 +591,7 @@ describe('Donations scope isolation (Phase 8)', () => {
         .set('stripe-signature', 'valid-sig')
         .set('Content-Type', 'application/json')
         .send('{}');
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(500);
       const created = await Donation.findOne({ stripePaymentId: 'pi_test_payment_bad' });
       expect(created).toBeNull();
     });

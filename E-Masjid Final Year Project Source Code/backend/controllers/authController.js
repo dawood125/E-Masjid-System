@@ -2,6 +2,9 @@ const { sanitizeString } = require('../middleware/validate');
 const authService = require('../services/authService');
 const generateToken = require('../utils/generateToken');
 
+const TOKEN_COOKIE_NAME = 'emasjid_token';
+const TOKEN_COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+
 function pickSanitized(body, fields) {
   const out = {};
   for (const f of fields) {
@@ -21,6 +24,25 @@ function publicUser(u) {
   };
 }
 
+function cookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'lax',
+    path: '/',
+    maxAge: TOKEN_COOKIE_MAX_AGE_MS,
+  };
+}
+
+function setAuthCookie(res, token) {
+  res.cookie(TOKEN_COOKIE_NAME, token, cookieOptions());
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie(TOKEN_COOKIE_NAME, { path: '/' });
+}
+
 async function register(req, res, next) {
   try {
     const fields = pickSanitized(req.body, ['name', 'email', 'address', 'city', 'phone']);
@@ -29,6 +51,7 @@ async function register(req, res, next) {
     if (fields.email) fields.email = fields.email.toLowerCase();
 
     const { user, token } = await authService.registerUser(fields);
+    setAuthCookie(res, token);
     res.status(201).json({
       success: true,
       token,
@@ -48,8 +71,14 @@ async function login(req, res, next) {
     const email = sanitizeString(req.body.email).toLowerCase();
     const { password } = req.body;
     const { user, token } = await authService.loginUser({ email, password });
+    setAuthCookie(res, token);
     res.json({ success: true, token, user: publicUser(user) });
   } catch (e) { next(e); }
+}
+
+async function logout(req, res) {
+  clearAuthCookie(res);
+  res.json({ success: true, message: 'Logged out' });
 }
 
 async function forgotPassword(req, res, next) {
@@ -78,14 +107,19 @@ function getMe(req, res) {
 
 function refreshToken(req, res) {
   const token = generateToken(req.user._id, req.user.role);
+  setAuthCookie(res, token);
   res.json({ success: true, token });
 }
 
 module.exports = {
   register,
   login,
+  logout,
   forgotPassword,
   resetPassword,
   getMe,
   refreshToken,
+  TOKEN_COOKIE_NAME,
+  setAuthCookie,
+  clearAuthCookie,
 };

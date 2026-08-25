@@ -1,23 +1,34 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Mosque = require('../models/Mosque');
+const { verifyToken } = require('../utils/generateToken');
+const { TOKEN_COOKIE_NAME } = require('../controllers/authController');
 
 // Protect routes - Verify JWT token
 const protect = async (req, res, next) => {
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies && req.cookies[TOKEN_COOKIE_NAME]) {
+    token = req.cookies[TOKEN_COOKIE_NAME];
   }
   if (!token) {
     return res.status(401).json({ success: false, message: 'Not authorized, no token' });
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { decoded } = verifyToken(token);
     req.user = await User.findById(decoded.id).select('-password');
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
     if (req.user.isActive === false) {
       return res.status(401).json({ success: false, message: 'Account is deactivated. Please contact your administrator.' });
+    }
+    if (req.user.mosqueId && ['admin', 'scholar', 'committee'].includes(req.user.role)) {
+      const mosque = await Mosque.findById(req.user.mosqueId).select('isActive name');
+      if (mosque && mosque.isActive === false) {
+        return res.status(403).json({ success: false, message: `Your masjid (${mosque.name}) is currently deactivated. Please contact your manager.` });
+      }
     }
     next();
   } catch (error) {

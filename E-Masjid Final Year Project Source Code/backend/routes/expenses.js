@@ -6,6 +6,7 @@ const { handleValidation } = require('../middleware/validate');
 const ctrl = require('../controllers/expensesController');
 
 router.get('/', ctrl.listExpenses);
+router.get('/admin', protect, authorize('admin', 'manager'), ctrl.listAdmin);
 router.get('/summary', ctrl.summary);
 
 router.post('/', protect, authorize('admin'), [

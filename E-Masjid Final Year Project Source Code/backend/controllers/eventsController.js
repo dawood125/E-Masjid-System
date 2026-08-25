@@ -7,18 +7,27 @@ function tryOrNext(fn) {
 }
 
 const listPublic = tryOrNext(async (req, res) => {
-  const events = await eventsService.listPublic({ mosqueId: req.query.mosqueId });
-  res.json({ success: true, data: events });
+  const page = await eventsService.listPublic({
+    mosqueId: req.query.mosqueId,
+    limit: req.query.limit,
+    page: req.query.page,
+  });
+  res.json({ success: true, ...page });
 });
 
 const listForCaller = tryOrNext(async (req, res) => {
-  const events = await eventsService.listForCaller(req);
-  res.json({ success: true, data: events });
+  const page = await eventsService.listForCaller(req);
+  res.json({ success: true, ...page });
 });
 
 const getById = tryOrNext(async (req, res) => {
   const event = await eventsService.getById(req.params.id);
   res.json({ success: true, data: event });
+});
+
+const getRegistrations = tryOrNext(async (req, res) => {
+  const result = await eventsService.getRegistrations(req.params.id);
+  res.json({ success: true, data: result });
 });
 
 const create = tryOrNext(async (req, res) => {
@@ -42,4 +51,4 @@ const register = tryOrNext(async (req, res) => {
   res.json({ success: true, message: 'Registered successfully', data: event });
 });
 
-module.exports = { listPublic, listForCaller, getById, create, update, remove, register };
+module.exports = { listPublic, listForCaller, getById, getRegistrations, create, update, remove, register };

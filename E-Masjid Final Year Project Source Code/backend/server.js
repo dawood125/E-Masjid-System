@@ -28,6 +28,21 @@ app.use(cors({
   credentials: true,
 }));
 
+// Lightweight cookie parser (we only read emasjid_token)
+app.use((req, _res, next) => {
+  const header = req.headers && req.headers.cookie;
+  req.cookies = {};
+  if (!header) return next();
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const name = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (name) req.cookies[name] = decodeURIComponent(value);
+  }
+  next();
+});
+
 // Stripe webhook must use raw body
 app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 

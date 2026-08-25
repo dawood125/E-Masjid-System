@@ -14,9 +14,9 @@
 Each fix is covered by:
 
 - A Playwright E2E assertion in
-  `Testing/16_Navbar_Mosque_BugFixes/navbar_mosque_test.js`
+  `Testing/16A_Navbar_Mosque_BugFixes/navbar_mosque_test.js`
   (Issues 1, 2, 4 verified by automated browser assertions; Issue 3
   verified by the developer checking the server console output).
 - A manual scenario in
-  `Testing/16_Navbar_Mosque_BugFixes/manual_testing_guide.md`
+  `Testing/16A_Navbar_Mosque_BugFixes/manual_testing_guide.md`
   (scenarios A–I).

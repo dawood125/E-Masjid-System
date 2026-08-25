@@ -551,7 +551,7 @@ files, fill in the "Outcome" section:
 | 13 | `13_Committee_Module/` | `my_test_results.md` |
 | 14 | `14_Fund_Requests_Module/` | `my_test_results.md` |
 | 15 | `15_Committee_Account_Management_Module/` | `my_test_results.md` |
-| 16 | `16_Navbar_Mosque_BugFixes/` | `my_test_results.md` (bug fixes from manual testing) |
+| 16 | `16A_Navbar_Mosque_BugFixes/` | `my_test_results.md` (bug fixes from manual testing) |
 
 For each, write something like:
 
@@ -572,7 +572,7 @@ Followed `FUND_REQUEST_FLOW_MANUAL_TEST.md`. Sections tested:
 - 10 (Deactivate-mid-vote): all 4 sub-scenarios PASS
 - 11 (Race): N/A (covered by Playwright)
 - 12 (Gmail): 4 of 4 inboxes received the right emails
-- 13 (Phase 16 navbar fixes): scenarios A-I from `16_Navbar_Mosque_BugFixes/manual_testing_guide.md` PASS
+- 13 (Phase 16 navbar fixes): scenarios A-I from `16A_Navbar_Mosque_BugFixes/manual_testing_guide.md` PASS
 
 No new bugs found.
 ```
@@ -583,7 +583,7 @@ No new bugs found.
 
 Four bugs were found during manual testing of the Fund Request flow and
 fixed in a separate sprint. The scenarios for them live in
-`Testing/16_Navbar_Mosque_BugFixes/manual_testing_guide.md`. Summary:
+`Testing/16A_Navbar_Mosque_BugFixes/manual_testing_guide.md`. Summary:
 
 | # | Bug | Symptom | Fix |
 |---|---|---|---|
@@ -595,7 +595,7 @@ fixed in a separate sprint. The scenarios for them live in
 **To run the Phase 16 verification:**
 
 ```bash
-node Testing/16_Navbar_Mosque_BugFixes/navbar_mosque_test.js
+node Testing/16A_Navbar_Mosque_BugFixes/navbar_mosque_test.js
 ```
 
 **To watch the Issue-3 email logging live:**

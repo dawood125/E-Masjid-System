@@ -12,7 +12,7 @@ export default function ManageMosques() {
   const [adminFormBusy, setAdminFormBusy] = useState(false)
   const [lastCreatedAdmin, setLastCreatedAdmin] = useState(null)
   const [editModalMosque, setEditModalMosque] = useState(null)
-  const [editForm, setEditForm] = useState({ name: '', address: '', city: '', phone: '', email: '', image: '' })
+  const [editForm, setEditForm] = useState({ name: '', address: '', city: '', phone: '', email: '' })
   const [editFormBusy, setEditFormBusy] = useState(false)
   const { showToast } = useUI()
   const [loading, setLoading] = useState(true)
@@ -50,7 +50,7 @@ export default function ManageMosques() {
       try {
         const res = await api.createMosque({
           ...formData,
-          isActive: true,
+          isActive: false,
         })
         const newMosque = res.data
         setMosques((prev) => [newMosque, ...prev])
@@ -106,13 +106,12 @@ export default function ManageMosques() {
       city: mosque.city || '',
       phone: mosque.phone || '',
       email: mosque.email || '',
-      image: mosque.image || '',
     })
   }
 
   const closeEditModal = () => {
     setEditModalMosque(null)
-    setEditForm({ name: '', address: '', city: '', phone: '', email: '', image: '' })
+    setEditForm({ name: '', address: '', city: '', phone: '', email: '' })
   }
 
   const handleEditMosque = (e) => {
@@ -233,10 +232,6 @@ export default function ManageMosques() {
           <div key={mosque._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {/* Mosque Header */}
             <div className="flex flex-col md:flex-row">
-              <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0">
-                <img src={mosque.image} alt={mosque.name} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent md:bg-gradient-to-t" />
-              </div>
               <div className="flex-1 p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -470,15 +465,6 @@ export default function ManageMosques() {
                     onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
                   />
                 </div>
-              </div>
-              <div>
-                <label className="form-label">Image URL</label>
-                <input
-                  className="form-input"
-                  placeholder="/assets/images/mosques/your-masjid.jpg"
-                  value={editForm.image}
-                  onChange={(e) => setEditForm((p) => ({ ...p, image: e.target.value }))}
-                />
               </div>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button type="button" onClick={closeEditModal} className="btn btn-secondary">

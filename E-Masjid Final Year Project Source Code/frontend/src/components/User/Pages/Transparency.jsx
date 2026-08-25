@@ -47,6 +47,8 @@ export default function Transparency() {
   const [expensesTotalPages, setExpensesTotalPages] = useState(1)
   const [topDonors, setTopDonors] = useState([])
   const [summary, setSummary] = useState({ totalDonations: 0, totalExpenses: 0, balance: 0 })
+  const [donationTrend, setDonationTrend] = useState({ thisMonth: 0, lastMonth: 0 })
+  const [expenseTrend, setExpenseTrend] = useState({ thisMonth: 0, lastMonth: 0 })
   const [loading, setLoading] = useState(true)
   const [donationFilterCategories, setDonationFilterCategories] = useState(['all', 'zakat', 'sadaqah', 'fund'])
 
@@ -107,6 +109,14 @@ export default function Transparency() {
         const totalDonations = donSumRes.data?.totalDonations || 0
         const totalExpenses = expSumRes.data?.totalExpenses || 0
         setSummary({ totalDonations, totalExpenses, balance: totalDonations - totalExpenses })
+        setDonationTrend({
+          thisMonth: donSumRes.data?.thisMonth || 0,
+          lastMonth: donSumRes.data?.lastMonth || 0,
+        })
+        setExpenseTrend({
+          thisMonth: expSumRes.data?.thisMonth || 0,
+          lastMonth: expSumRes.data?.lastMonth || 0,
+        })
       } catch (e) {
         if (!mounted) return
         showToast(e.message || 'Failed to load transparency data', 'error')
@@ -172,6 +182,27 @@ export default function Transparency() {
   const totalDonations = summary.totalDonations
   const totalExpenses = summary.totalExpenses
   const balance = summary.balance
+
+  function computeTrend(current, previous) {
+    if (!previous || previous <= 0) {
+      if (!current) return { label: 'No prior data', tone: 'muted', icon: 'info' }
+      return { label: 'New this month', tone: 'positive', icon: 'trending_up' }
+    }
+    const diff = current - previous
+    const pct = Math.round((diff / previous) * 100)
+    if (Math.abs(pct) < 1) return { label: 'Flat vs last month', tone: 'muted', icon: 'remove' }
+    const direction = pct > 0 ? 'up' : 'down'
+    const tone = pct > 0 ? 'positive' : 'negative'
+    const sign = pct > 0 ? '+' : ''
+    return {
+      label: `${sign}${pct}% from last month`,
+      tone,
+      icon: direction === 'up' ? 'trending_up' : 'trending_down',
+    }
+  }
+
+  const donationTrendInfo = computeTrend(donationTrend.thisMonth, donationTrend.lastMonth)
+  const expenseTrendInfo = computeTrend(expenseTrend.thisMonth, expenseTrend.lastMonth)
 
   const donationFilterChips = (
     <div className="flex items-center gap-2">
@@ -258,9 +289,11 @@ export default function Transparency() {
             </div>
             <p className="mt-3 text-sm text-gray-500">Total Donations Received</p>
             <h3 className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(totalDonations)}</h3>
-            <p className="mt-2 inline-flex items-center gap-1 text-sm text-green-700">
-              <i className="material-icons-round text-base">trending_up</i>
-              +12% from last month
+            <p className={`mt-2 inline-flex items-center gap-1 text-sm ${
+              donationTrendInfo.tone === 'positive' ? 'text-green-700' : donationTrendInfo.tone === 'negative' ? 'text-red-600' : 'text-gray-600'
+            }`}>
+              <i className="material-icons-round text-base">{donationTrendInfo.icon}</i>
+              {donationTrendInfo.label}
             </p>
           </div>
 
@@ -274,9 +307,11 @@ export default function Transparency() {
             </div>
             <p className="mt-3 text-sm text-gray-500">Total Funds Utilized</p>
             <h3 className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(totalExpenses)}</h3>
-            <p className="mt-2 inline-flex items-center gap-1 text-sm text-gray-600">
-              <i className="material-icons-round text-base">info</i>
-              Maintenance & Operations
+            <p className={`mt-2 inline-flex items-center gap-1 text-sm ${
+              expenseTrendInfo.tone === 'positive' ? 'text-green-700' : expenseTrendInfo.tone === 'negative' ? 'text-red-600' : 'text-gray-600'
+            }`}>
+              <i className="material-icons-round text-base">{expenseTrendInfo.icon}</i>
+              {expenseTrendInfo.label}
             </p>
           </div>
 

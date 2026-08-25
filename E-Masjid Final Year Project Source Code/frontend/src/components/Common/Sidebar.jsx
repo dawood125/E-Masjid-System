@@ -5,7 +5,7 @@ import { ROUTES } from '../../utils/constants.js'
 
 export default function Sidebar({ role = 'admin' }) {
   const { sidebarOpen, closeSidebar } = useUI()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -114,8 +114,10 @@ export default function Sidebar({ role = 'admin' }) {
               <i className="material-icons-round text-sm">person</i>
             </div>
             <div className="text-sm flex-1">
-              <p className="font-medium">Haji Ahmad</p>
-              <p className="text-primary-100 text-xs">Administrator</p>
+              <p className="font-medium">{user?.name || (role === 'scholar' ? 'Scholar' : 'Admin')}</p>
+              <p className="text-primary-100 text-xs">
+                {role === 'scholar' ? 'Scholar Panel' : 'Administrator'}
+              </p>
             </div>
           </div>
         </div>

@@ -106,7 +106,7 @@ piece of the same end-to-end flow with professional QA rigor.
 
 **Total: 30 bugs found and fixed across the four phases.**
 
-### Phase 16 (post-Phase-15 bug-fix sprint) — `16_Navbar_Mosque_BugFixes/`
+### Phase 16 (post-Phase-15 bug-fix sprint) — `16A_Navbar_Mosque_BugFixes/`
 
 Six bugs surfaced during manual testing of the Fund Request flow that
 touched the navbar + mosque-context plumbing rather than the core
@@ -159,7 +159,7 @@ has an automated test + a manual scenario that covers it.
 | E2E | `Testing/13_Committee_Module/committee_voting_test.js` | 19 PASS / 0 FAIL / 1 INFO |
 | E2E | `Testing/14_Fund_Requests_Module/user_fundrequest_test.js` | 21 PASS / 0 FAIL / 1 INFO |
 | E2E | `Testing/15_Committee_Account_Management_Module/committee_admin_test.js` | 15 PASS / 1 SKIP / 0 FAIL |
-| E2E | `Testing/16_Navbar_Mosque_BugFixes/navbar_mosque_test.js` | 6 PASS / 1 INFO / 0 FAIL |
+| E2E | `Testing/16A_Navbar_Mosque_BugFixes/navbar_mosque_test.js` | 6 PASS / 1 INFO / 0 FAIL |
 | **E2E total** | | **61 PASS / 1 SKIP / 1 INFO across 4 files** |
 
 ---

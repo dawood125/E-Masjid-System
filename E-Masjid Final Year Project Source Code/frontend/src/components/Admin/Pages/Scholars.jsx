@@ -46,6 +46,8 @@ export default function Scholars() {
   const [resetForm, setResetForm] = useState({ password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(true)
   const [assigningId, setAssigningId] = useState(null)
+  const [confirmToggle, setConfirmToggle] = useState(null)
+  const [togglingId, setTogglingId] = useState(null)
 
   const loadScholars = async () => {
     const res = await api.getScholars()
@@ -209,6 +211,7 @@ export default function Scholars() {
   }
 
   const toggleActive = (scholar) => {
+    setTogglingId(scholar.id)
     ;(async () => {
       try {
         const next = !scholar.isActive
@@ -220,8 +223,11 @@ export default function Scholars() {
           next ? `${scholar.name} re-activated.` : `${scholar.name} marked inactive.`,
           'success'
         )
+        setConfirmToggle(null)
       } catch (err) {
         showToast(err.message || 'Failed to update scholar.', 'error')
+      } finally {
+        setTogglingId(null)
       }
     })()
   }
@@ -359,7 +365,7 @@ export default function Scholars() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => toggleActive(scholar)}
+                    onClick={() => setConfirmToggle(scholar)}
                     className={`inline-flex h-8 w-8 items-center justify-center rounded-md border ${
                       scholar.isActive
                         ? 'border-red-200 text-red-600 hover:bg-red-50'
@@ -368,7 +374,7 @@ export default function Scholars() {
                     title={scholar.isActive ? 'Deactivate' : 'Activate'}
                   >
                     <i className="material-icons-round text-base">
-                      {scholar.isActive ? 'delete' : 'check_circle'}
+                      {scholar.isActive ? 'block' : 'check_circle'}
                     </i>
                   </button>
                 </div>
@@ -723,6 +729,53 @@ export default function Scholars() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmToggle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className={`inline-flex items-center gap-2 text-lg font-bold ${confirmToggle.isActive ? 'text-red-700' : 'text-emerald-700'}`}>
+                <i className="material-icons-round">{confirmToggle.isActive ? 'block' : 'check_circle'}</i>
+                {confirmToggle.isActive ? 'Deactivate Scholar' : 'Activate Scholar'}
+              </h3>
+              <button type="button" onClick={() => setConfirmToggle(null)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-700">
+                {confirmToggle.isActive ? (
+                  <>Are you sure you want to mark <strong className="text-gray-900">{confirmToggle.name}</strong> as inactive? They will not appear in scholar assignment lists for new Nikah bookings until re-activated.</>
+                ) : (
+                  <>Are you sure you want to re-activate <strong className="text-gray-900">{confirmToggle.name}</strong>? They will once again be eligible for Nikah booking assignments.</>
+                )}
+              </p>
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setConfirmToggle(null)}
+                  disabled={togglingId === confirmToggle.id}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleActive(confirmToggle)}
+                  disabled={togglingId === confirmToggle.id}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
+                    confirmToggle.isActive
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                >
+                  {togglingId === confirmToggle.id ? 'Updating...' : (confirmToggle.isActive ? 'Mark Inactive' : 'Activate')}
+                </button>
+              </div>
             </div>
           </div>
         </div>

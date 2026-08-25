@@ -86,20 +86,18 @@ export default function ManagerDashboard() {
             </div>
           ) : mosques.map((mosque) => (
             <div key={mosque._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
-              <div className="relative h-40 overflow-hidden">
-                <img src={mosque.image} alt={mosque.name} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-3 left-4 right-4">
-                  <h3 className="text-lg font-bold text-white">{mosque.name}</h3>
-                  <p className="text-sm text-white/80">{mosque.city}</p>
-                </div>
-                <span className={`absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-semibold ${mosque.isActive ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
-                  {mosque.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
               <div className="p-5">
-                <p className="text-sm text-gray-500 mb-3">{mosque.address}</p>
-                <Link to={ROUTES.MANAGER_MOSQUES} className="inline-flex items-center gap-1 text-sm font-semibold text-[#047857] hover:text-[#d4af37] transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{mosque.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{mosque.city}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${mosque.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {mosque.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                {mosque.address && <p className="text-sm text-gray-500 mt-3">{mosque.address}</p>}
+                <Link to={ROUTES.MANAGER_MOSQUES} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#047857] hover:text-[#d4af37] transition-colors">
                   Manage <i className="material-icons-round text-base">arrow_forward</i>
                 </Link>
               </div>

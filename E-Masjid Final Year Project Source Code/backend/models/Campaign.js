@@ -8,11 +8,16 @@ const mongoose = require('mongoose');
  * any other campaign when a new one is featured, so the admin panel doesn't
  * have to do that bookkeeping manually.
  *
- * `raisedAmount` and `donorCount` are denormalized fields — we COULD compute
- * them from the Donations table by summing amounts with campaignId=X, but
- * that requires linking donations to campaigns (currently they aren't). For
- * the FYP we let admins update these manually via the admin panel. The
- * `progress` virtual computes the percentage from raised/target.
+ * `raisedAmount` is a denormalized field — we COULD compute it from the
+ * Donations table by summing amounts with campaignId=X, but that requires
+ * linking donations to campaigns (currently they aren't). For the FYP we let
+ * admins update it manually via the admin panel. The `progress` virtual
+ * computes the percentage from raised/target.
+ *
+ * Phase 4.5 (post-launch): `donorCount` was removed. It was manual
+ * bookkeeping the admin had to keep up-to-date, which is error-prone for a
+ * masjid that has no system-of-record for individual donor tallies. The
+ * campaign card now shows only raised/target PKR + days left.
  */
 const campaignSchema = new mongoose.Schema({
   title: {
@@ -36,11 +41,6 @@ const campaignSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Raised amount cannot be negative'],
   },
-  donorCount: {
-    type: Number,
-    default: 0,
-    min: [0, 'Donor count cannot be negative'],
-  },
   daysLeft: {
     type: Number,
     default: 30,
@@ -50,6 +50,12 @@ const campaignSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   isFeatured: { type: Boolean, default: false },
   order: { type: Number, default: 0 }, // For ordering within active campaigns
+  mosqueId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Mosque',
+    required: true,
+    index: true,
+  },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
@@ -66,6 +72,8 @@ campaignSchema.pre('save', async function (next) {
 
 campaignSchema.index({ isFeatured: 1, isActive: 1 });
 campaignSchema.index({ isActive: 1, order: 1, createdAt: -1 });
+campaignSchema.index({ mosqueId: 1, isActive: 1, order: 1 });
+campaignSchema.index({ mosqueId: 1, isFeatured: 1, isActive: 1 });
 
 campaignSchema.virtual('progressPercent').get(function () {
   if (!this.targetAmount || this.targetAmount <= 0) return 0;

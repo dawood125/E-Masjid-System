@@ -7,16 +7,18 @@ function tryOrNext(fn) {
 }
 
 const listPublic = tryOrNext(async (req, res) => {
-  const items = await svc.listPublic({
+  const page = await svc.listPublic({
     mosqueId: req.query.mosqueId,
     includeAll: req.query.includeAll,
+    limit: req.query.limit,
+    page: req.query.page,
   });
-  res.json({ success: true, data: items });
+  res.json({ success: true, ...page });
 });
 
 const listForCaller = tryOrNext(async (req, res) => {
-  const items = await svc.listForCaller(req);
-  res.json({ success: true, data: items });
+  const page = await svc.listForCaller(req);
+  res.json({ success: true, ...page });
 });
 
 const create = tryOrNext(async (req, res) => {

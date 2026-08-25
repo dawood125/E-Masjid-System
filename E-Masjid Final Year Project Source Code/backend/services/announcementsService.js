@@ -10,7 +10,19 @@ function todayMidnight() {
   return d;
 }
 
-async function listPublic({ mosqueId, includeAll }) {
+function clampLimit(raw, fallback = 20, max = 100) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(n, max);
+}
+
+function clampPage(raw, fallback = 1) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.floor(n);
+}
+
+async function listPublic({ mosqueId, includeAll, limit, page }) {
   if (mosqueId && !isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
   const query = mosqueId ? { mosqueId } : {};
   if (includeAll !== 'true') {
@@ -21,12 +33,33 @@ async function listPublic({ mosqueId, includeAll }) {
       { publishDate: null },
     ];
   }
-  return Announcement.find(query).sort({ createdAt: -1 });
+  const safeLimit = clampLimit(limit);
+  const safePage = clampPage(page);
+  const [items, total] = await Promise.all([
+    Announcement.find(query)
+      .select('title content isUrgent publishDate status createdAt mosqueId publishedBy')
+      .sort({ createdAt: -1 })
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit)
+      .lean(),
+    Announcement.countDocuments(query),
+  ]);
+  return { data: items, total, page: safePage, totalPages: Math.ceil(total / safeLimit) || 1 };
 }
 
 async function listForCaller(req) {
   const scope = await resolveScope(req, { allowManagerPick: true });
-  return Announcement.find({ mosqueId: scope }).sort({ createdAt: -1 });
+  const safeLimit = clampLimit(req.query.limit, 20);
+  const safePage = clampPage(req.query.page);
+  const [items, total] = await Promise.all([
+    Announcement.find({ mosqueId: scope })
+      .sort({ createdAt: -1 })
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit)
+      .lean(),
+    Announcement.countDocuments({ mosqueId: scope }),
+  ]);
+  return { data: items, total, page: safePage, totalPages: Math.ceil(total / safeLimit) || 1 };
 }
 
 async function create(input, user) {

@@ -13,6 +13,7 @@ import ImageCarousel from '../../Marketing/ImageCarousel.jsx'
 import ImpactCounters from '../../Marketing/ImpactCounters.jsx'
 import Testimonials from '../../Marketing/Testimonials.jsx'
 import FeaturedCampaign from '../../Marketing/FeaturedCampaign.jsx'
+import OtherCampaigns from '../../Marketing/OtherCampaigns.jsx'
 
 const prayerOrder = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha']
 
@@ -82,13 +83,15 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true
-    const params = activeMosqueId ? `mosqueId=${activeMosqueId}` : ''
+    const baseParams = activeMosqueId ? `mosqueId=${activeMosqueId}` : ''
+    const eventsParams = baseParams ? `${baseParams}&limit=2&page=1` : 'limit=2&page=1'
+    const announcementsParams = baseParams ? `${baseParams}&limit=3&page=1` : 'limit=3&page=1'
     ;(async () => {
       try {
         const [prayerRes, eventsRes, announcementsRes] = await Promise.all([
-          api.getPrayerTimes(params),
-          api.getEvents(params),
-          api.getAnnouncements(params),
+          api.getPrayerTimes(baseParams),
+          api.getEvents(eventsParams),
+          api.getAnnouncements(announcementsParams),
         ])
         if (!mounted) return
 
@@ -259,6 +262,9 @@ export default function Home() {
 
       {/* ==================== FEATURED CAMPAIGN (donation CTA with progress bar) ==================== */}
       <FeaturedCampaign />
+
+      {/* ==================== OTHER ACTIVE CAMPAIGNS (grid) ==================== */}
+      <OtherCampaigns />
 
       {/* ==================== TESTIMONIALS (3 community members) ==================== */}
       <Testimonials />

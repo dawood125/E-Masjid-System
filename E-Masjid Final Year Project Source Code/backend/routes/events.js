@@ -8,6 +8,7 @@ router.get('/', ctrl.listPublic);
 router.get('/admin', protect, authorize('admin', 'manager', 'scholar', 'committee'), ctrl.listForCaller);
 
 router.get('/:id', ctrl.getById);
+router.get('/:id/registrations', protect, authorize('admin', 'manager', 'scholar', 'committee'), ctrl.getRegistrations);
 router.post('/:id/register', protect, ctrl.register);
 
 router.post('/', protect, authorize('admin', 'manager'), upload.single('image'), ctrl.create);

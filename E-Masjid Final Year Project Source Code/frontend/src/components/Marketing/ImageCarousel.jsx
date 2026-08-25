@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
+import { useMosque } from '../../hooks/useMosque.js'
 
 /**
  * "Life at the Masjid" — image carousel.
@@ -8,6 +9,9 @@ import api from '../../utils/api.js'
  * manages which images show in the carousel. The 6 Gemini-generated images
  * in /public/assets/images/gallery/ are seeded as the defaults so the
  * carousel still looks beautiful on a fresh seed.
+ *
+ * Phase 4.5 (re-verify 2026-08-24): scoped to the active masjid so the
+ * carousel reflects the masjid selected in the navbar.
  */
 
 const DEFAULT_SLIDES = [
@@ -39,10 +43,11 @@ export default function ImageCarousel() {
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const timerRef = useRef(null)
+  const { activeMosqueId } = useMosque()
 
   useEffect(() => {
     let mounted = true
-    api.getMarketingHeroSlides()
+    api.getMarketingHeroSlides(activeMosqueId)
       .then((res) => {
         if (!mounted) return
         if (res.data && res.data.length > 0) {
@@ -56,7 +61,7 @@ export default function ImageCarousel() {
       })
       .catch(() => { /* fall back to defaults */ })
     return () => { mounted = false }
-  }, [])
+  }, [activeMosqueId])
 
   const next = useCallback(() => setIndex((i) => (i + 1) % slides.length), [slides.length])
   const prev = useCallback(() => setIndex((i) => (i - 1 + slides.length) % slides.length), [slides.length])
@@ -86,20 +91,47 @@ export default function ImageCarousel() {
 
         <div className="relative overflow-hidden rounded-3xl shadow-2xl group">
           <div className="relative h-[420px] md:h-[520px] bg-black">
-            {slides.map((s, i) => (
-              <img
-                key={s._id || s.image}
-                src={s.image}
-                alt={s.caption}
-                loading="lazy"
-                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${i === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
-              />
-            ))}
+            {slides.map((s, i) => {
+              const imgEl = (
+                <img
+                  src={s.image}
+                  alt={s.caption || ''}
+                  loading="lazy"
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${i === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+                />
+              )
+              return (
+                <div
+                  key={s._id || s.image}
+                  className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0'}`}
+                >
+                  {s.link ? (
+                    <a
+                      href={s.link}
+                      target={/^https?:\/\//i.test(s.link) ? '_blank' : undefined}
+                      rel={/^https?:\/\//i.test(s.link) ? 'noopener noreferrer' : undefined}
+                      className="block h-full w-full"
+                      aria-label={s.caption || 'Open link'}
+                    >
+                      {imgEl}
+                    </a>
+                  ) : (
+                    imgEl
+                  )}
+                </div>
+              )
+            })}
             <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/85 via-black/50 to-transparent pointer-events-none" />
             <div className="absolute bottom-0 inset-x-0 p-6 md:p-8 text-white pointer-events-none">
               <p className="font-primary text-xl md:text-2xl font-semibold drop-shadow-lg max-w-3xl">
                 {slides[index].caption}
               </p>
+              {slides[index].link && (
+                <p className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#d4af37]">
+                  <i className="material-icons-round text-base">open_in_new</i>
+                  Click to learn more
+                </p>
+              )}
             </div>
           </div>
 

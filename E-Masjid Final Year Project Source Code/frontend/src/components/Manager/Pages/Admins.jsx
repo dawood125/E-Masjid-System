@@ -134,7 +134,7 @@ export default function ManageAdmins() {
           <i className="material-icons-round text-amber-700">info</i>
           <p>
             Admins are created from the <strong>Manage Mosques</strong> page using the <em>Add Admin</em> button on a masjid card.
-            To reset an admin's password or deactivate their account, you can contact them directly (admins use the standard forgot-password flow).
+            To reset an admin&apos;s password or deactivate their account, you can contact them directly (admins use the standard forgot-password flow).
           </p>
         </div>
       </div>

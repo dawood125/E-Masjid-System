@@ -20,15 +20,67 @@ function coerceImagePath(req) {
   return req.file ? '/uploads/events/' + req.file.filename : undefined;
 }
 
-async function listPublic({ mosqueId }) {
+function clampLimit(raw, fallback = 20, max = 100) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(n, max);
+}
+
+function clampPage(raw, fallback = 1) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.floor(n);
+}
+
+async function listPublic({ mosqueId, limit, page }) {
   if (mosqueId && !isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
   const query = { isActive: true, ...(mosqueId ? { mosqueId } : {}) };
-  return Event.find(query).sort({ date: 1 });
+  const safeLimit = clampLimit(limit);
+  const safePage = clampPage(page);
+  const [items, total] = await Promise.all([
+    Event.find(query)
+      .select('title date time location image category description maxParticipants requiresRegistration mosqueId registeredUsers')
+      .sort({ date: 1 })
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit)
+      .lean(),
+    Event.countDocuments(query),
+  ]);
+  const data = items.map((e) => ({
+    ...e,
+    registeredCount: Array.isArray(e.registeredUsers) ? e.registeredUsers.length : 0,
+  }));
+  return { data, total, page: safePage, totalPages: Math.ceil(total / safeLimit) || 1 };
 }
 
 async function listForCaller(req) {
   const scope = await resolveScope(req, { allowManagerPick: true });
-  return Event.find({ mosqueId: scope }).sort({ date: 1 });
+  const safeLimit = clampLimit(req.query.limit, 20);
+  const safePage = clampPage(req.query.page);
+  const [items, total] = await Promise.all([
+    Event.find({ mosqueId: scope })
+      .sort({ date: 1 })
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit)
+      .lean(),
+    Event.countDocuments({ mosqueId: scope }),
+  ]);
+  return { data: items, total, page: safePage, totalPages: Math.ceil(total / safeLimit) || 1 };
+}
+
+async function getRegistrations(id) {
+  if (!isValidObjectId(id)) throw httpError(400, 'Invalid event id');
+  const event = await Event.findById(id)
+    .populate('registeredUsers', 'name email phone')
+    .select('title registeredUsers')
+    .lean();
+  if (!event) throw httpError(404, 'Event not found');
+  return {
+    eventId: event._id,
+    title: event.title,
+    registrations: event.registeredUsers || [],
+    registeredCount: (event.registeredUsers || []).length,
+  };
 }
 
 async function getById(id) {
@@ -139,6 +191,7 @@ module.exports = {
   listPublic,
   listForCaller,
   getById,
+  getRegistrations,
   create,
   update,
   remove,

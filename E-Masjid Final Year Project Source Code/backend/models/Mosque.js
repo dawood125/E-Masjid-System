@@ -6,10 +6,9 @@ const mosqueSchema = new mongoose.Schema({
   city: { type: String, required: [true, 'City is required'] },
   phone: { type: String },
   email: { type: String },
-  image: { type: String },
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   admins: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  isActive: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: false },
 }, { timestamps: true });
 
 mosqueSchema.index({ managerId: 1, createdAt: -1 });

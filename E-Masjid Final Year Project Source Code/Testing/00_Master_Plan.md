@@ -21,6 +21,7 @@
 | 2 | `02_Forgot_Password_Module` | Forgot/Reset password + email-service failure | ✅ Complete (10/10 backend tests, awaiting partner manual) |
 | 3 | `03_Navbar_Masjid_Selection` | Navbar + multi-mosque dropdown | ✅ Complete (10/10 backend tests, awaiting partner manual) |
 | 4 | `04_Homepage_Module` | Public homepage (prayer/announcement/event + carousel + top donors) | ✅ Complete |
+| 4.5 | `04.5_Marketing_Content_Management` | Admin-managed campaigns + testimonials + hero slides (homepage marketing sections) | ✅ Complete (re-verified 2026-08-24; stabilized 2026-08-25; fixed BUG-PHASE4.5-008 multi-tenant scope leak; 5 post-feedback fixes 2026-08-25 — hero link clickable, testimonials slider, Other Campaigns grid, donorCount removed; 5/5 + 5/5 Playwright PASS confirmed) |
 | 5 | `05_Prayer_Timings_Module` | Public view + admin manage + Jummah + Ramadan | 🔄 Starting now |
 | 6 | `06_Announcements_Module` | Public view + admin manage + urgent + scheduling | ⏸ Pending |
 | 7 | `07_Events_Module` | Public + admin CRUD + register + max-participant + draft | ⏸ Pending |
@@ -50,6 +51,7 @@
 | 2 | Forgot Password | FR-9, UC-3, NFR-Rel |
 | 3 | Navbar | (UI / cross-cutting) |
 | 4 | Homepage | FR-5, FR-13, FR-7, UC-7, FT-5, FYP Evaluation #9 |
+| 4.5 | Marketing Content | FR-13 (admin-managed campaigns), FYP Evaluation #5/#9 |
 | 5 | Prayer Timings | FR-7, UC-4, UC-13 |
 | 6 | Announcements | FR-5, UC-7, UC-15 |
 | 7 | Events | FR-5, UC-5, UC-14 |

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../../utils/api.js'
+import { useMosque } from '../../hooks/useMosque.js'
 
 /**
  * Live stats ticker: 4 key numbers shown just below the hero.
@@ -72,14 +73,15 @@ function StatCard({ label, value, icon, format = 'number', delay = 0 }) {
 export default function StatsSection() {
   const [stats, setStats] = useState(null)
   const [error, setError] = useState(null)
+  const { activeMosqueId } = useMosque()
 
   useEffect(() => {
     let mounted = true
-    api.getMarketingStats()
+    api.getMarketingStats(activeMosqueId)
       .then((res) => { if (mounted) setStats(res.data) })
       .catch((e) => { if (mounted) setError(e.message || 'Failed to load stats') })
     return () => { mounted = false }
-  }, [])
+  }, [activeMosqueId])
 
   // Map backend keys to display config (icon, format, etc.)
   const config = [

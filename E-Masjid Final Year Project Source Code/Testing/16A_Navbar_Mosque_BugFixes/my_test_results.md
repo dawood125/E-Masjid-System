@@ -11,7 +11,7 @@ This phase does **not** add new backend integration tests because:
 
 ## Playwright end-to-end
 
-`Testing/16_Navbar_Mosque_BugFixes/navbar_mosque_test.js` (run
+`Testing/16A_Navbar_Mosque_BugFixes/navbar_mosque_test.js` (run
 against the live backend + MongoDB on port 5000):
 
 ```
@@ -76,7 +76,7 @@ npx jest tests/integration --runInBand
 
 # Playwright E2E for the four Phase 16 fixes
 cd ..
-node Testing/16_Navbar_Mosque_BugFixes/navbar_mosque_test.js
+node Testing/16A_Navbar_Mosque_BugFixes/navbar_mosque_test.js
 ```
 
 For the Issue 3 verification, watch the backend stdout when a fresh

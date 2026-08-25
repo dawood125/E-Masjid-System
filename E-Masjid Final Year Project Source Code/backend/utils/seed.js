@@ -449,7 +449,8 @@ const seedDB = async () => {
       createdBy: admin._id,
     });
 
-    // Sample hero carousel slides (shown in the "Life at the Masjid" carousel)
+    // Sample hero carousel slides (one set per masjid — the "Life at the Masjid"
+    // carousel is per-masjid, so each masjid gets its own 6 default slides).
     const defaultSlides = [
       { image: '/assets/images/gallery/gallery-fajr.jpg',       caption: 'Fajr prayer at dawn — worshippers in sujood' },
       { image: '/assets/images/gallery/gallery-quran.jpg',      caption: 'Quran study circle with our ustaad' },
@@ -458,13 +459,17 @@ const seedDB = async () => {
       { image: '/assets/images/gallery/gallery-nikah.jpg',      caption: 'A blessed Nikah ceremony' },
       { image: '/assets/images/gallery/gallery-courtyard.jpg', caption: 'Our peaceful courtyard at golden hour' },
     ];
-    for (let i = 0; i < defaultSlides.length; i++) {
-      await HeroSlide.create({
-        ...defaultSlides[i],
-        order: i,
-        isActive: true,
-        createdBy: admin._id,
-      });
+    for (const m of allMasjids) {
+      const createdBy = m._id.equals(mosque._id) ? admin._id : (m.admins[0] || admin._id);
+      for (let i = 0; i < defaultSlides.length; i++) {
+        await HeroSlide.create({
+          ...defaultSlides[i],
+          order: i,
+          isActive: true,
+          createdBy,
+          mosqueId: m._id,
+        });
+      }
     }
 
     console.log('\n✅ Database seeded successfully!');

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const stripeLib = require('stripe');
 const Donation = require('../models/Donation');
 const { sanitizeString, isValidObjectId } = require('../middleware/validate');
@@ -19,7 +20,12 @@ function maskAnonymous(donation) {
 }
 
 function monthIndex(month) {
-  return new Date(`${month} 1, 2026`).getMonth() + 1;
+  if (!month || month === 'all') return null;
+  const lower = String(month).toLowerCase();
+  const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  const idx = monthNames.indexOf(lower);
+  if (idx === -1) throw httpError(400, "Invalid month format. Use full English month name like 'august'.");
+  return idx + 1;
 }
 
 async function listAdmin(query, user) {
@@ -105,7 +111,7 @@ async function aggregateTopDonors({ mosqueId }) {
 
 async function aggregateSummary({ mosqueId }) {
   if (mosqueId && !isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
-  const match = mosqueId ? { mosqueId: toObjectId(mosqueId) } : {};
+  const match = { status: { $ne: 'refunded' }, ...(mosqueId ? { mosqueId: toObjectId(mosqueId) } : {}) };
   const totals = await Donation.aggregate([
     { $match: match },
     { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -114,18 +120,42 @@ async function aggregateSummary({ mosqueId }) {
     { $match: match },
     { $group: { _id: '$type', total: { $sum: '$amount' } } },
   ]);
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const monthly = await Donation.aggregate([
+    { $match: { ...match, createdAt: { $gte: startOfLastMonth } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, total: { $sum: '$amount' } } },
+  ]);
+  const monthlyMap = monthly.reduce((acc, item) => {
+    acc[item._id] = item.total;
+    return acc;
+  }, {});
+  const thisMonthKey = `${startOfThisMonth.getFullYear()}-${String(startOfThisMonth.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonthKey = `${startOfLastMonth.getFullYear()}-${String(startOfLastMonth.getMonth() + 1).padStart(2, '0')}`;
   return {
     totalDonations: totals[0]?.total || 0,
     byType: byType.reduce((acc, item) => {
       acc[item._id] = item.total;
       return acc;
     }, {}),
+    thisMonth: monthlyMap[thisMonthKey] || 0,
+    lastMonth: monthlyMap[lastMonthKey] || 0,
   };
 }
 
 function generateTransactionId(donationId) {
   const suffix = String(donationId).slice(-5).toUpperCase();
   return `TXN-${new Date().getFullYear()}-${suffix}`;
+}
+
+async function findByStripeSession(sessionId) {
+  if (!sessionId || typeof sessionId !== 'string') throw httpError(400, 'Invalid session id');
+  const donation = await Donation.findOne({ stripeSessionId: sessionId })
+    .select('donorName amount type paymentMethod isAnonymous stripeSessionId stripePaymentId status createdAt mosqueId')
+    .lean();
+  if (!donation) throw httpError(404, 'Donation not found yet');
+  return donation;
 }
 
 async function createCash(input, user) {
@@ -161,9 +191,24 @@ async function createLegacyOnline(input) {
 
 async function createStripeCheckout(input) {
   const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
+  const idempotencyKey = `donation_${crypto.randomBytes(12).toString('hex')}`;
+  const pendingDonation = await Donation.create({
+    donorName: sanitizeString(input.donorName || 'Online Donor'),
+    email: sanitizeString(input.email || ''),
+    phone: sanitizeString(input.phone || ''),
+    amount: Number(input.amount),
+    type: input.type || 'Masjid Fund',
+    paymentMethod: 'Online',
+    isAnonymous: !!input.isAnonymous,
+    status: 'pending',
+    stripeSessionId: idempotencyKey,
+    mosqueId: input.mosqueId || undefined,
+    note: input.note || undefined,
+  });
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
+    client_reference_id: idempotencyKey,
     line_items: [
       {
         price_data: {
@@ -177,9 +222,11 @@ async function createStripeCheckout(input) {
         quantity: 1,
       },
     ],
-    success_url: `${process.env.CLIENT_URL}/donate?success=1`,
+    success_url: `${process.env.CLIENT_URL}/donate?success=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.CLIENT_URL}/donate?canceled=1`,
     metadata: {
+      donationId: String(pendingDonation._id),
+      idempotencyKey,
       donorName: sanitizeString(input.donorName || 'Online Donor'),
       email: sanitizeString(input.email || ''),
       phone: sanitizeString(input.phone || ''),
@@ -188,8 +235,14 @@ async function createStripeCheckout(input) {
       isAnonymous: String(!!input.isAnonymous),
       mosqueId: input.mosqueId || '',
     },
-  });
-  return { url: session.url };
+  }, { idempotencyKey });
+
+  await Donation.updateOne(
+    { _id: pendingDonation._id },
+    { $set: { stripeSessionId: session.id } }
+  );
+
+  return { url: session.url, donationId: pendingDonation._id };
 }
 
 async function createOnlineDonation(input) {
@@ -225,6 +278,7 @@ module.exports = {
   listAdmin,
   aggregateTopDonors,
   aggregateSummary,
+  findByStripeSession,
   createCash,
   createOnlineDonation,
   update,

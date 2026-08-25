@@ -22,6 +22,7 @@ class ApiService {
     const options = {
       method,
       headers: this.getHeaders(),
+      credentials: 'include',
     }
     if (body) options.body = JSON.stringify(body)
 
@@ -61,16 +62,20 @@ class ApiService {
   resetPassword(token, data) { return this.request('POST', `/api/auth/reset-password/${token}`, data) }
   getMe() { return this.request('GET', '/api/auth/me') }
   refreshToken() { return this.request('POST', '/api/auth/refresh-token') }
+  logout() { return this.request('POST', '/api/auth/logout') }
 
   getDonations(params = '') { return this.request('GET', `/api/donations${params ? '?' + params : ''}`) }
+  getAdminDonations(params = '') { return this.request('GET', `/api/donations/admin${params ? '?' + params : ''}`) }
   getTopDonors(params = '') { return this.request('GET', `/api/donations/top-donors${params ? '?' + params : ''}`) }
   getDonationSummary(params = '') { return this.request('GET', `/api/donations/summary${params ? '?' + params : ''}`) }
+  getDonationBySession(sessionId) { return this.request('GET', `/api/donations/by-session/${sessionId}`) }
   createDonation(data) { return this.request('POST', '/api/donations', data) }
   updateDonation(id, data) { return this.request('PUT', `/api/donations/${id}`, data) }
   deleteDonation(id) { return this.request('DELETE', `/api/donations/${id}`) }
   createOnlineDonation(data) { return this.request('POST', '/api/donations/online', data) }
 
   getExpenses(params = '') { return this.request('GET', `/api/expenses${params ? '?' + params : ''}`) }
+  getAdminExpenses(params = '') { return this.request('GET', `/api/expenses/admin${params ? '?' + params : ''}`) }
   getExpenseSummary(params = '') { return this.request('GET', `/api/expenses/summary${params ? '?' + params : ''}`) }
   createExpense(data) { return this.request('POST', '/api/expenses', data) }
   updateExpense(id, data) { return this.request('PUT', `/api/expenses/${id}`, data) }
@@ -81,6 +86,7 @@ class ApiService {
       method,
       headers: {},
       body: formData,
+      credentials: 'include',
     }
     const token = this.getToken()
     if (token) options.headers['Authorization'] = `Bearer ${token}`
@@ -128,12 +134,30 @@ class ApiService {
   getPrayerTimes(params = '') { return this.request('GET', `/api/prayer-times${params ? '?' + params : ''}`) }
   updatePrayerTimes(data) { return this.request('PUT', '/api/prayer-times', data) }
 
-  getMarketingStats() { return this.request('GET', '/api/marketing/stats') }
-  getMarketingImpact() { return this.request('GET', '/api/marketing/impact') }
-  getMarketingFeaturedCampaign() { return this.request('GET', '/api/marketing/featured-campaign') }
-  getMarketingCampaigns() { return this.request('GET', '/api/marketing/campaigns') }
-  getMarketingTestimonials() { return this.request('GET', '/api/marketing/testimonials') }
-  getMarketingHeroSlides() { return this.request('GET', '/api/marketing/hero-slides') }
+  getMarketingStats(mosqueId) {
+    const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
+    return this.request('GET', `/api/marketing/stats${p}`)
+  }
+  getMarketingImpact(mosqueId) {
+    const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
+    return this.request('GET', `/api/marketing/impact${p}`)
+  }
+  getMarketingFeaturedCampaign(mosqueId) {
+    const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
+    return this.request('GET', `/api/marketing/featured-campaign${p}`)
+  }
+  getMarketingCampaigns(mosqueId) {
+    const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
+    return this.request('GET', `/api/marketing/campaigns${p}`)
+  }
+  getMarketingTestimonials(mosqueId) {
+    const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
+    return this.request('GET', `/api/marketing/testimonials${p}`)
+  }
+  getMarketingHeroSlides(mosqueId) {
+    const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
+    return this.request('GET', `/api/marketing/hero-slides${p}`)
+  }
 
   adminListCampaigns() { return this.request('GET', '/api/admin/marketing/campaigns') }
   adminCreateCampaign(data) { return this.request('POST', '/api/admin/marketing/campaigns', data) }

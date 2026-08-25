@@ -80,6 +80,8 @@ export default function Events() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [imageFile, setImageFile] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -221,6 +223,21 @@ export default function Events() {
       })
     } catch (err) {
       showToast(err.message || 'Failed to save event.', 'error')
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    setDeletingId(confirmDelete.id)
+    try {
+      await api.deleteEvent(confirmDelete.id)
+      setEvents((prev) => prev.filter((e) => (e._id || e.id) !== confirmDelete.id))
+      showToast('Event deleted successfully.', 'success')
+      setConfirmDelete(null)
+    } catch (err) {
+      showToast(err.message || 'Failed to delete event.', 'error')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -401,15 +418,7 @@ export default function Events() {
                       </button>
                       <button
                         type="button"
-                        onClick={async () => {
-                          try {
-                            await api.deleteEvent(event.id)
-                            setEvents((prev) => prev.filter((e) => (e._id || e.id) !== event.id))
-                            showToast('Event deleted successfully.', 'success')
-                          } catch (err) {
-                            showToast(err.message || 'Failed to delete event.', 'error')
-                          }
-                        }}
+                        onClick={() => setConfirmDelete(event)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
                       >
                         <i className="material-icons-round text-base">delete</i>
@@ -623,6 +632,46 @@ export default function Events() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-red-700">
+                <i className="material-icons-round">delete</i>
+                Delete Event
+              </h3>
+              <button type="button" onClick={() => setConfirmDelete(null)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-700">
+                Are you sure you want to delete the event <strong className="text-gray-900">{confirmDelete.title}</strong>?
+                This action cannot be undone and will also remove all registrations.
+              </p>
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deletingId === confirmDelete.id}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={deletingId === confirmDelete.id}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingId === confirmDelete.id ? 'Deleting...' : 'Delete Event'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -118,8 +118,13 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     const redirectPath = getLogoutRedirectPath(user?.role)
+    try {
+      await api.logout()
+    } catch (e) {
+      // even if the server call fails we still want to clear local state
+    }
     setUser(null)
     localStorage.removeItem('user')
     localStorage.removeItem('authToken')

@@ -12,8 +12,8 @@ const create = tryOrNext(async (req, res) => {
 });
 
 const list = tryOrNext(async (req, res) => {
-  const items = await svc.listForCaller(req.user, req.query.status);
-  res.json({ success: true, data: items });
+  const page = await svc.listForCaller(req.user, req.query);
+  res.json({ success: true, ...page });
 });
 
 const review = tryOrNext(async (req, res) => {

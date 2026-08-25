@@ -7,6 +7,8 @@ export default function AdminCommittee() {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' })
   const [loading, setLoading] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const { showToast } = useUI()
 
   useEffect(() => {
@@ -67,12 +69,16 @@ export default function AdminCommittee() {
   }
 
   const deleteMember = async (id) => {
+    setDeletingId(id)
     try {
       await api.deleteCommitteeMember(id)
       setMembers((prev) => prev.filter((member) => member.id !== id))
       showToast('Committee member removed', 'info')
+      setConfirmDelete(null)
     } catch (err) {
       showToast(err.message || 'Failed to remove committee member.', 'error')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -161,7 +167,7 @@ export default function AdminCommittee() {
                     </button>
                   </td>
                   <td className="px-5 py-4 text-center">
-                    <button onClick={() => deleteMember(member.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 transition-colors">
+                    <button onClick={() => setConfirmDelete(member)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 transition-colors">
                       <i className="material-icons-round text-lg">delete</i>
                     </button>
                   </td>
@@ -171,6 +177,46 @@ export default function AdminCommittee() {
           </table>
         </div>
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-red-700">
+                <i className="material-icons-round">delete</i>
+                Remove Committee Member
+              </h3>
+              <button type="button" onClick={() => setConfirmDelete(null)} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-700">
+                Are you sure you want to remove <strong className="text-gray-900">{confirmDelete.name}</strong> from the committee?
+                They will lose access to the committee panel immediately.
+              </p>
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deletingId === confirmDelete.id}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteMember(confirmDelete.id)}
+                  disabled={deletingId === confirmDelete.id}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingId === confirmDelete.id ? 'Removing...' : 'Remove Member'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

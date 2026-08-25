@@ -33,9 +33,16 @@ const testimonialSchema = new mongoose.Schema({
   },
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
+  mosqueId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Mosque',
+    required: true,
+    index: true,
+  },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 testimonialSchema.index({ isActive: 1, order: 1, createdAt: -1 });
+testimonialSchema.index({ mosqueId: 1, isActive: 1, order: 1 });
 
 module.exports = mongoose.model('Testimonial', testimonialSchema);

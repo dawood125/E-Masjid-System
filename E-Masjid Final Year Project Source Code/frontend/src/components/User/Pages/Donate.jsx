@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
@@ -13,24 +13,14 @@ const donationTypes = [
 ]
 
 const presetAmounts = [500, 1000, 5000, 10000]
+const POLL_INTERVAL_MS = 1500
+const MAX_POLL_ATTEMPTS = 20
 
 export default function Donate() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { showToast } = useUI()
   const { activeMosqueId } = useMosque()
-
-  useEffect(() => {
-    if (searchParams.get('success') === '1') {
-      setShowSuccess(true)
-      setTransactionId('Stripe Payment Completed')
-      showToast('Donation processed successfully. JazakAllah Khair!', 'success')
-      setSearchParams({}, { replace: true })
-    } else if (searchParams.get('canceled') === '1') {
-      showToast('Donation was canceled. You were not charged.', 'warning')
-      setSearchParams({}, { replace: true })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const pollRef = useRef(null)
 
   const [donationData, setDonationData] = useState({
     amount: 1000,
@@ -43,7 +33,83 @@ export default function Donate() {
   })
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showConfirming, setShowConfirming] = useState(false)
   const [transactionId, setTransactionId] = useState('')
+  const [confirmedAmount, setConfirmedAmount] = useState(0)
+  const [confirmError, setConfirmError] = useState('')
+
+  useEffect(() => {
+    const successFlag = searchParams.get('success')
+    const canceledFlag = searchParams.get('canceled')
+    const sessionId = searchParams.get('session_id')
+
+    if (canceledFlag === '1') {
+      showToast('Donation was canceled. You were not charged.', 'warning')
+      setSearchParams({}, { replace: true })
+      return
+    }
+
+    if (successFlag === '1' && sessionId) {
+      setShowConfirming(true)
+      setConfirmError('')
+      let attempts = 0
+      const stopPolling = () => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+          pollRef.current = null
+        }
+      }
+      const poll = async () => {
+        attempts += 1
+        try {
+          const res = await api.getDonationBySession(sessionId)
+          const donation = res.data
+          if (donation && donation.status === 'completed') {
+            stopPolling()
+            setTransactionId(donation.stripePaymentId || donation.stripeSessionId || sessionId)
+            setConfirmedAmount(Number(donation.amount) || 0)
+            setShowConfirming(false)
+            setShowSuccess(true)
+            showToast('Donation processed successfully. JazakAllah Khair!', 'success')
+            setSearchParams({}, { replace: true })
+          } else if (donation && donation.status === 'failed') {
+            stopPolling()
+            setShowConfirming(false)
+            setConfirmError('Your payment failed. Please try again or contact the masjid.')
+            setSearchParams({}, { replace: true })
+          } else if (attempts >= MAX_POLL_ATTEMPTS) {
+            stopPolling()
+            setShowConfirming(false)
+            setConfirmError('We are still confirming your payment. You will receive an email shortly.')
+            setSearchParams({}, { replace: true })
+          }
+        } catch (err) {
+          if (attempts >= MAX_POLL_ATTEMPTS) {
+            stopPolling()
+            setShowConfirming(false)
+            setConfirmError(err.message || 'Could not confirm donation status.')
+            setSearchParams({}, { replace: true })
+          }
+        }
+      }
+      poll()
+      pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
+    } else if (successFlag === '1') {
+      setShowSuccess(true)
+      setTransactionId('Stripe Payment Completed')
+      setConfirmedAmount(0)
+      showToast('Donation processed successfully. JazakAllah Khair!', 'success')
+      setSearchParams({}, { replace: true })
+    }
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const effectiveAmount = useMemo(() => {
     if (donationData.customAmount && Number(donationData.customAmount) > 0) {
@@ -106,6 +172,7 @@ export default function Donate() {
       }
 
       setTransactionId(res.transactionId || 'TXN-PENDING')
+      setConfirmedAmount(effectiveAmount)
       setShowSuccess(true)
       showToast('Donation processed successfully. JazakAllah Khair!', 'success')
     } catch (e2) {
@@ -117,6 +184,8 @@ export default function Donate() {
 
   const closeSuccess = () => {
     setShowSuccess(false)
+    setConfirmError('')
+    setConfirmedAmount(0)
     setDonationData({
       amount: 1000,
       customAmount: '',
@@ -294,6 +363,31 @@ export default function Donate() {
         </div>
       </div>
 
+      {showConfirming && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl animate-fade-in-up">
+            <div className="mx-auto h-16 w-16 rounded-full border-4 border-primary-100 border-t-[#047857] animate-spin" />
+            <h3 className="mt-5 font-primary text-2xl font-bold text-gray-900">Confirming your donation</h3>
+            <p className="mt-3 text-sm text-gray-600">
+              Stripe is processing your payment. Please don&apos;t close or refresh this window — this usually takes only a few seconds.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {confirmError && !showConfirming && !showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl animate-fade-in-up">
+            <div className="mx-auto h-16 w-16 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+              <i className="material-icons-round text-4xl">error_outline</i>
+            </div>
+            <h3 className="mt-5 font-primary text-2xl font-bold text-gray-900">We&apos;re still confirming</h3>
+            <p className="mt-3 text-sm text-gray-600">{confirmError}</p>
+            <button type="button" className="btn btn-primary mt-5 bg-[#047857]" onClick={() => setConfirmError('')}>OK</button>
+          </div>
+        </div>
+      )}
+
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-xl rounded-2xl bg-white p-6 text-center shadow-2xl animate-fade-in-up">
@@ -305,7 +399,7 @@ export default function Donate() {
               Your donation has been processed successfully. May Allah accept your contribution and reward you abundantly.
             </p>
             <div className="mt-4 inline-flex rounded-xl bg-primary-50 px-4 py-2 text-xl font-bold text-[#047857]">
-              {formatCurrency(effectiveAmount)}
+              {formatCurrency(confirmedAmount || effectiveAmount)}
             </div>
             <p className="mt-3 text-sm text-gray-600">
               <strong>Transaction ID:</strong> {transactionId}<br />A receipt has been sent to your email address.

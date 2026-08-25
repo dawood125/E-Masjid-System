@@ -102,18 +102,99 @@ async function create(input, user) {
   return request;
 }
 
-async function listForCaller(user, statusFilter) {
-  let query = {};
-  if (user.role === 'community') query.userId = user._id;
+function clampLimit(raw, fallback = 20, max = 100) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(n, max);
+}
+
+function clampPage(raw, fallback = 1) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.floor(n);
+}
+
+async function listForCaller(user, query) {
+  const statusFilter = query?.status;
+  const limit = clampLimit(query?.limit);
+  const page = clampPage(query?.page);
+  const match = {};
+  if (user.role === 'community') match.userId = user._id;
   if (user.role === 'committee' || user.role === 'admin' || user.role === 'scholar') {
-    query.mosqueId = user.mosqueId;
+    match.mosqueId = user.mosqueId;
   }
-  if (statusFilter && statusFilter !== 'all') query.status = statusFilter;
-  return FundRequest.find(query)
-    .populate('reviewedBy', 'name')
-    .populate('finalizedBy', 'name')
-    .populate('votes.member', 'name email')
-    .sort({ createdAt: -1 });
+  if (statusFilter && statusFilter !== 'all') match.status = statusFilter;
+
+  const pipeline = [
+    { $match: match },
+    { $sort: { createdAt: -1 } },
+    {
+      $facet: {
+        data: [
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'reviewedBy',
+              foreignField: '_id',
+              as: 'reviewedBy',
+              pipeline: [{ $project: { name: 1 } }],
+            },
+          },
+          { $unwind: { path: '$reviewedBy', preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'finalizedBy',
+              foreignField: '_id',
+              as: 'finalizedBy',
+              pipeline: [{ $project: { name: 1 } }],
+            },
+          },
+          { $unwind: { path: '$finalizedBy', preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'votes.member',
+              foreignField: '_id',
+              as: 'voteMembers',
+              pipeline: [{ $project: { name: 1, email: 1 } }],
+            },
+          },
+          {
+            $addFields: {
+              votes: {
+                $map: {
+                  input: { $zip: { inputs: ['$votes', '$voteMembers'] } },
+                  as: 'pair',
+                  in: {
+                    $mergeObjects: [
+                      { $arrayElemAt: ['$$pair', 0] },
+                      { member: { $arrayElemAt: ['$$pair', 1] } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          { $project: { voteMembers: 0 } },
+        ],
+        count: [{ $count: 'total' }],
+      },
+    },
+    {
+      $project: {
+        data: 1,
+        total: { $ifNull: [{ $arrayElemAt: ['$count.total', 0] }, 0] },
+      },
+    },
+  ];
+
+  const [result] = await FundRequest.aggregate(pipeline);
+  const total = result?.total || 0;
+  const data = result?.data || [];
+  return { data, total, page, totalPages: Math.ceil(total / limit) || 1 };
 }
 
 async function review(id, body, user) {
@@ -156,15 +237,6 @@ async function castVote(id, body, user) {
   const { vote, note } = body;
   if (!['approve', 'reject'].includes(vote)) throw httpError(400, 'vote must be approve or reject');
 
-  const existing = await FundRequest.findById(id);
-  if (!existing) throw httpError(404, 'Request not found');
-  if (String(existing.mosqueId) !== String(user.mosqueId)) {
-    throw httpError(403, 'Not authorized for this mosque request');
-  }
-  if (existing.status !== 'pending') {
-    throw httpError(409, `Request is already ${existing.status}; cannot vote`);
-  }
-
   const newVote = {
     member: user._id,
     vote,
@@ -172,14 +244,23 @@ async function castVote(id, body, user) {
     votedAt: new Date(),
   };
 
-  const others = (existing.votes || []).filter((v) => String(v.member) !== String(user._id));
   const updated = await FundRequest.findOneAndUpdate(
-    { _id: id, status: 'pending' },
-    { $set: { votes: [...others, newVote] } },
+    { _id: id, status: 'pending', 'votes.member': { $ne: user._id }, mosqueId: user.mosqueId },
+    { $push: { votes: newVote } },
     { new: true }
   );
 
-  if (!updated) throw httpError(409, 'Request is no longer pending; cannot vote');
+  if (!updated) {
+    const existing = await FundRequest.findById(id);
+    if (!existing) throw httpError(404, 'Request not found');
+    if (String(existing.mosqueId) !== String(user.mosqueId)) {
+      throw httpError(403, 'Not authorized for this mosque request');
+    }
+    if (existing.status !== 'pending') {
+      throw httpError(409, `Request is already ${existing.status}; cannot vote`);
+    }
+    throw httpError(409, 'You have already voted on this request');
+  }
 
   return FundRequest.findById(id)
     .populate('reviewedBy', 'name')

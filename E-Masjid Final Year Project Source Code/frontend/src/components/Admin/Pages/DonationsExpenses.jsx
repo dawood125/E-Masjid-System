@@ -1,17 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
-
-const DATE_FILTER_OPTIONS = [
-  { value: 'this-month', label: 'This Month' },
-  { value: 'last-month', label: 'Last Month' },
-  { value: 'last-3-months', label: 'Last 3 Months' },
-  { value: 'this-year', label: 'This Year' },
-  { value: 'last-year', label: 'Last Year' },
-]
 
 const DONATION_TYPE_COLORS = {
   zakat: 'bg-emerald-100 text-emerald-700',
@@ -29,38 +21,36 @@ const EXPENSE_CATEGORY_COLORS = {
   default: 'bg-gray-100 text-gray-700',
 }
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 20
 
-function isWithinRange(dateString, range) {
-  const target = new Date(dateString)
-  const now = new Date()
+function formatRecordTime(dateString) {
+  if (!dateString) return ''
+  const d = new Date(dateString)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
 
-  if (range === 'this-month') {
-    return target.getFullYear() === now.getFullYear() && target.getMonth() === now.getMonth()
+function recordNote(item, activeTab) {
+  if (!item) return ''
+  if (activeTab === 'donations') {
+    if (item.note && String(item.note).trim()) return item.note
+    if (item.description && String(item.description).trim()) return item.description
+    return `${item.type || 'Donation'} contribution`
   }
-  if (range === 'last-month') {
-    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
-    return target >= d && target <= lastDay
-  }
-  if (range === 'last-3-months') {
-    const d = new Date(now.getFullYear(), now.getMonth() - 3, 1)
-    return target >= d && target <= now
-  }
-  if (range === 'this-year') {
-    return target.getFullYear() === now.getFullYear()
-  }
-  if (range === 'last-year') {
-    return target.getFullYear() === now.getFullYear() - 1
-  }
-  return true
+  return item.description || `${item.category || 'Expense'} expense`
 }
 
 export default function DonationsExpenses() {
   const { showToast } = useUI()
   const [donations, setDonations] = useState([])
+  const [donationsTotal, setDonationsTotal] = useState(0)
+  const [donationsTotalPages, setDonationsTotalPages] = useState(1)
   const [expenses, setExpenses] = useState([])
+  const [expensesTotal, setExpensesTotal] = useState(0)
+  const [expensesTotalPages, setExpensesTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingDonation, setEditingDonation] = useState(null)
   const [recordForm, setRecordForm] = useState({
@@ -70,35 +60,59 @@ export default function DonationsExpenses() {
     paymentMethod: 'Cash',
     isAnonymous: false,
     description: '',
+    note: '',
     category: 'Utilities',
   })
 
   const [activeTab, setActiveTab] = useState('donations')
-  const [dateFilter, setDateFilter] = useState('this-month')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [donationPage, setDonationPage] = useState(1)
   const [expensePage, setExpensePage] = useState(1)
+  const [confirmDeleteDonation, setConfirmDeleteDonation] = useState(null)
+  const [confirmDeleteDonationText, setConfirmDeleteDonationText] = useState('')
+  const [confirmDeleteExpense, setConfirmDeleteExpense] = useState(null)
+  const [confirmDeleteExpenseText, setConfirmDeleteExpenseText] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
+
+  const donationSafePage = Math.min(Math.max(1, donationPage), donationsTotalPages || 1)
+  const expenseSafePage = Math.min(Math.max(1, expensePage), expensesTotalPages || 1)
 
   useEffect(() => {
-    let mounted = true
+    let cancelled = false
     const mosqueId = getActiveMosqueId()
-    const params = mosqueId ? `mosqueId=${mosqueId}` : ''
+    const donationParams = [`page=${donationSafePage}`, `limit=${PAGE_SIZE}`]
+    const expenseParams = [`page=${expenseSafePage}`, `limit=${PAGE_SIZE}`]
+    if (mosqueId) {
+      donationParams.push(`mosqueId=${mosqueId}`)
+      expenseParams.push(`mosqueId=${mosqueId}`)
+    }
+    if (typeFilter !== 'all') donationParams.push(`type=${typeFilter}`)
+    if (categoryFilter !== 'all') expenseParams.push(`category=${categoryFilter}`)
     ;(async () => {
       try {
-        const [donationRes, expenseRes] = await Promise.all([api.getDonations(params), api.getExpenses(params)])
-        if (!mounted) return
+        const [donationRes, expenseRes] = await Promise.all([
+          api.getAdminDonations(donationParams.join('&')),
+          api.getAdminExpenses(expenseParams.join('&')),
+        ])
+        if (cancelled) return
         const d = Array.isArray(donationRes.data) ? donationRes.data : []
         const e = Array.isArray(expenseRes.data) ? expenseRes.data : []
         setDonations(d.map((item) => ({ ...item, id: item._id || item.id, date: item.createdAt || item.date })))
+        setDonationsTotal(typeof donationRes.total === 'number' ? donationRes.total : d.length)
+        setDonationsTotalPages(typeof donationRes.totalPages === 'number' ? donationRes.totalPages : 1)
         setExpenses(e.map((item) => ({ ...item, id: item._id || item.id, date: item.createdAt || item.date })))
+        setExpensesTotal(typeof expenseRes.total === 'number' ? expenseRes.total : e.length)
+        setExpensesTotalPages(typeof expenseRes.totalPages === 'number' ? expenseRes.totalPages : 1)
       } catch (err) {
-        showToast(err.message || 'Failed to load donations/expenses.', 'error')
+        if (!cancelled) showToast(err.message || 'Failed to load donations/expenses.', 'error')
       } finally {
-        if (mounted) setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     })()
-    return () => { mounted = false }
-  }, [showToast])
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [donationSafePage, expenseSafePage, typeFilter, categoryFilter, showToast])
 
   const donationTypes = useMemo(() => {
     return ['all', ...new Set(donations.map((donation) => donation.type.toLowerCase()))]
@@ -108,30 +122,8 @@ export default function DonationsExpenses() {
     return ['all', ...new Set(expenses.map((expense) => expense.category.toLowerCase()))]
   }, [expenses])
 
-  const filteredDonations = useMemo(() => {
-    return donations.filter((donation) => {
-      const matchesDate = isWithinRange(donation.date, dateFilter)
-      const matchesCategory = categoryFilter === 'all' || donation.type.toLowerCase() === categoryFilter
-      return matchesDate && matchesCategory
-    })
-  }, [dateFilter, categoryFilter, donations])
-
-  const filteredExpenses = useMemo(() => {
-    return expenses.filter((expense) => {
-      const matchesDate = isWithinRange(expense.date, dateFilter)
-      const matchesCategory = categoryFilter === 'all' || expense.category.toLowerCase() === categoryFilter
-      return matchesDate && matchesCategory
-    })
-  }, [dateFilter, categoryFilter, expenses])
-
-  const donationMaxPage = Math.max(1, Math.ceil(filteredDonations.length / PAGE_SIZE))
-  const expenseMaxPage = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE))
-
-  const visibleDonations = filteredDonations.slice((donationPage - 1) * PAGE_SIZE, donationPage * PAGE_SIZE)
-  const visibleExpenses = filteredExpenses.slice((expensePage - 1) * PAGE_SIZE, expensePage * PAGE_SIZE)
-
-  const totalDonations = filteredDonations.reduce((sum, donation) => sum + donation.amount, 0)
-  const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const totalDonations = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0)
+  const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
   const netBalance = totalDonations - totalExpenses
 
   const categoryOptions = activeTab === 'donations' ? donationTypes : expenseCategories
@@ -150,6 +142,7 @@ export default function DonationsExpenses() {
       paymentMethod: 'Cash',
       isAnonymous: false,
       description: '',
+      note: '',
       category: 'Utilities',
     })
     setIsCreateOpen(true)
@@ -164,6 +157,7 @@ export default function DonationsExpenses() {
       paymentMethod: donation.paymentMethod || 'Cash',
       isAnonymous: donation.isAnonymous || false,
       description: '',
+      note: donation.note || donation.description || '',
       category: 'Utilities',
     })
     setIsCreateOpen(true)
@@ -171,6 +165,9 @@ export default function DonationsExpenses() {
 
   const handleCreateRecord = async (event) => {
     event.preventDefault()
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setSubmitting(true)
     try {
       if (activeTab === 'donations') {
         const payload = {
@@ -179,6 +176,7 @@ export default function DonationsExpenses() {
           type: recordForm.type,
           paymentMethod: recordForm.paymentMethod,
           isAnonymous: recordForm.isAnonymous,
+          note: recordForm.note || undefined,
         }
 
         if (editingDonation) {
@@ -189,8 +187,8 @@ export default function DonationsExpenses() {
           showToast('Donation updated successfully.', 'success')
         } else {
           const res = await api.createDonation(payload)
-          setDonations((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
           showToast('Donation added successfully.', 'success')
+          setDonationPage(1)
         }
       } else {
         const payload = {
@@ -206,8 +204,8 @@ export default function DonationsExpenses() {
           showToast('Expense updated successfully.', 'success')
         } else {
           const res = await api.createExpense(payload)
-          setExpenses((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
           showToast('Expense added successfully.', 'success')
+          setExpensePage(1)
         }
       }
       setIsCreateOpen(false)
@@ -219,10 +217,14 @@ export default function DonationsExpenses() {
         paymentMethod: 'Cash',
         isAnonymous: false,
         description: '',
+        note: '',
         category: 'Utilities',
       })
     } catch (err) {
       showToast(err.message || 'Failed to add record.', 'error')
+    } finally {
+      submittingRef.current = false
+      setSubmitting(false)
     }
   }
 
@@ -255,7 +257,6 @@ export default function DonationsExpenses() {
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Donations (Income)</p>
           <h3 className="mt-2 text-2xl font-bold text-emerald-700">{formatCurrency(totalDonations)}</h3>
-          <p className="mt-2 text-sm text-emerald-700">+12% vs last month</p>
         </article>
 
         <article className="rounded-xl border border-red-200 bg-white p-5 shadow-sm">
@@ -264,7 +265,6 @@ export default function DonationsExpenses() {
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Expenses (Spending)</p>
           <h3 className="mt-2 text-2xl font-bold text-red-700">{formatCurrency(totalExpenses)}</h3>
-          <p className="mt-2 text-sm text-red-700">+5% vs last month</p>
         </article>
 
         <article className="rounded-xl bg-primary-700 p-5 text-white shadow-sm">
@@ -305,49 +305,30 @@ export default function DonationsExpenses() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="relative">
-                <span className="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                  <i className="material-icons-round text-base">calendar_month</i>
-                </span>
-                <select
-                  value={dateFilter}
-                  onChange={(event) => {
-                    setDateFilter(event.target.value)
+            <label className="relative">
+              <span className="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                <i className="material-icons-round text-base">filter_list</i>
+              </span>
+              <select
+                value={activeTab === 'donations' ? typeFilter : categoryFilter}
+                onChange={(event) => {
+                  if (activeTab === 'donations') {
+                    setTypeFilter(event.target.value)
                     setDonationPage(1)
-                    setExpensePage(1)
-                  }}
-                  className="min-w-[170px] rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-primary-500 focus:outline-none"
-                >
-                  {DATE_FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="relative">
-                <span className="pointer-events-none absolute left-3 top-2.5 text-gray-400">
-                  <i className="material-icons-round text-base">filter_list</i>
-                </span>
-                <select
-                  value={categoryFilter}
-                  onChange={(event) => {
+                  } else {
                     setCategoryFilter(event.target.value)
-                    setDonationPage(1)
                     setExpensePage(1)
-                  }}
-                  className="min-w-[170px] rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-primary-500 focus:outline-none"
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'all' ? 'All Categories' : option.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+                  }
+                }}
+                className="min-w-[170px] rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-primary-500 focus:outline-none"
+              >
+                {categoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option === 'all' ? 'All Categories' : option.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <button
               type="button"
@@ -384,19 +365,19 @@ export default function DonationsExpenses() {
                     </td>
                   </tr>
                 )}
-                {visibleDonations.map((donation) => {
+                {donations.map((donation) => {
                   const tone = DONATION_TYPE_COLORS[donation.type.toLowerCase()] || DONATION_TYPE_COLORS.default
                   return (
                     <tr key={donation.id}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{formatDate(donation.date)}</p>
-                        <p className="text-xs text-gray-500">10:30 AM</p>
+                        <p className="text-xs text-gray-500">{formatRecordTime(donation.date) || '—'}</p>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">{donation.donorName}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{donation.type}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{donation.type} contribution</td>
+                      <td className="px-4 py-3 text-gray-600">{recordNote(donation, 'donations')}</td>
                       <td className="px-4 py-3 text-right font-semibold text-success">+ {donation.amount.toLocaleString('en-PK')}</td>
                       <td className="px-4 py-3 text-gray-700">{donation.paymentMethod}</td>
                       <td className="px-4 py-3">
@@ -410,14 +391,9 @@ export default function DonationsExpenses() {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              try {
-                                await api.deleteDonation(donation.id)
-                                setDonations((prev) => prev.filter((item) => item.id !== donation.id))
-                                showToast('Donation deleted successfully.', 'success')
-                              } catch (err) {
-                                showToast(err.message || 'Failed to delete donation.', 'error')
-                              }
+                            onClick={() => {
+                              setConfirmDeleteDonation(donation)
+                              setConfirmDeleteDonationText('')
                             }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 transition-all duration-150 hover:bg-red-50"
                           >
@@ -428,7 +404,7 @@ export default function DonationsExpenses() {
                     </tr>
                   )
                 })}
-                {!loading && !visibleDonations.length && (
+                {!loading && !donations.length && (
                   <tr>
                     <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
                       No donations found for this filter.
@@ -441,23 +417,24 @@ export default function DonationsExpenses() {
 
           <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="text-gray-600">
-              Showing <strong>{visibleDonations.length ? (donationPage - 1) * PAGE_SIZE + 1 : 0}</strong> to{' '}
-              <strong>{Math.min(donationPage * PAGE_SIZE, filteredDonations.length)}</strong> of{' '}
-              <strong>{filteredDonations.length}</strong> donations
+              Showing <strong>{donations.length ? (donationSafePage - 1) * PAGE_SIZE + 1 : 0}</strong> to{' '}
+              <strong>{Math.min(donationSafePage * PAGE_SIZE, donationsTotal)}</strong> of{' '}
+              <strong>{donationsTotal}</strong> donations
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={donationPage === 1}
+                disabled={donationSafePage === 1 || loading}
                 onClick={() => setDonationPage((prev) => Math.max(1, prev - 1))}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
+              <span className="inline-flex items-center px-2 text-sm text-gray-700">Page {donationSafePage} of {donationsTotalPages}</span>
               <button
                 type="button"
-                disabled={donationPage >= donationMaxPage}
-                onClick={() => setDonationPage((prev) => Math.min(donationMaxPage, prev + 1))}
+                disabled={donationSafePage >= donationsTotalPages || loading}
+                onClick={() => setDonationPage((prev) => Math.min(donationsTotalPages, prev + 1))}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
@@ -486,15 +463,18 @@ export default function DonationsExpenses() {
                     </td>
                   </tr>
                 )}
-                {visibleExpenses.map((expense) => {
+                {expenses.map((expense) => {
                   const tone = EXPENSE_CATEGORY_COLORS[expense.category.toLowerCase()] || EXPENSE_CATEGORY_COLORS.default
                   return (
                     <tr key={expense.id}>
-                      <td className="px-4 py-3 font-medium text-gray-900">{formatDate(expense.date)}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900">{formatDate(expense.date)}</p>
+                        <p className="text-xs text-gray-500">{formatRecordTime(expense.date) || '—'}</p>
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{expense.category}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{expense.description}</td>
+                      <td className="px-4 py-3 text-gray-700">{recordNote(expense, 'expenses')}</td>
                       <td className="px-4 py-3 text-right font-semibold text-error">- {expense.amount.toLocaleString('en-PK')}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
@@ -508,6 +488,7 @@ export default function DonationsExpenses() {
                                 paymentMethod: 'Cash',
                                 isAnonymous: false,
                                 description: expense.description || '',
+                                note: '',
                                 category: expense.category || 'Utilities',
                                 _editExpenseId: expense.id,
                               })
@@ -520,14 +501,9 @@ export default function DonationsExpenses() {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              try {
-                                await api.deleteExpense(expense.id)
-                                setExpenses((prev) => prev.filter((item) => item.id !== expense.id))
-                                showToast('Expense deleted successfully.', 'success')
-                              } catch (err) {
-                                showToast(err.message || 'Failed to delete expense.', 'error')
-                              }
+                            onClick={() => {
+                              setConfirmDeleteExpense(expense)
+                              setConfirmDeleteExpenseText('')
                             }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600 transition-all duration-150 hover:bg-red-50"
                           >
@@ -538,7 +514,7 @@ export default function DonationsExpenses() {
                     </tr>
                   )
                 })}
-                {!loading && !visibleExpenses.length && (
+                {!loading && !expenses.length && (
                   <tr>
                     <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
                       No expenses found for this filter.
@@ -551,23 +527,24 @@ export default function DonationsExpenses() {
 
           <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <p className="text-gray-600">
-              Showing <strong>{visibleExpenses.length ? (expensePage - 1) * PAGE_SIZE + 1 : 0}</strong> to{' '}
-              <strong>{Math.min(expensePage * PAGE_SIZE, filteredExpenses.length)}</strong> of{' '}
-              <strong>{filteredExpenses.length}</strong> expenses
+              Showing <strong>{expenses.length ? (expenseSafePage - 1) * PAGE_SIZE + 1 : 0}</strong> to{' '}
+              <strong>{Math.min(expenseSafePage * PAGE_SIZE, expensesTotal)}</strong> of{' '}
+              <strong>{expensesTotal}</strong> expenses
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={expensePage === 1}
+                disabled={expenseSafePage === 1 || loading}
                 onClick={() => setExpensePage((prev) => Math.max(1, prev - 1))}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
+              <span className="inline-flex items-center px-2 text-sm text-gray-700">Page {expenseSafePage} of {expensesTotalPages}</span>
               <button
                 type="button"
-                disabled={expensePage >= expenseMaxPage}
-                onClick={() => setExpensePage((prev) => Math.min(expenseMaxPage, prev + 1))}
+                disabled={expenseSafePage >= expensesTotalPages || loading}
+                onClick={() => setExpensePage((prev) => Math.min(expensesTotalPages, prev + 1))}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
@@ -582,9 +559,9 @@ export default function DonationsExpenses() {
           <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-bold text-gray-900">
-                {activeTab === 'donations' ? (editingDonation ? 'Edit Donation' : 'Add Donation') : 'Add Expense'}
+                {activeTab === 'donations' ? (editingDonation ? 'Edit Donation' : 'Add Donation') : (recordForm._editExpenseId ? 'Edit Expense' : 'Add Expense')}
               </h3>
-              <button type="button" onClick={() => { setIsCreateOpen(false); setEditingDonation(null) }} className="text-gray-500 hover:text-gray-700">
+              <button type="button" onClick={() => { if (!submitting) { setIsCreateOpen(false); setEditingDonation(null) } }} disabled={submitting} className="text-gray-500 hover:text-gray-700 disabled:opacity-40">
                 <i className="material-icons-round">close</i>
               </button>
             </div>
@@ -597,6 +574,7 @@ export default function DonationsExpenses() {
                       className="h-4 w-4 rounded border-gray-300 text-primary-700 focus:ring-primary-500"
                       checked={recordForm.isAnonymous}
                       onChange={(e) => setRecordForm((p) => ({ ...p, isAnonymous: e.target.checked, ...(e.target.checked ? { donorName: '' } : {}) }))}
+                      disabled={submitting}
                     />
                     <span className="text-sm font-medium text-gray-700">Anonymous Donor</span>
                   </label>
@@ -604,9 +582,10 @@ export default function DonationsExpenses() {
                     <label className="block space-y-2">
                       <span className="text-sm font-medium text-gray-700">Donor Name</span>
                       <input
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
                         value={recordForm.donorName}
                         onChange={(e) => setRecordForm((p) => ({ ...p, donorName: e.target.value }))}
+                        disabled={submitting}
                       />
                     </label>
                   )}
@@ -614,9 +593,10 @@ export default function DonationsExpenses() {
                     <label className="space-y-2">
                       <span className="text-sm font-medium text-gray-700">Type</span>
                       <select
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
                         value={recordForm.type}
                         onChange={(e) => setRecordForm((p) => ({ ...p, type: e.target.value }))}
+                        disabled={submitting}
                       >
                         <option>Sadaqah</option>
                         <option>Zakat</option>
@@ -626,7 +606,7 @@ export default function DonationsExpenses() {
                     <label className="space-y-2">
                       <span className="text-sm font-medium text-gray-700">Payment Method</span>
                       <select
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
                         value={recordForm.paymentMethod}
                         onChange={(e) => setRecordForm((p) => ({ ...p, paymentMethod: e.target.value }))}
                         disabled
@@ -635,6 +615,16 @@ export default function DonationsExpenses() {
                       </select>
                     </label>
                   </div>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-gray-700">Description / Note</span>
+                    <input
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
+                      placeholder="e.g., For new carpet"
+                      value={recordForm.note}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, note: e.target.value }))}
+                      disabled={submitting}
+                    />
+                  </label>
                 </>
               ) : (
                 <>
@@ -642,17 +632,19 @@ export default function DonationsExpenses() {
                     <span className="text-sm font-medium text-gray-700">Description</span>
                     <input
                       required
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
                       value={recordForm.description}
                       onChange={(e) => setRecordForm((p) => ({ ...p, description: e.target.value }))}
+                      disabled={submitting}
                     />
                   </label>
                   <label className="block space-y-2">
                     <span className="text-sm font-medium text-gray-700">Category</span>
                     <select
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
                       value={recordForm.category}
                       onChange={(e) => setRecordForm((p) => ({ ...p, category: e.target.value }))}
+                      disabled={submitting}
                     >
                       <option>Utilities</option>
                       <option>Salary</option>
@@ -673,24 +665,167 @@ export default function DonationsExpenses() {
                   type="number"
                   min="1"
                   required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
                   value={recordForm.amount}
                   onChange={(e) => setRecordForm((p) => ({ ...p, amount: e.target.value }))}
+                  disabled={submitting}
                 />
               </label>
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
                   onClick={() => { setIsCreateOpen(false); setEditingDonation(null) }}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                  disabled={submitting}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800">
-                  Save
+                <button type="submit" disabled={submitting} className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60">
+                  {submitting ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteDonation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-red-700">
+                <i className="material-icons-round">delete</i>
+                Delete Donation
+              </h3>
+              <button type="button" onClick={() => { setConfirmDeleteDonation(null); setConfirmDeleteDonationText('') }} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-700">
+                This will permanently delete the donation from <strong className="text-gray-900">{confirmDeleteDonation.donorName || 'Anonymous'}</strong>{' '}
+                of <strong className="text-gray-900">PKR {Number(confirmDeleteDonation.amount).toLocaleString('en-PK')}</strong>.
+                This action cannot be undone and will affect the Transparency page.
+              </p>
+              <p className="text-sm text-gray-700">
+                To confirm, type the donor name exactly:
+              </p>
+              <p className="rounded-lg bg-gray-100 px-3 py-2 font-mono text-sm font-semibold text-gray-800">
+                {confirmDeleteDonation.donorName || 'Anonymous'}
+              </p>
+              <input
+                type="text"
+                value={confirmDeleteDonationText}
+                onChange={(e) => setConfirmDeleteDonationText(e.target.value)}
+                placeholder="Type the donor name to confirm"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none"
+                aria-label="Confirm by typing the donor name"
+              />
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDeleteDonation(null); setConfirmDeleteDonationText('') }}
+                  disabled={deletingId === confirmDeleteDonation.id}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const expected = (confirmDeleteDonation.donorName || 'Anonymous').trim()
+                    if (confirmDeleteDonationText.trim() !== expected) return
+                    setDeletingId(confirmDeleteDonation.id)
+                    try {
+                      await api.deleteDonation(confirmDeleteDonation.id)
+                      setDonations((prev) => prev.filter((item) => item.id !== confirmDeleteDonation.id))
+                      showToast('Donation deleted successfully.', 'success')
+                      setConfirmDeleteDonation(null)
+                      setConfirmDeleteDonationText('')
+                    } catch (err) {
+                      showToast(err.message || 'Failed to delete donation.', 'error')
+                    } finally {
+                      setDeletingId(null)
+                    }
+                  }}
+                  disabled={deletingId === confirmDeleteDonation.id || confirmDeleteDonationText.trim() !== (confirmDeleteDonation.donorName || 'Anonymous').trim()}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingId === confirmDeleteDonation.id ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-lg font-bold text-red-700">
+                <i className="material-icons-round">delete</i>
+                Delete Expense
+              </h3>
+              <button type="button" onClick={() => { setConfirmDeleteExpense(null); setConfirmDeleteExpenseText('') }} className="text-gray-500 hover:text-gray-700">
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm text-gray-700">
+                This will permanently delete the <strong className="text-gray-900">{confirmDeleteExpense.category}</strong> expense of{' '}
+                <strong className="text-gray-900">PKR {Number(confirmDeleteExpense.amount).toLocaleString('en-PK')}</strong>{' '}
+                (<span className="text-gray-600">{confirmDeleteExpense.description || 'no description'}</span>).
+                This action cannot be undone.
+              </p>
+              <p className="text-sm text-gray-700">
+                To confirm, type the amount exactly as shown:
+              </p>
+              <p className="rounded-lg bg-gray-100 px-3 py-2 font-mono text-sm font-semibold text-gray-800">
+                {Number(confirmDeleteExpense.amount).toLocaleString('en-PK')}
+              </p>
+              <input
+                type="text"
+                value={confirmDeleteExpenseText}
+                onChange={(e) => setConfirmDeleteExpenseText(e.target.value)}
+                placeholder="Type the amount to confirm"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none"
+                aria-label="Confirm by typing the amount"
+              />
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDeleteExpense(null); setConfirmDeleteExpenseText('') }}
+                  disabled={deletingId === confirmDeleteExpense.id}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const expected = Number(confirmDeleteExpense.amount).toLocaleString('en-PK')
+                    if (confirmDeleteExpenseText.trim() !== expected) return
+                    setDeletingId(confirmDeleteExpense.id)
+                    try {
+                      await api.deleteExpense(confirmDeleteExpense.id)
+                      setExpenses((prev) => prev.filter((item) => item.id !== confirmDeleteExpense.id))
+                      showToast('Expense deleted successfully.', 'success')
+                      setConfirmDeleteExpense(null)
+                      setConfirmDeleteExpenseText('')
+                    } catch (err) {
+                      showToast(err.message || 'Failed to delete expense.', 'error')
+                    } finally {
+                      setDeletingId(null)
+                    }
+                  }}
+                  disabled={deletingId === confirmDeleteExpense.id || confirmDeleteExpenseText.trim() !== Number(confirmDeleteExpense.amount).toLocaleString('en-PK')}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingId === confirmDeleteExpense.id ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@ const { chromium, request: pwRequest } = require('playwright')
 const E2E_HOST = String.fromCharCode(49, 50, 55, 46, 48, 46, 48, 46, 49)
 const BASE_URL = `http://${E2E_HOST}:5174`
 const API_URL = `http://${E2E_HOST}:5000/api`
-const SCREENSHOT_DIR = 'Testing/16_Navbar_Mosque_BugFixes/screenshots'
+const SCREENSHOT_DIR = 'Testing/16A_Navbar_Mosque_BugFixes/screenshots'
 
 const OUTCOMES = []
 let sectionCounters = {}

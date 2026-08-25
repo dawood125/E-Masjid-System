@@ -147,10 +147,6 @@ export default function Dashboard() {
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Donations</p>
           <h3 className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(summary.totalDonations)}</h3>
-          <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-success">
-            <i className="material-icons-round text-base">trending_up</i>
-            +12% this month
-          </p>
         </article>
 
         <article className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
@@ -159,10 +155,6 @@ export default function Dashboard() {
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Expenses</p>
           <h3 className="mt-2 text-2xl font-bold text-gray-900">{formatCurrency(summary.totalExpenses)}</h3>
-          <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-gray-500">
-            <i className="material-icons-round text-base">trending_flat</i>
-            This month
-          </p>
         </article>
 
         <article className="rounded-xl border border-amber-200 bg-white p-6 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">

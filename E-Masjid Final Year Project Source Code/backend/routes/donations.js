@@ -8,6 +8,7 @@ const ctrl = require('../controllers/donationsController');
 router.get('/', ctrl.listPublic);
 router.get('/top-donors', ctrl.topDonors);
 router.get('/summary', ctrl.summary);
+router.get('/by-session/:sessionId', ctrl.getBySession);
 
 router.get('/admin', protect, authorize('admin', 'manager'), ctrl.listAdmin);
 
@@ -25,7 +26,7 @@ router.post('/online', [
   body('phone').optional({ nullable: true }).isString().trim().isLength({ min: 7, max: 20 }).withMessage('Invalid phone'),
   body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),
   body('type').optional().isIn(['Sadaqah', 'Zakat', 'Masjid Fund']).withMessage('Invalid donation type'),
-  body('mosqueId').optional({ nullable: true, checkFalsy: true }).custom((v) => isValidObjectId(v)).withMessage('Invalid mosqueId'),
+  body('mosqueId').optional({ nullable: true }).notEmpty().withMessage('mosqueId cannot be empty').custom((v) => isValidObjectId(v)).withMessage('Invalid mosqueId'),
   handleValidation,
 ], ctrl.createOnline);
 

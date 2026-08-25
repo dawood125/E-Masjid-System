@@ -91,7 +91,7 @@ function CampaignsTab({ showToast }) {
   const [form, setForm] = useState(blankCampaign)
 
   function blankCampaign() {
-    return { title: '', subtitle: '', targetAmount: '', raisedAmount: '', donorCount: '', daysLeft: '30', image: '', isActive: true, isFeatured: false, order: '0' }
+    return { title: '', subtitle: '', targetAmount: '', raisedAmount: '', daysLeft: '30', image: '', isActive: true, isFeatured: false, order: '0' }
   }
 
   const load = useCallback(() => {
@@ -109,7 +109,6 @@ function CampaignsTab({ showToast }) {
       subtitle: c.subtitle || '',
       targetAmount: c.targetAmount ?? '',
       raisedAmount: c.raisedAmount ?? '',
-      donorCount: c.donorCount ?? '',
       daysLeft: c.daysLeft ?? '30',
       image: c.image || '',
       isActive: c.isActive !== false,
@@ -127,7 +126,6 @@ function CampaignsTab({ showToast }) {
         ...form,
         targetAmount: Number(form.targetAmount) || 0,
         raisedAmount: Number(form.raisedAmount) || 0,
-        donorCount: Number(form.donorCount) || 0,
         daysLeft: Number(form.daysLeft) || 0,
         order: Number(form.order) || 0,
       }
@@ -198,7 +196,6 @@ function CampaignsTab({ showToast }) {
           <div className="grid grid-cols-2 gap-4">
             <Field label="Target Amount (PKR)" type="number" value={form.targetAmount} onChange={(v) => setForm({ ...form, targetAmount: v })} required placeholder="800000" />
             <Field label="Raised Amount (PKR)" type="number" value={form.raisedAmount} onChange={(v) => setForm({ ...form, raisedAmount: v })} placeholder="320000" />
-            <Field label="Donor Count" type="number" value={form.donorCount} onChange={(v) => setForm({ ...form, donorCount: v })} placeholder="142" />
             <Field label="Days Left" type="number" value={form.daysLeft} onChange={(v) => setForm({ ...form, daysLeft: v })} placeholder="30" />
             <Field label="Order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
             <Field label="Image URL (optional)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} placeholder="https://..." />
