@@ -417,6 +417,7 @@ const seedDB = async () => {
       isActive: true,
       isFeatured: true,
       order: 0,
+      mosqueId: mosque._id,
       createdBy: admin._id,
     });
 
@@ -428,6 +429,7 @@ const seedDB = async () => {
       photo: '/assets/images/testimonials/testimonial-1.jpg',
       order: 0,
       isActive: true,
+      mosqueId: mosque._id,
       createdBy: admin._id,
     });
     await Testimonial.create({
@@ -437,6 +439,7 @@ const seedDB = async () => {
       photo: '/assets/images/testimonials/testimonial-2.jpg',
       order: 1,
       isActive: true,
+      mosqueId: mosque._id,
       createdBy: admin._id,
     });
     await Testimonial.create({
@@ -446,6 +449,7 @@ const seedDB = async () => {
       photo: '/assets/images/testimonials/testimonial-3.jpg',
       order: 2,
       isActive: true,
+      mosqueId: mosque._id,
       createdBy: admin._id,
     });
 
