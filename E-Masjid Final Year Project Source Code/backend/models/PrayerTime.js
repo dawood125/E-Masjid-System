@@ -10,9 +10,9 @@ const prayerTimeSchema = new mongoose.Schema({
   jummah: { type: String },
   eidUlFitr: { type: String },
   eidUlAdha: { type: String },
-  // Phase 5 fix BUG-PRAYER-006/007: per-mosque, per-date sunrise time.
-  // The admin sets this manually; if not set, the public page omits the Sunrise
-  // column gracefully (instead of showing a fake "06:45").
+  
+  
+  
   sunrise: { type: String },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
 }, { timestamps: true });

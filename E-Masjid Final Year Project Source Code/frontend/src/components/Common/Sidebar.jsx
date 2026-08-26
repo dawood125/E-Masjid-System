@@ -29,7 +29,7 @@ export default function Sidebar({ role = 'admin' }) {
 
   return (
     <>
-      {/* Sidebar Overlay */}
+
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out lg:hidden"
@@ -37,9 +37,8 @@ export default function Sidebar({ role = 'admin' }) {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed left-0 top-0 z-40 h-screen w-sidebar transform bg-primary-dark text-white transition-transform duration-300 ease-in-out lg:z-30 lg:translate-x-0 flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        {/* Sidebar Header (fixed at top, no shrink) */}
+
         <div className="p-6 border-b border-primary-700 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 bg-white bg-opacity-20 rounded-lg">
@@ -60,9 +59,8 @@ export default function Sidebar({ role = 'admin' }) {
           </button>
         </div>
 
-        {/* Scrollable middle (nav + logout) */}
         <div className="flex-1 overflow-y-auto">
-          {/* Navigation Links */}
+
           <nav className="p-4">
             {links.map((link) => {
               const isDashboardPath = link.path === ROUTES.ADMIN_DASHBOARD || link.path === ROUTES.SCHOLAR_DASHBOARD
@@ -87,10 +85,8 @@ export default function Sidebar({ role = 'admin' }) {
             })}
           </nav>
 
-          {/* Divider */}
           <div className="px-4 my-4 border-t border-primary-700" />
 
-          {/* Logout */}
           <div className="p-4">
             <button
               type="button"
@@ -107,7 +103,6 @@ export default function Sidebar({ role = 'admin' }) {
           </div>
         </div>
 
-        {/* Footer (pinned to bottom, no shrink) */}
         <div className="p-4 border-t border-primary-700 bg-primary-800 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">

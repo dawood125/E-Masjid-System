@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null)
   const activityFlagRef = useRef(false)
 
-  // Initialize auth from localStorage and verify with backend
+  
   useEffect(() => {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('authToken')
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
     checkAuth()
   }, [])
 
-  // Activity tracking and token refresh
+  
   useEffect(() => {
     const markActive = () => { activityFlagRef.current = true }
 
@@ -102,7 +102,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const register = useCallback(async (formData) => {
-    // Phase 3.5: accept a full form-data object (was previously 4 positional args)
+    
     try {
       setError(null)
       const data = await api.register(formData)
@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
     try {
       await api.logout()
     } catch (e) {
-      // even if the server call fails we still want to clear local state
+      
     }
     setUser(null)
     localStorage.removeItem('user')

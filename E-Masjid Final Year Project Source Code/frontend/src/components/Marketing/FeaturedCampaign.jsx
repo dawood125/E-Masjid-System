@@ -4,16 +4,6 @@ import api from '../../utils/api.js'
 import { ROUTES } from '../../utils/constants.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-/**
- * Featured campaign: a single large donation CTA card with a progress bar.
- * Phase 4.5: Now fetched from GET /api/marketing/featured-campaign. If no
- * campaign is featured, the section is hidden entirely (clean fallback).
- * Phase 4.5 (re-verify 2026-08-24): scoped to the active masjid selected in
- * the navbar so each masjid's homepage shows only its own featured campaign.
- * Phase 4.5 (post-feedback 2026-08-25): donorCount removed from the UI — it
- * was manual bookkeeping the admin had to keep up-to-date. The card now
- * shows only raised/target PKR + days left.
- */
 function formatPKR(n) {
   return 'PKR ' + Number(n || 0).toLocaleString('en-PK')
 }

@@ -24,16 +24,12 @@ function islamicDateLabel() {
   }
 }
 
-// FIX-PRAYER-004 (BUG-PRAYER-003): if today is Friday AND current time is
-// before the Jumu'ah time, the "next prayer" should be Jumu'ah (not Dhuhr).
-// Jumu'ah is treated as a 6th prayer in the countdown; if the day is not
-// Friday or no Jumu'ah time is set, the regular Dhuhr slot is used.
 function nextPrayerCountdown(todaySchedule) {
   const now = new Date()
   const isFriday = now.getDay() === 5
 
-  // Build the candidate list. If Friday + Jumu'ah time present, swap it in
-  // place of Zuhr/Dhuhr for the countdown.
+  
+  
   const baseList = prayersConfig.map((prayer) => {
     const value = todaySchedule[prayer.key]
     return { ...prayer, value }
@@ -83,10 +79,6 @@ function nextPrayerCountdown(todaySchedule) {
   }
 }
 
-// FIX-PRAYER-003 (BUG-PRAYER-001): compare date parts only, not full ISO string.
-// `day.date` is an ISO datetime from Mongoose (e.g. "2026-08-10T19:00:00.000Z"),
-// so a string-equality with `slice(0,10)` always returned false and the "Today"
-// badge never rendered.
 function isSameLocalDay(isoString) {
   if (!isoString) return false
   const a = new Date(isoString)
@@ -149,8 +141,8 @@ export default function PrayerTimes() {
     year: 'numeric',
   })
 
-  // FIX-PRAYER-002 (BUG-PRAYER-006): Sunrise now comes from the PrayerTime
-  // document (admin-set). If unset, the Sunrise column/cell is hidden.
+  
+  
   const sunriseTime = todayTimes.sunrise
   const hasSunrise = Boolean(sunriseTime)
 
@@ -174,7 +166,6 @@ export default function PrayerTimes() {
         </div>
       </section>
 
-      {/* Countdown Section */}
       <section className="-mt-14 relative z-20 pb-14">
         <div className="container">
           <div className="mx-auto max-w-2xl rounded-2xl bg-[#064e3b] text-white p-8 shadow-xl text-center border-t-[5px] border-[#d4af37] animate-fade-in">
@@ -204,9 +195,8 @@ export default function PrayerTimes() {
             <h2 className="font-primary text-2xl font-bold">{'Today\'s Schedule'}</h2>
           </div>
 
-          {/* Prayer Cards Grid */}
           <div className={`grid grid-cols-1 gap-5 ${hasSunrise ? 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}`}>
-            {/* Fajr */}
+
             <div className={`relative rounded-2xl border p-6 shadow-sm transition-all animate-fade-in-up ${
               'fajr' === countdown.nextPrayerKey
                 ? 'bg-[#047857] border-[#047857] text-white shadow-lg -translate-y-1'
@@ -224,7 +214,6 @@ export default function PrayerTimes() {
               </div>
             </div>
 
-            {/* Sunrise (FIX-PRAYER-002 — only shown if admin has set it) */}
             {hasSunrise && (
               <div className="relative rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm animate-fade-in-up hover:-translate-y-1 hover:shadow-md transition-all" style={{ animationDelay: '90ms' }}>
                 <div className="flex flex-col items-center text-center">
@@ -235,7 +224,6 @@ export default function PrayerTimes() {
               </div>
             )}
 
-            {/* Dhuhr (or Jumu'ah on Friday — Jumu'ah replaces Dhuhr in display only, not the data) */}
             {(() => {
               const isFriday = new Date().getDay() === 5
               const showAsJummah = isFriday && todayTimes.jummah
@@ -268,7 +256,6 @@ export default function PrayerTimes() {
               )
             })()}
 
-            {/* Asr, Maghrib, Isha */}
             {prayers.slice(2).map((prayer, i) => {
               const isActive = prayer.key === countdown.nextPrayerKey
               return (
@@ -298,7 +285,6 @@ export default function PrayerTimes() {
         </div>
       </section>
 
-      {/* Special Prayer Timings (Eid) */}
       {(todayTimes.eidUlFitr || todayTimes.eidUlAdha) && (
         <section className="pb-14">
           <div className="container">
@@ -330,7 +316,6 @@ export default function PrayerTimes() {
         </section>
       )}
 
-      {/* Weekly Schedule Table */}
       <section className="bg-primary-50 py-16">
         <div className="container">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
@@ -359,7 +344,7 @@ export default function PrayerTimes() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {(weekTimes.length > 0 ? weekTimes : []).map((day) => {
-                    // FIX-PRAYER-003 (BUG-PRAYER-001): use date-part comparison
+                    
                     const isToday = isSameLocalDay(day.date)
                     const hasJummah = Boolean(day.jummah)
                     const isFriday = new Date(day.date).getDay() === 5

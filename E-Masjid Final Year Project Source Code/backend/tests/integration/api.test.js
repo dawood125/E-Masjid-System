@@ -61,7 +61,7 @@ describe('E-Masjid API (integration)', () => {
       { mosqueId: mosque._id }
     );
 
-    // Login to get tokens
+    
     const loginAdmin = await request(app).post('/api/auth/login').send({ email: 'a@test.com', password: 'pass1234' });
     adminToken = loginAdmin.body.token;
     const loginCommittee = await request(app).post('/api/auth/login').send({ email: 'c@test.com', password: 'pass1234' });
@@ -202,7 +202,7 @@ describe('E-Masjid API (integration)', () => {
     expect(String(accept.body.data.scholarId)).toBe(String(scholarUser._id));
   });
 
-  // ─── Forgot / Reset Password flow (FR-9) ─────────────────────────
+  
   const TEST_COMMUNITY_EMAIL = 'u@test.com'
 
   test('forgot-password returns neutral message for unknown email (no enumeration)', async () => {
@@ -225,9 +225,9 @@ describe('E-Masjid API (integration)', () => {
     const stored = await User.findOne({ email: TEST_COMMUNITY_EMAIL }).select('+resetPasswordToken +resetPasswordExpire');
     expect(stored).toBeTruthy();
     expect(stored.resetPasswordToken).toBeTruthy();
-    expect(stored.resetPasswordToken).toMatch(/^[a-f0-9]{64}$/); // sha256 hex
+    expect(stored.resetPasswordToken).toMatch(/^[a-f0-9]{64}$/); 
     const expiresIn = stored.resetPasswordExpire.getTime() - Date.now();
-    // Should be ~24 hours (allow a 60-second window for test execution time)
+    
     expect(expiresIn).toBeGreaterThan(24 * 60 * 60 * 1000 - 60_000);
     expect(expiresIn).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
   });
@@ -250,7 +250,7 @@ describe('E-Masjid API (integration)', () => {
 
   test('reset-password: wrong/missing token rejected; one-time use; matches new password rules', async () => {
     const crypto = require('crypto');
-    // Set a known token + expiry on the community test user
+    
     const rawToken = crypto.randomBytes(20).toString('hex');
     const hashed = crypto.createHash('sha256').update(rawToken).digest('hex');
     await User.updateOne(
@@ -258,14 +258,14 @@ describe('E-Masjid API (integration)', () => {
       { resetPasswordToken: hashed, resetPasswordExpire: new Date(Date.now() + 24 * 60 * 60 * 1000) }
     );
 
-    // Invalid token -> 400
+    
     const badToken = await request(app)
       .post(`/api/auth/reset-password/${'a'.repeat(40)}`)
       .send({ password: 'NewPass1234' });
     expect(badToken.status).toBe(400);
     expect(badToken.body.success).toBe(false);
 
-    // Weak password -> 400 (PASSWORD_RULE) - server returns { message: 'Validation failed', errors: [{ field, message }] }
+    
     const weak = await request(app)
       .post(`/api/auth/reset-password/${rawToken}`)
       .send({ password: 'short' });
@@ -276,18 +276,18 @@ describe('E-Masjid API (integration)', () => {
     expect(passwordErr).toBeTruthy();
     expect(passwordErr.message).toMatch(/at least 8 characters/i);
 
-    // Mismatched confirmPassword -> 400 (server-side defense in depth)
+    
     const mismatch = await request(app)
       .post(`/api/auth/reset-password/${rawToken}`)
       .send({ password: 'NewPass1234', confirmPassword: 'DifferentPass1234' });
     expect(mismatch.status).toBe(400);
     expect(mismatch.body.success).toBe(false);
-    // The custom validator's error message is surfaced via errors[] (handleValidation uses generic message)
+    
     const confirmErr = (mismatch.body.errors || []).find((e) => e.field === 'confirmPassword' || /passwords do not match/i.test(e.message));
     expect(confirmErr).toBeTruthy();
     expect(confirmErr.message).toMatch(/passwords do not match/i);
 
-    // Valid -> 200, token cleared, login works with new password
+    
     const ok = await request(app)
       .post(`/api/auth/reset-password/${rawToken}`)
       .send({ password: 'NewPass1234', confirmPassword: 'NewPass1234' });
@@ -304,7 +304,7 @@ describe('E-Masjid API (integration)', () => {
     expect(login.status).toBe(200);
     expect(login.body.token).toBeTruthy();
 
-    // One-time use: same token again -> 400
+    
     const replay = await request(app)
       .post(`/api/auth/reset-password/${rawToken}`)
       .send({ password: 'AnotherPass1234', confirmPassword: 'AnotherPass1234' });

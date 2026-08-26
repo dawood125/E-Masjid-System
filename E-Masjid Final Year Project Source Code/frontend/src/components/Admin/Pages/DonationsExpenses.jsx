@@ -111,7 +111,7 @@ export default function DonationsExpenses() {
       }
     })()
     return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [donationSafePage, expenseSafePage, typeFilter, categoryFilter, showToast])
 
   const donationTypes = useMemo(() => {

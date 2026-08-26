@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext.jsx'
 import { UIProvider } from './context/UIContext.jsx'
 
-// User Pages
 import Home from './components/User/Pages/Home'
 import Login from './components/User/Pages/Login'
 import Register from './components/User/Pages/Register'
@@ -20,7 +19,6 @@ import FundRequest from './components/User/Pages/FundRequest'
 import MyRequests from './components/User/Pages/MyRequests'
 import AdminLogin from './components/Admin/Pages/AdminLogin'
 
-// Admin Pages
 import AdminDashboard from './components/Admin/Pages/Dashboard'
 import AdminMarketing from './components/Admin/Pages/Marketing'
 import DonationsExpenses from './components/Admin/Pages/DonationsExpenses'
@@ -31,20 +29,16 @@ import AdminScholars from './components/Admin/Pages/Scholars'
 import AdminCommittee from './components/Admin/Pages/Committee'
 import AdminFundRequests from './components/Admin/Pages/FundRequests'
 
-// Scholar Pages
 import ScholarDashboard from './components/Scholar/Pages/Dashboard'
 
-// Manager Pages
 import ManagerLogin from './components/Manager/Pages/ManagerLogin'
 import ManagerDashboard from './components/Manager/Pages/Dashboard'
 import ManageMosques from './components/Manager/Pages/Mosques'
 import ManageAdmins from './components/Manager/Pages/Admins'
 
-// Committee Pages
 import CommitteeLogin from './components/Committee/Pages/CommitteeLogin'
 import CommitteeDashboard from './components/Committee/Pages/Dashboard'
 
-// Layouts
 import UserLayout from './components/User/Layouts/UserLayout'
 import AdminLayout from './components/Admin/Layouts/AdminLayout'
 import ScholarLayout from './components/Scholar/Layouts/ScholarLayout'
@@ -61,7 +55,7 @@ function App() {
           <MosqueProvider>
           <Toast />
           <Routes>
-            {/* User Routes */}
+
             <Route element={<UserLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -79,7 +73,6 @@ function App() {
               <Route path="/my-requests" element={<MyRequests />} />
             </Route>
 
-            {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
@@ -94,13 +87,11 @@ function App() {
               <Route path="marketing" element={<AdminMarketing />} />
             </Route>
 
-            {/* Scholar Routes */}
             <Route path="/scholar/*" element={<ScholarLayout />}>
               <Route index element={<ScholarDashboard />} />
               <Route path="dashboard" element={<ScholarDashboard />} />
             </Route>
 
-            {/* Manager Routes */}
             <Route path="/manager/login" element={<ManagerLogin />} />
             <Route path="/manager/*" element={<ManagerLayout />}>
               <Route index element={<ManagerDashboard />} />
@@ -108,13 +99,11 @@ function App() {
               <Route path="admins" element={<ManageAdmins />} />
             </Route>
 
-            {/* Committee Routes */}
             <Route path="/committee/login" element={<CommitteeLogin />} />
             <Route path="/committee/*" element={<CommitteeLayout />}>
               <Route index element={<CommitteeDashboard />} />
             </Route>
 
-            {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </MosqueProvider>

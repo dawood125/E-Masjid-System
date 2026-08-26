@@ -2,25 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import api from '../../../utils/api.js'
 import { useUI } from '../../../hooks/useUI.js'
 
-/**
- * MosqueSearchModal — used by:
- *   1. The Register flow (Step 2) to pick a home mosque for the new user
- *   2. The public Navbar dropdown (post-Phase 3.5) to switch mosques from anywhere
- *
- * Phase 3.5 (post-demo): REMOVED the "Use my current location" feature.
- * The BigDataCloud free reverse-geocode API was unreliable (returned the wrong
- * city on some networks) and the FYP demo doesn't need it. Keeping the
- * search + city-filter is enough for the supervisor to see the feature works.
- *
- * Features:
- *   - Live search (name, city, address)
- *   - City filter
- *   - Selectable cards (click to select)
- *   - Empty state ("No mosques match") + loading skeleton
- *
- * Props:
- *   open, onClose, onSelect(mosque), initialCity (optional, pre-fills city field)
- */
 export default function MosqueSearchModal({ open, onClose, onSelect, initialCity = '' }) {
   const { showToast } = useUI()
 
@@ -32,7 +13,7 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
   const debounceRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Autofocus the search input when the modal opens
+  
   useEffect(() => {
     if (open && inputRef.current) {
       const t = setTimeout(() => inputRef.current?.focus(), 100)
@@ -40,7 +21,7 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
     }
   }, [open])
 
-  // Debounced search whenever query or city changes
+  
   useEffect(() => {
     if (!open) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -61,7 +42,7 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
     }, 300)
   }, [query, city, open, showToast])
 
-  // Lock body scroll while open
+  
   useEffect(() => {
     if (open) {
       const original = document.body.style.overflow
@@ -70,7 +51,7 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
     }
   }, [open])
 
-  // Close on Escape
+  
   useEffect(() => {
     if (!open) return
     const handler = (e) => { if (e.key === 'Escape') onClose() }
@@ -94,7 +75,7 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
+
         <div className="flex items-center justify-between p-5 border-b border-gray-200 shrink-0">
           <div>
             <h3 className="font-primary text-xl font-bold text-[#064e3b]">Select Your Home Mosque</h3>
@@ -109,7 +90,6 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
           </button>
         </div>
 
-        {/* Search controls */}
         <div className="p-5 border-b border-gray-100 shrink-0 space-y-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -136,7 +116,6 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
           </div>
         </div>
 
-        {/* Results list */}
         <div className="flex-1 overflow-y-auto px-5 pb-2 min-h-[200px] max-h-[40vh]">
           {loading ? (
             <div className="space-y-2">
@@ -186,7 +165,6 @@ export default function MosqueSearchModal({ open, onClose, onSelect, initialCity
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-5 border-t border-gray-200 flex justify-end gap-3 shrink-0 bg-gray-50">
           <button onClick={onClose} className="btn btn-secondary">Cancel</button>
           <button

@@ -2,14 +2,6 @@ import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 
-/**
- * Super Admin (Manager) → Admins page
- *
- * Lists all admin accounts across the masjids this manager manages. Used
- * for support (password reset, deactivation, audit) — but not for editing
- * admin credentials directly. Each admin's masjid affiliation is shown so
- * the super admin can quickly find which masjid they belong to.
- */
 export default function ManageAdmins() {
   const [admins, setAdmins] = useState([])
   const [managedMosques, setManagedMosques] = useState([])
@@ -31,7 +23,7 @@ export default function ManageAdmins() {
     }
   }
 
-  useEffect(() => { load() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [])
+  useEffect(() => { load()  }, [])
 
   const filtered = admins
     .filter((a) => filterMosque === 'all' || a.mosqueId?._id === filterMosque)
@@ -49,7 +41,6 @@ export default function ManageAdmins() {
         </p>
       </div>
 
-      {/* Filters */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
@@ -79,7 +70,6 @@ export default function ManageAdmins() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

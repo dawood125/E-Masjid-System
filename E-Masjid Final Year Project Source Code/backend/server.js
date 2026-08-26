@@ -8,27 +8,27 @@ const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { stripeWebhook } = require('./routes/stripeWebhook');
 
-// Connect to Database (tests manage their own connections)
+
 if (process.env.NODE_ENV !== 'test') {
   connectDB();
 }
 
 const app = express();
 
-// ─── MIDDLEWARE ──────────────────────────────────────
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(mongoSanitize());
 
-// Static files for uploads
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// CORS
+
 app.use(cors({
   origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://127.0.0.1:5174', 'http://127.0.0.1:5173'],
   credentials: true,
 }));
 
-// Lightweight cookie parser (we only read emasjid_token)
+
 app.use((req, _res, next) => {
   const header = req.headers && req.headers.cookie;
   req.cookies = {};
@@ -43,14 +43,14 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Stripe webhook must use raw body
+
 app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 
-// Body parsers
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ─── ROUTES ─────────────────────────────────────────
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/donations', require('./routes/donations'));
 app.use('/api/expenses', require('./routes/expenses'));
@@ -66,21 +66,21 @@ app.use('/api/marketing', require('./routes/marketing'));
 app.use('/api/admin/marketing', require('./routes/adminMarketing'));
 app.use('/api/super-admin', require('./routes/superAdmin'));
 
-// Health check
+
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'E-Masjid API is running', timestamp: new Date().toISOString() });
 });
 
-// ─── ERROR HANDLING ─────────────────────────────────
+
 app.use(errorHandler);
 
-// ─── START SERVER ───────────────────────────────────
+
 let server;
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 5000;
   server = app.listen(PORT);
 
-  // Handle unhandled promise rejections
+  
   process.on('unhandledRejection', (err) => {
     console.error(`Unhandled Rejection: ${err.message}`);
     if (server) {

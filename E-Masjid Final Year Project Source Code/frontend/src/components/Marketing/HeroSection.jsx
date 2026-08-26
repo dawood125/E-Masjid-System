@@ -3,29 +3,21 @@ import { Link } from 'react-router-dom'
 import { useMosque } from '../../hooks/useMosque.js'
 import { ROUTES } from '../../utils/constants.js'
 
-/**
- * Hero section for the homepage.
- * - Full-bleed background image (or video if available, with a fallback).
- * - On-load Ken Burns slow zoom + pan for a cinematic feel.
- * - Subtle dark green overlay for text legibility.
- * - Two CTAs: "Donate Now" (primary, gold) + "Submit Fund Request" (secondary, outlined).
- * - The hero text dynamically reflects the active mosque name from the MosqueContext.
- */
 export default function HeroSection() {
   const { activeMosque } = useMosque()
   const [videoFailed, setVideoFailed] = useState(false)
   const [showVideo, setShowVideo] = useState(true)
 
-  // If the video file fails to load (autoplay blocked, codec issue, etc.),
-  // gracefully fall back to the static image. This is a defensive default
-  // for older mobile browsers and slow connections.
+  
+  
+  
   const handleVideoError = () => {
     setVideoFailed(true)
   }
 
   return (
     <section className="relative h-[620px] md:h-[720px] overflow-hidden flex items-center justify-center bg-[#064e3b]">
-      {/* Background video (preferred, with image fallback) */}
+
       {!videoFailed && showVideo && (
         <video
           autoPlay
@@ -41,7 +33,6 @@ export default function HeroSection() {
         </video>
       )}
 
-      {/* Static image fallback (always rendered behind the video, in case video is hidden) */}
       <img
         src="/assets/images/hero/hero-desktop.jpg"
         alt="Beautiful Pakistani mosque at golden hour"
@@ -50,10 +41,8 @@ export default function HeroSection() {
         onError={() => setShowVideo(false)}
       />
 
-      {/* Dark green gradient overlay for text legibility */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#064e3b]/90 via-[#064e3b]/75 to-[#047857]/60" />
 
-      {/* Decorative pattern overlay */}
       <div
         className="absolute inset-0 opacity-30 pointer-events-none"
         style={{
@@ -62,7 +51,6 @@ export default function HeroSection() {
         }}
       />
 
-      {/* Main hero content */}
       <div className="relative z-10 container text-center py-14 animate-fade-in-up">
         <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 py-2 backdrop-blur mb-6">
           <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
@@ -102,7 +90,6 @@ export default function HeroSection() {
           </Link>
         </div>
 
-        {/* Scroll-down indicator */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 animate-bounce">
           <i className="material-icons-round text-3xl">keyboard_arrow_down</i>
         </div>

@@ -2,19 +2,6 @@ import { useEffect, useState } from 'react'
 import api from '../../utils/api.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-/**
- * Live stats ticker: 4 key numbers shown just below the hero.
- *
- * Values are fetched from GET /api/marketing/stats (auto-computed from the DB):
- *   - yearsServing      → years since the oldest active mosque was created
- *   - totalDonationsPKR → sum of confirmed/completed donations
- *   - activeRequests    → count of FundRequest with status='pending'
- *   - familiesHelped    → count of FundRequest with status='approved'/'fulfilled'
- *
- * Phase 4.5: Removed the hardcoded "Mosques Served" card (per partner feedback
- * — we only have one mosque at a time). Replaced with "Years Serving" which
- * is more meaningful for a community-mosque context.
- */
 function useCountUp(target, durationMs = 1400) {
   const safeTarget = typeof target === 'number' && !isNaN(target) ? target : 0
   const [value, setValue] = useState(0)
@@ -25,7 +12,7 @@ function useCountUp(target, durationMs = 1400) {
     const tick = (now) => {
       const elapsed = now - start
       const progress = Math.min(elapsed / durationMs, 1)
-      const eased = 1 - Math.pow(1 - progress, 3) // easeOutCubic
+      const eased = 1 - Math.pow(1 - progress, 3) 
       setValue(Math.floor(eased * safeTarget))
       if (progress < 1) raf = requestAnimationFrame(tick)
       else setValue(safeTarget)
@@ -83,7 +70,7 @@ export default function StatsSection() {
     return () => { mounted = false }
   }, [activeMosqueId])
 
-  // Map backend keys to display config (icon, format, etc.)
+  
   const config = [
     { key: 'yearsServing',     label: 'Years Serving',      icon: 'schedule',           format: 'number' },
     { key: 'totalDonationsPKR', label: 'Total Donations',    icon: 'volunteer_activism', format: 'currency' },

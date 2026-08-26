@@ -24,8 +24,8 @@ export default function ManageMosques() {
   const loadMosques = async () => {
     setLoading(true)
     try {
-      // Use the super-admin endpoint so we get the full record including the
-      // `admins` array (which /api/mosques also returns for managers).
+      
+      
       const res = await api.getSuperAdminMosques()
       setMosques(res.data || [])
     } catch (e) {
@@ -37,7 +37,7 @@ export default function ManageMosques() {
 
   useEffect(() => {
     loadMosques()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [])
 
   const handleCreateMosque = (e) => {
@@ -57,7 +57,7 @@ export default function ManageMosques() {
         setFormData({ name: '', address: '', city: '', phone: '', email: '' })
         setShowForm(false)
         showToast('Mosque created. Now create the first admin for it.', 'success')
-        // Auto-open the create-admin modal for the new masjid
+        
         setAdminModalMosque(newMosque)
         setAdminForm({ name: '', email: '', phone: '', password: '' })
         setLastCreatedAdmin(null)
@@ -80,7 +80,7 @@ export default function ManageMosques() {
         if (adminForm.password) payload.password = adminForm.password
         const res = await api.createSuperAdminAdmin(adminModalMosque._id, payload)
         setLastCreatedAdmin({ ...res.data, generatedPassword: res.generatedPassword })
-        // refresh masjid list so admin count reflects in the UI
+        
         await loadMosques()
         showToast('Admin account created. Share the credentials securely.', 'success')
         setAdminForm({ name: '', email: '', phone: '', password: '' })
@@ -174,7 +174,6 @@ export default function ManageMosques() {
         </div>
       </div>
 
-      {/* Create Mosque Form */}
       {showForm && (
         <form onSubmit={handleCreateMosque} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm animate-fade-in-up">
           <h2 className="font-primary text-xl font-bold text-gray-900 mb-5">Create New Mosque</h2>
@@ -222,7 +221,6 @@ export default function ManageMosques() {
         </form>
       )}
 
-      {/* Mosque List */}
       <div className="space-y-6">
         {loading ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500">
@@ -230,7 +228,7 @@ export default function ManageMosques() {
           </div>
         ) : mosques.map((mosque) => (
           <div key={mosque._id} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            {/* Mosque Header */}
+
             <div className="flex flex-col md:flex-row">
               <div className="flex-1 p-6">
                 <div className="flex items-start justify-between gap-4">
@@ -285,8 +283,6 @@ export default function ManageMosques() {
         ))}
       </div>
 
-      {/* Create-Admin modal (Super Admin flow). Opened after creating a
-          new masjid OR when "Add Admin" is clicked on any masjid card. */}
       {adminModalMosque && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"
@@ -399,7 +395,6 @@ export default function ManageMosques() {
         </div>
       )}
 
-      {/* Edit Masjid modal */}
       {editModalMosque && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"

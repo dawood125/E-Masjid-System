@@ -119,7 +119,7 @@ export default function FundRequest() {
 
   return (
     <div className="bg-primary-50 min-h-screen">
-      {/* Page Header */}
+
       <section className="relative py-16 bg-gradient-to-br from-[#064e3b] to-[#047857] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.15),transparent_60%)]" />
         <div className="container relative z-10">
@@ -134,7 +134,6 @@ export default function FundRequest() {
         </div>
       </section>
 
-      {/* Form Section */}
       <section className="py-12">
         <div className="container max-w-3xl">
           <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-8 md:p-10 shadow-xl border border-gray-200">
@@ -148,7 +147,6 @@ export default function FundRequest() {
               </div>
             </div>
 
-            {/* Personal Information */}
             <h3 className="font-primary text-sm font-semibold text-[#047857] uppercase tracking-wider mb-4">Personal Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
               <div>
@@ -177,7 +175,6 @@ export default function FundRequest() {
               </div>
             </div>
 
-            {/* Request Details */}
             <h3 className="font-primary text-sm font-semibold text-[#047857] uppercase tracking-wider mb-4">Request Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
               <div>
@@ -210,7 +207,6 @@ export default function FundRequest() {
               <p className="mt-1 text-xs text-gray-400">{formData.reason.length}/500 characters</p>
             </div>
 
-            {/* Terms */}
             <div className="mb-8 rounded-xl bg-amber-50 border border-amber-200 p-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" className="mt-1 h-4 w-4 rounded border-gray-300 text-[#047857] focus:ring-[#047857]" checked={formData.agreeTerms} onChange={e => handleChange('agreeTerms', e.target.checked)} />
@@ -222,7 +218,6 @@ export default function FundRequest() {
               {errors.mosqueId && <p className="form-error mt-2">{errors.mosqueId}</p>}
             </div>
 
-            {/* Submit */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button type="submit" disabled={submitting} className="btn btn-lg bg-[#047857] text-white hover:bg-[#064e3b] flex-1 shadow-md disabled:opacity-60 disabled:cursor-not-allowed">
                 <i className="material-icons-round text-xl">send</i>

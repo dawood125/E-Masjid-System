@@ -5,20 +5,8 @@ import { useUI } from '../../../hooks/useUI.js'
 import { ROUTES } from '../../../utils/constants.js'
 import MosqueSearchModal from '../../Auth/Pages/MosqueSearchModal.jsx'
 
-// Same rule as backend/routes/auth.js (kept in sync with backend PASSWORD_RULE)
 const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
 
-/**
- * Register (Phase 3.5) — 2-step registration flow.
- *
- *   Step 1: Basic info (name, email, phone, password, terms)
- *   Step 2: Address + home-mosque selection (uses MosqueSearchModal with
- *           live search + city filter + "use my location" button)
- *
- * If the user doesn't have a specific mosque in mind, they can skip Step 2
- * and register without a `mosqueId`. They can always pick one later from
- * the public Navbar dropdown.
- */
 export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
@@ -30,7 +18,7 @@ export default function Register() {
     address: '',
     city: '',
     mosqueId: '',
-    selectedMosque: null, // full mosque object (for display)
+    selectedMosque: null, 
   })
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -47,7 +35,7 @@ export default function Register() {
       ...prev,
       mosqueId: mosque?._id || '',
       selectedMosque: mosque || null,
-      // Auto-fill city from selected mosque
+      
       city: mosque?.city || prev.city,
     }))
     setIsMosqueModalOpen(false)
@@ -57,10 +45,10 @@ export default function Register() {
     e?.preventDefault()
     setFieldErrors({})
 
-    // Step 1 validation: ALL fields must be valid before moving on.
-    // This matches the backend's PASSWORD_RULE so the user gets the same
-    // feedback in both places, and prevents partially-filled forms from
-    // reaching the address step.
+    
+    
+    
+    
     const errors = {}
     if (!formData.name || formData.name.trim().length < 2) {
       errors.name = 'Name is required (at least 2 characters)'
@@ -157,7 +145,7 @@ export default function Register() {
     <section className="min-h-screen bg-gradient-to-br from-[#f0fdf4] via-white to-[#ecfdf5] py-16">
       <div className="container">
         <div className="mx-auto grid max-w-7xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl lg:grid-cols-2 animate-fade-in">
-          {/* LEFT PANEL — unchanged promotional content */}
+
           <div className="relative bg-gradient-to-br from-[#064e3b] to-[#047857] p-8 sm:p-10 text-white">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em]">
               <i className="material-icons-round text-base">verified</i>
@@ -199,10 +187,9 @@ export default function Register() {
             </div>
           </div>
 
-          {/* RIGHT PANEL — 2-step form */}
           <div className="p-8 sm:p-10">
             <div className="mx-auto max-w-lg">
-              {/* Step indicator */}
+
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-1">
                   <div className={`h-2 flex-1 rounded-full transition-colors ${step >= 1 ? 'bg-[#047857]' : 'bg-gray-200'}`} />

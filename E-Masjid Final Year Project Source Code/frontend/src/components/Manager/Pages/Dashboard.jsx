@@ -32,7 +32,7 @@ export default function ManagerDashboard() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Welcome Header */}
+
       <div className="rounded-2xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-8 text-white relative overflow-hidden">
         <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#d4af37]/10" />
         <div className="absolute -bottom-14 -left-14 h-48 w-48 rounded-full bg-white/5" />
@@ -43,7 +43,6 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3">
@@ -69,7 +68,6 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Mosque List */}
       <div>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-primary text-2xl font-bold text-gray-900">Your Mosques</h2>

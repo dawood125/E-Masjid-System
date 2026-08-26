@@ -30,10 +30,6 @@ function getInitialTimes() {
   }
 }
 
-// FIX-PRAYER-001 (BUG-PRAYER-002): use local YYYY-MM-DD (PKT), not UTC slice.
-// At 23:30 PKT the UTC date is already tomorrow, which silently misattributed
-// saves. `toLocaleDateString('sv-SE')` reliably yields YYYY-MM-DD in the
-// browser's local timezone.
 function localTodayISO() {
   return new Date().toLocaleDateString('sv-SE')
 }
@@ -49,10 +45,10 @@ export default function PrayerTimes() {
   const [eidEnabled, setEidEnabled] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
 
-  // FIX-PRAYER-005 (BUG-PRAYER-004): compute the mosque-mismatch warning.
-  // The admin's own mosqueId comes from the JWT-derived `user` object.
-  // The navbar's active mosqueId is in localStorage. If they differ, show
-  // a yellow banner and force the form to use the admin's own mosque.
+  
+  
+  
+  
   const adminMosqueId = user?.mosqueId || null
   const navbarMosqueId = getActiveMosqueId()
   const mosqueMismatch =
@@ -60,12 +56,12 @@ export default function PrayerTimes() {
     navbarMosqueId &&
     adminMosqueId !== navbarMosqueId
 
-  // Fetch times for the selected date + admin's own mosque.
-  // Re-fires when selectedDate, adminMosqueId, or mosqueMismatch changes
-  // (the latter so switching the warning doesn't leave a stale cached form).
+  
+  
+  
   useEffect(() => {
     let mounted = true
-    // FIX-PRAYER-005: always use the admin's own mosqueId, never localStorage.
+    
     const params = new URLSearchParams()
     if (adminMosqueId) params.set('mosqueId', adminMosqueId)
     if (selectedDate) params.set('date', selectedDate)
@@ -121,8 +117,8 @@ export default function PrayerTimes() {
     event.preventDefault()
     setSaving(true)
     try {
-      // FIX-PRAYER-001 (BUG-PRAYER-002): submit the admin's selected date,
-      // not "today" (which was being computed with the buggy UTC slice).
+      
+      
       const payload = {
         date: selectedDate,
         fajr: times.fajr,
@@ -181,9 +177,6 @@ export default function PrayerTimes() {
         </Link>
       </div>
 
-      {/* FIX-PRAYER-005 (BUG-PRAYER-004): yellow warning banner when the
-          navbar's active mosque differs from the admin's own mosqueId.
-          Form always uses admin's own mosqueId (see useEffect above). */}
       {mosqueMismatch && (
         <section className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 shadow-sm">
           <div className="flex items-start gap-3">
@@ -284,9 +277,6 @@ export default function PrayerTimes() {
           </h2>
         </div>
 
-        {/* FIX-PRAYER-006 (BUG-PRAYER-005): date picker so the admin can
-            update any past, today, or future date. The form auto-populates
-            with that date's existing row (or defaults if not yet set). */}
         <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
           <label className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary-900">
@@ -336,7 +326,6 @@ export default function PrayerTimes() {
             </div>
           </div>
 
-          {/* FIX-PRAYER-006 (BUG-PRAYER-006): Sunrise field is now an editable input */}
           <div className="space-y-4 py-6">
             <div>
               <h3 className="text-base font-semibold text-gray-900">Sunrise</h3>

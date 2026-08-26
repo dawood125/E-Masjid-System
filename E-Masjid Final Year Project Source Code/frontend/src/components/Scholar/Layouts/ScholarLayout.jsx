@@ -24,12 +24,11 @@ export default function ScholarLayout() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+
       <Sidebar role="scholar" />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col lg:ml-sidebar overflow-hidden">
-        {/* Header */}
+
         <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
           <div className="px-4 sm:px-6 lg:px-8 h-header flex items-center justify-between">
             <button
@@ -47,7 +46,6 @@ export default function ScholarLayout() {
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
           <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <Outlet />

@@ -10,14 +10,6 @@ const ROLE_LABELS = {
   community: 'User',
 }
 
-/**
- * Forces a logout when a login page is mounted while a user is already
- * authenticated. Shows a toast so the user understands why they were
- * signed out. Runs only once on mount, never on re-renders.
- *
- * Use in every login page so cross-role logins (Admin -> Manager, etc.)
- * silently replace the previous session instead of stacking two sessions.
- */
 export function useForceLogoutOnMount() {
   const { isAuthenticated, user, loading, logout } = useAuth()
   const { showToast } = useUI()

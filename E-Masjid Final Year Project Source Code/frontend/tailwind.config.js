@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+
 export default {
   content: [
     "./index.html",
@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary Colors
+        
         primary: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -23,7 +23,7 @@ export default {
           dark: '#065f46',
           light: '#d1fae5',
         },
-        // Accent Colors
+        
         accent: {
           50: '#fffbf0',
           100: '#fef3c7',
@@ -38,7 +38,7 @@ export default {
           DEFAULT: '#d4af37',
           light: '#fef3c7',
         },
-        // Status Colors
+        
         success: '#16a34a',
         'success-light': '#dcfce7',
         warning: '#d97706',
@@ -47,7 +47,7 @@ export default {
         'error-light': '#fee2e2',
         info: '#2563eb',
         'info-light': '#dbeafe',
-        // Neutrals
+        
         white: '#ffffff',
         'off-white': '#f9fafb',
         dark: '#111827',

@@ -4,16 +4,6 @@ import api from '../../utils/api.js'
 import { ROUTES } from '../../utils/constants.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-/**
- * Other Active Campaigns — a 3-up card grid showing every isActive=true,
- * isFeatured=false campaign. Pairs with FeaturedCampaign above so admins
- * can run multiple fundraising campaigns at once: ONE featured (big CTA)
- * and several smaller ones below.
- *
- * Phase 4.5 (post-feedback 2026-08-25): added so the "Active" toggle on
- * non-featured campaigns actually does something visible on the homepage
- * (previously the homepage only ever showed the featured campaign).
- */
 function formatPKR(n) {
   return 'PKR ' + Number(n || 0).toLocaleString('en-PK')
 }

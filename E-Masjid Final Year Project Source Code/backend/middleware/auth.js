@@ -4,7 +4,6 @@ const Mosque = require('../models/Mosque');
 const { verifyToken } = require('../utils/generateToken');
 const { TOKEN_COOKIE_NAME } = require('../controllers/authController');
 
-// Protect routes - Verify JWT token
 const protect = async (req, res, next) => {
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -36,7 +35,6 @@ const protect = async (req, res, next) => {
   }
 };
 
-// Role-based authorization
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

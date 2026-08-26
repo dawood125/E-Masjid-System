@@ -1,13 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * Community Testimonial model.
- *
- * Shown in the homepage's "What Our Community Says" section (Phase 4).
- * Admin creates these from the admin panel. The photo is a URL (e.g. an
- * image uploaded to a CDN) — for the FYP we use /assets/images/testimonials/
- * in the public folder, but the schema accepts any URL string.
- */
 const testimonialSchema = new mongoose.Schema({
   name: {
     type: String,

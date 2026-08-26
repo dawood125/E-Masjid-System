@@ -1,4 +1,4 @@
-// Mock Prayer Times Data
+
 export const mockPrayerTimes = {
   today: {
     date: new Date().toISOString().split('T')[0],
@@ -76,7 +76,6 @@ export const mockPrayerTimes = {
   ],
 }
 
-// Mock Announcements
 export const mockAnnouncements = [
   {
     id: '1',
@@ -112,7 +111,6 @@ export const mockAnnouncements = [
   },
 ]
 
-// Mock Events
 export const mockEvents = [
   {
     id: '1',
@@ -160,7 +158,6 @@ export const mockEvents = [
   },
 ]
 
-// Mock Donations
 export const mockDonations = [
   {
     id: '1',
@@ -209,7 +206,6 @@ export const mockDonations = [
   },
 ]
 
-// Mock Expenses
 export const mockExpenses = [
   {
     id: '1',
@@ -248,7 +244,6 @@ export const mockExpenses = [
   },
 ]
 
-// Mock Nikah Bookings
 export const mockNikahBookings = [
   {
     id: '1',
@@ -291,7 +286,6 @@ export const mockNikahBookings = [
   },
 ]
 
-// Mock Scholars
 export const mockScholars = [
   {
     id: '1',
@@ -319,7 +313,6 @@ export const mockScholars = [
   },
 ]
 
-// Financial Summary
 export const mockFinancialSummary = {
   totalDonations: 265000,
   totalExpenses: 183500,
@@ -338,7 +331,6 @@ export const mockFinancialSummary = {
   },
 }
 
-// Mock Mosques (Multi-Mosque Support)
 export const mockMosques = [
   {
     id: '1',
@@ -381,7 +373,6 @@ export const mockMosques = [
   },
 ]
 
-// Mock Committee Members
 export const mockCommitteeMembers = [
   {
     id: 'cm1',
@@ -412,7 +403,6 @@ export const mockCommitteeMembers = [
   },
 ]
 
-// Mock Fund Requests (Zakat/Sadaqah)
 export const mockFundRequests = [
   {
     id: 'fr1',
@@ -460,7 +450,6 @@ export const mockFundRequests = [
   },
 ]
 
-// Mock Top Donors
 export const mockTopDonors = [
   { rank: 1, name: 'Muhammad Hassan', totalAmount: 150000, donationCount: 12 },
   { rank: 2, name: 'Abdullah Ahmed', totalAmount: 95000, donationCount: 8 },
@@ -469,7 +458,6 @@ export const mockTopDonors = [
   { rank: 5, name: 'Bilal Saeed', totalAmount: 48000, donationCount: 10 },
 ]
 
-// Promotional Content for Homepage
 export const mockPromotionalContent = {
   mosquePhotos: [
     {

@@ -1,4 +1,4 @@
-// Currency Formatting (PKR)
+
 export const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-PK', {
     style: 'currency',
@@ -7,7 +7,6 @@ export const formatCurrency = (amount) => {
   }).format(amount)
 }
 
-// Date Formatting
 export const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -37,18 +36,15 @@ export const formatDateTime = (dateString) => {
   })
 }
 
-// Truncate Text
 export const truncateText = (text, maxLength = 100) => {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength) + '...'
 }
 
-// Capitalize First Letter
 export const capitalize = (str) => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 
-// Get Initials
 export const getInitials = (name) => {
   if (!name) return ''
   return name
@@ -59,14 +55,12 @@ export const getInitials = (name) => {
     .slice(0, 2)
 }
 
-// Format Phone Number
 export const formatPhoneNumber = (phone) => {
   if (!phone) return ''
   const digits = phone.replace(/\D/g, '')
   return digits.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')
 }
 
-// Get Time Status
 export const getTimeStatus = (time) => {
   const [hours] = time.split(':')
   const hour = parseInt(hours)
@@ -79,7 +73,6 @@ export const getTimeStatus = (time) => {
   return 'Unknown'
 }
 
-// Get Badge Color
 export const getBadgeColor = (status) => {
   const colors = {
     pending: 'bg-warning-light text-warning',
@@ -92,7 +85,6 @@ export const getBadgeColor = (status) => {
   return colors[status] || 'bg-gray-100 text-gray-600'
 }
 
-// Get Icon for Status
 export const getStatusIcon = (status) => {
   const icons = {
     pending: 'schedule',

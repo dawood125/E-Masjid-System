@@ -6,7 +6,6 @@ import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 
-// Marketing components (Phase 4)
 import HeroSection from '../../Marketing/HeroSection.jsx'
 import StatsSection from '../../Marketing/StatsSection.jsx'
 import ImageCarousel from '../../Marketing/ImageCarousel.jsx'
@@ -117,7 +116,7 @@ export default function Home() {
       }
     })()
     return () => { mounted = false }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [showToast, activeMosqueId])
 
   useEffect(() => {
@@ -130,13 +129,11 @@ export default function Home() {
 
   return (
     <div className="bg-white">
-      {/* ==================== HERO (with marketing video) ==================== */}
+
       <HeroSection />
 
-      {/* ==================== STATS STRIP ==================== */}
       <StatsSection />
 
-      {/* ==================== PRAYER TIMES WIDGET (data-driven) ==================== */}
       <section className="relative z-20 pb-20 -mt-4 md:-mt-8">
         <div className="container">
           <div className="overflow-hidden rounded-2xl border-t-[5px] border-[#d4af37] bg-white shadow-xl">
@@ -192,13 +189,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ==================== IMPACT COUNTERS (BIG NUMBERS) ==================== */}
       <ImpactCounters />
 
-      {/* ==================== "LIFE AT THE MASJID" CAROUSEL ==================== */}
       <ImageCarousel />
 
-      {/* ==================== ANNOUNCEMENTS (data-driven) ==================== */}
       <section className="py-20 bg-white">
         <div className="container">
           <div className="mb-10 flex items-end justify-between gap-4">
@@ -260,16 +254,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ==================== FEATURED CAMPAIGN (donation CTA with progress bar) ==================== */}
       <FeaturedCampaign />
 
-      {/* ==================== OTHER ACTIVE CAMPAIGNS (grid) ==================== */}
       <OtherCampaigns />
 
-      {/* ==================== TESTIMONIALS (3 community members) ==================== */}
       <Testimonials />
 
-      {/* ==================== EVENTS + HADITH ==================== */}
       <section className="bg-primary-50 py-20">
         <div className="container grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-8">
           <div>
@@ -315,7 +305,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Next Event Countdown — show only if we have a real upcoming event */}
             {topEvents[0] && countdown && (
               <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-md">
                 <div className="flex items-center gap-2 mb-3">
@@ -365,7 +354,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ==================== FUND REQUEST CTA ==================== */}
       <section className="py-16 bg-gradient-to-r from-amber-50 via-white to-amber-50">
         <div className="container">
           <div className="rounded-2xl border border-amber-200 bg-white p-8 md:p-12 shadow-sm flex flex-col md:flex-row items-center gap-8">
@@ -386,7 +374,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ==================== FINAL CTA ==================== */}
       <section className="bg-gradient-to-br from-primary-50 to-green-100 py-20">
         <div className="container text-center">
           <h2 className="font-primary text-4xl font-bold text-[#064e3b]">Support Your Masjid</h2>

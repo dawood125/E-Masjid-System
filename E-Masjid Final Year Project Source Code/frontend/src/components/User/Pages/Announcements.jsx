@@ -37,7 +37,6 @@ function categoryTagClass(category) {
   return 'bg-gray-100 text-gray-700'
 }
 
-
 export default function Announcements() {
   const { showToast } = useUI()
   const { activeMosqueId, activeMosque } = useMosque()
@@ -99,9 +98,9 @@ export default function Announcements() {
   const currentPage = Math.min(page, totalPages)
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  // FIX-ANN-008 (BUG-ANN-007): show current page + neighboring pages with ellipsis.
-  // Previously `Array.from({ length: totalPages }).slice(0, 5)` capped at pages 1-5,
-  // making it impossible to reach page 6+.
+  
+  
+  
   const pageNumbers = useMemo(() => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
     const windowStart = Math.max(1, Math.min(currentPage - 2, totalPages - 4))
@@ -119,7 +118,7 @@ export default function Announcements() {
     return numbers
   }, [totalPages, currentPage])
 
-  // FIX-ANN-001 (BUG-ANN-001/002): dynamic mosque name + dynamic Islamic date.
+  
   const dynamicSubtitle = activeMosque
     ? `Stay informed with the latest news, updates, and important announcements from ${activeMosque.name}, ${activeMosque.city || ''}.`
     : 'Stay informed with the latest news, updates, and important announcements from your masjid.'
@@ -141,7 +140,6 @@ export default function Announcements() {
             </div>
           </header>
 
-          {/* FIX-ANN-002 (BUG-ANN urgent): amber banner at top for urgent announcement */}
           {urgent && urgent.isUrgent && (
             <article className="mb-7 overflow-hidden rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-md animate-fade-in">
               <div className="p-8">

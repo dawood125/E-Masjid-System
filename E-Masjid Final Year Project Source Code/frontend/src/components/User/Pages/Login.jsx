@@ -30,7 +30,7 @@ export default function Login() {
       await login(formData.email, formData.password, formData.role)
       showToast('Successfully logged in!', 'success')
 
-      // Redirect based on selected public portal role.
+      
       if (formData.role === 'scholar') {
         navigate(ROUTES.SCHOLAR)
       } else {

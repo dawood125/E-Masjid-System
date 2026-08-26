@@ -2,28 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../utils/api.js'
 import { useUI } from '../../../hooks/useUI.js'
 
-/**
- * Admin Marketing (Phase 4.5).
- *
- * Tabbed page for managing homepage marketing content:
- *   - Campaigns  (featured-campaign + all campaigns)
- *   - Testimonials (community voices)
- *   - Hero slides  (homepage carousel)
- *
- * Each tab has a list view + an "Add" button that opens a modal form.
- * Edit reuses the same modal. Delete has a confirmation step.
- *
- * Note: this is a self-contained page (no external dependencies on the
- * rest of the admin pages). All API calls go through api.js.
- */
-
 const TABS = [
   { key: 'campaigns',   label: 'Campaigns',   icon: 'volunteer_activism' },
   { key: 'testimonials', label: 'Testimonials', icon: 'format_quote' },
   { key: 'hero-slides',  label: 'Hero Slides',  icon: 'image' },
 ]
 
-// ─── Shared form fields helper ─────────────────────────
 function Field({ label, type = 'text', value, onChange, placeholder, required, children, rows }) {
   return (
     <label className="block">
@@ -81,7 +65,6 @@ function ConfirmDelete({ open, name, onCancel, onConfirm }) {
   )
 }
 
-// ─── CAMPAIGNS TAB ────────────────────────────────────
 function CampaignsTab({ showToast }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -222,7 +205,6 @@ function CampaignsTab({ showToast }) {
   )
 }
 
-// ─── TESTIMONIALS TAB ──────────────────────────────────
 function TestimonialsTab({ showToast }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -339,7 +321,6 @@ function TestimonialsTab({ showToast }) {
   )
 }
 
-// ─── HERO SLIDES TAB ──────────────────────────────────
 function HeroSlidesTab({ showToast }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -453,7 +434,6 @@ function HeroSlidesTab({ showToast }) {
   )
 }
 
-// ─── MAIN PAGE ─────────────────────────────────────────
 export default function Marketing() {
   const { showToast } = useUI()
   const [tab, setTab] = useState('campaigns')

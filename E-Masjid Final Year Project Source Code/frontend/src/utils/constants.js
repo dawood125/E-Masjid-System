@@ -1,4 +1,4 @@
-// Color Constants
+
 export const COLORS = {
   primary: '#047857',
   primaryDark: '#065f46',
@@ -20,7 +20,6 @@ export const COLORS = {
   gray700: '#374151',
 }
 
-// User Roles
 export const USER_ROLES = {
   COMMUNITY: 'community',
   ADMIN: 'admin',
@@ -29,14 +28,12 @@ export const USER_ROLES = {
   COMMITTEE: 'committee',
 }
 
-// Donation Types
 export const DONATION_TYPES = {
   SADAQAH: 'Sadaqah',
   ZAKAT: 'Zakat',
   MASJID_FUND: 'Masjid Fund',
 }
 
-// Prayer Names
 export const PRAYER_NAMES = {
   FAJR: 'Fajr',
   ZUHR: 'Zuhr',
@@ -46,7 +43,6 @@ export const PRAYER_NAMES = {
   JUMMAH: 'Jummah',
 }
 
-// Statuses
 export const STATUS = {
   PENDING: 'pending',
   ACCEPTED: 'accepted',
@@ -56,7 +52,6 @@ export const STATUS = {
   INACTIVE: 'inactive',
 }
 
-// Expense Categories
 export const EXPENSE_CATEGORIES = [
   'Maintenance',
   'Utilities',
@@ -69,9 +64,8 @@ export const EXPENSE_CATEGORIES = [
   'Other',
 ]
 
-// Routes
 export const ROUTES = {
-  // User Routes
+  
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/register',
@@ -87,7 +81,7 @@ export const ROUTES = {
   FUND_REQUEST: '/fund-request',
   MY_REQUESTS: '/my-requests',
 
-  // Admin Routes
+  
   ADMIN_LOGIN: '/admin/login',
   ADMIN: '/admin',
   ADMIN_DASHBOARD: '/admin',
@@ -99,30 +93,28 @@ export const ROUTES = {
   ADMIN_COMMITTEE: '/admin/committee',
   ADMIN_FUND_REQUESTS: '/admin/fund-requests',
 
-  // Manager Routes
+  
   MANAGER_LOGIN: '/manager/login',
   MANAGER: '/manager',
   MANAGER_DASHBOARD: '/manager',
   MANAGER_MOSQUES: '/manager/mosques',
   MANAGER_ADMINS: '/manager/admins',
 
-  // Committee Routes
+  
   COMMITTEE_LOGIN: '/committee/login',
   COMMITTEE: '/committee',
   COMMITTEE_DASHBOARD: '/committee',
 
-  // Scholar Routes
+  
   SCHOLAR: '/scholar',
   SCHOLAR_DASHBOARD: '/scholar',
 }
 
-// Pagination
 export const PAGINATION = {
   DEFAULT_PAGE_SIZE: 10,
   PAGE_SIZES: [5, 10, 25, 50],
 }
 
-// Date Formats
 export const DATE_FORMATS = {
   SHORT: 'MMM DD, YYYY',
   LONG: 'MMMM DD, YYYY',
@@ -130,7 +122,6 @@ export const DATE_FORMATS = {
   DATE_TIME: 'MMM DD, YYYY HH:mm',
 }
 
-// Error Messages
 export const ERROR_MESSAGES = {
   REQUIRED_FIELD: 'This field is required',
   INVALID_EMAIL: 'Invalid email address',
@@ -141,7 +132,6 @@ export const ERROR_MESSAGES = {
   NOT_FOUND: 'Resource not found.',
 }
 
-// Success Messages
 export const SUCCESS_MESSAGES = {
   LOGGED_IN: 'Successfully logged in',
   LOGGED_OUT: 'Successfully logged out',
@@ -153,7 +143,6 @@ export const SUCCESS_MESSAGES = {
   BOOKING_SUBMITTED: 'Booking request submitted',
 }
 
-// API Endpoints
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export const API_ENDPOINTS = {
@@ -171,7 +160,6 @@ export const API_ENDPOINTS = {
   COMMITTEE: '/api/committee',
 }
 
-// Local Storage Keys
 export const STORAGE_KEYS = {
   USER: 'user',
   AUTH_TOKEN: 'authToken',

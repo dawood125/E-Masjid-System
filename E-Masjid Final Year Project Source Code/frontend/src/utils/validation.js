@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-// Auth Schemas
 const passwordField = z
   .string()
   .min(8, 'Password must be at least 8 characters')
@@ -25,7 +24,6 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
 })
 
-// Form Schemas
 export const donationSchema = z.object({
   amount: z.number().min(1, 'Amount must be greater than 0'),
   donationType: z.enum(['zakat', 'sadaqah', 'mosque-fund']),

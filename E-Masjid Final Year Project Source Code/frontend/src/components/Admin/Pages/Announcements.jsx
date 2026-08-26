@@ -36,11 +36,11 @@ export default function Announcements() {
     urgent: false,
     mode: 'publish',
   })
-  // FIX-ANN-005 (BUG-ANN-008): delete-confirmation modal state
+  
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [confirmDeleteText, setConfirmDeleteText] = useState('')
 
-  // FIX-ANN-004 (BUG-ANN-005): always use admin's own mosqueId, not navbar's.
+  
   const { activeMosqueId: navbarMosqueId } = useMosque()
   const adminMosqueId = user?.mosqueId || null
   const isManager = user?.role === 'manager'
@@ -48,10 +48,10 @@ export default function Announcements() {
 
   const fetchAnnouncements = async () => {
     try {
-      // Phase 6 (BUG-ANN-012): call the protected admin endpoint so the backend
-      // can force-scope to req.user.mosqueId. Manager can pass ?mosqueId=
-      // to choose (within the mosques they oversee); everyone else gets their
-      // own scope (or 400 if unscoped).
+      
+      
+      
+      
       const params = isManager && navbarMosqueId ? `mosqueId=${navbarMosqueId}` : ''
       const res = await api.getAdminAnnouncements(params)
       setAnnouncements(Array.isArray(res.data) ? res.data : [])
@@ -64,7 +64,7 @@ export default function Announcements() {
 
   useEffect(() => {
     fetchAnnouncements()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [adminMosqueId, isManager, navbarMosqueId])
 
   const preparedAnnouncements = useMemo(() => {
@@ -110,7 +110,7 @@ export default function Announcements() {
       title: item.title,
       content: item.content,
       publishDate: item.publishDate ? new Date(item.publishDate).toISOString().slice(0, 10) : '',
-      urgent: item.isUrgent || false, // FIX-ANN-003 (BUG-ANN-010): pre-populate the urgent checkbox
+      urgent: item.isUrgent || false, 
       mode: item.status === 'draft' ? 'draft' : 'publish',
     })
     setIsModalOpen(true)
@@ -124,7 +124,7 @@ export default function Announcements() {
         title: newAnnouncement.title,
         content: newAnnouncement.content,
         isUrgent: newAnnouncement.urgent,
-        publishedBy: user?.name || 'Admin', // FIX-ANN-006 (BUG-ANN-009)
+        publishedBy: user?.name || 'Admin', 
         status: newAnnouncement.mode === 'draft' ? 'draft' : 'published',
       }
       if (newAnnouncement.publishDate) payload.publishDate = newAnnouncement.publishDate
@@ -149,7 +149,7 @@ export default function Announcements() {
     }
   }
 
-  // FIX-ANN-003 (BUG-ANN-004): wire quick actions to real API calls
+  
   const handleMarkUrgent = async (item) => {
     try {
       const newUrgent = !item.isUrgent
@@ -234,7 +234,6 @@ export default function Announcements() {
         </div>
       </div>
 
-      {/* FIX-ANN-004 (BUG-ANN-005): mosque-mismatch warning banner */}
       {mosqueMismatch && (
         <section className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 shadow-sm">
           <div className="flex items-start gap-3">
@@ -425,7 +424,6 @@ export default function Announcements() {
         </section>
       )}
 
-      {/* Create/Edit modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
@@ -527,7 +525,6 @@ export default function Announcements() {
         </div>
       )}
 
-      {/* FIX-ANN-005 (BUG-ANN-008): delete-confirmation modal — type title to confirm */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
           <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">

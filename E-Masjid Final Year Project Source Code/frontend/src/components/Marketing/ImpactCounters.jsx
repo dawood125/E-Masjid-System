@@ -2,13 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import api from '../../utils/api.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-/**
- * Impact counters: 4 BIG numbers that show cumulative impact of the mosque.
- *
- * Phase 4.5: Now fetched from GET /api/marketing/impact (auto-computed from DB).
- * Numbers count up from 0 when the section scrolls into view.
- */
-
 const IMPACT_CONFIG = [
   { key: 'prayersTracked',   label: 'Prayers Tracked',         suffix: '+' },
   { key: 'studentsTaught',    label: 'Students Taught',         suffix: '+' },
@@ -72,13 +65,13 @@ export default function ImpactCounters() {
     let mounted = true
     api.getMarketingImpact(activeMosqueId)
       .then((res) => { if (mounted) setData(res.data) })
-      .catch(() => { /* keep data as null and render zeros */ })
+      .catch(() => {  })
     return () => { mounted = false }
   }, [activeMosqueId])
 
   return (
     <section ref={ref} className="relative py-20 bg-[#064e3b] overflow-hidden">
-      {/* Background pattern */}
+
       <div
         className="absolute inset-0 opacity-5 pointer-events-none"
         style={{

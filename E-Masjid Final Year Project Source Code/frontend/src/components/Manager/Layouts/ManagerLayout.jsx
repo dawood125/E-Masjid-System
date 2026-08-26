@@ -29,12 +29,11 @@ export default function ManagerLayout() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar Overlay */}
+
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={closeSidebar} />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed left-0 top-0 z-40 h-screen w-[280px] transform overflow-y-auto bg-gradient-to-b from-[#1a1a2e] to-[#16213e] text-white transition-transform duration-300 lg:z-30 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -85,7 +84,6 @@ export default function ManagerLayout() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col lg:ml-[280px] overflow-hidden">
         <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
           <div className="px-4 sm:px-6 lg:px-8 h-[70px] flex items-center justify-between">

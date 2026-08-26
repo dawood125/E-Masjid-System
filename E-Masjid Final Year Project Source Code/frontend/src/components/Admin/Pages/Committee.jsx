@@ -128,7 +128,6 @@ export default function AdminCommittee() {
         </form>
       )}
 
-      {/* Members Table */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">

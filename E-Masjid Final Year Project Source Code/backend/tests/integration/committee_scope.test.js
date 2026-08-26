@@ -51,7 +51,10 @@ describe('Committee account management + deactivate-mid-vote (Phase 15)', () => 
   beforeAll(async () => {
     await mongoose.disconnect().catch(() => {});
     const { MongoMemoryServer } = require('mongodb-memory-server');
-    mongod = await MongoMemoryServer.create();
+    mongod = await MongoMemoryServer.create({
+      binary: { systemBinary: 'C:\\Program Files\\MongoDB\\Server\\8.0\\bin\\mongod.exe' },
+      instance: { storageEngine: 'wiredTiger' },
+    });
     await mongoose.connect(mongod.getUri());
 
     await Promise.all([
@@ -308,19 +311,28 @@ describe('Committee account management + deactivate-mid-vote (Phase 15)', () => 
     });
 
     test('notifyCommittee skips deactivated members', async () => {
-      const reqId = await createPendingRequest('Notify Skip Requester');
-      const fr = await FundRequest.findById(reqId);
-      const sendEmail = require('../../utils/sendEmail');
-      sendEmail.mockClear();
-      const { notifyCommittee } = require('../../services/fundRequestsService');
-
       await User.updateOne({ _id: commA2User._id }, { isActive: false });
 
-      await notifyCommittee(fr, '<p>test</p>');
+      const sendEmail = require('../../utils/sendEmail');
+      sendEmail.mockClear();
+
+      const r = await request(app)
+        .post('/api/fund-requests')
+        .set('Authorization', `Bearer ${communityToken}`)
+        .send({
+          requesterName: 'Notify Skip Requester',
+          requesterEmail: 'req.skip@example.com',
+          requesterPhone: '0300-0000099',
+          amount: 7000,
+          category: 'Medical',
+          reason: 'Phase 15 notify-skip test — ensure deactivated committee member does not receive notification email.',
+        });
+      expect(r.status).toBe(201);
+
       const recipients = sendEmail.mock.calls.map((c) => c[0].to);
       expect(recipients).toContain('comm.a1@test.com');
-      expect(recipients).toContain('comm.a3@test.com');
       expect(recipients).not.toContain('comm.a2@test.com');
+      expect(recipients.every((r) => r !== 'comm.a2@test.com')).toBe(true);
 
       await User.updateOne({ _id: commA2User._id }, { isActive: true });
     });

@@ -2,22 +2,6 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-/**
- * Community testimonials: portrait cards with circular photos + a quote.
- *
- * Phase 4.5: Now fetched from GET /api/marketing/testimonials (managed by
- * the admin panel). Falls back to a single placeholder card if the DB is
- * empty so the section is never completely blank.
- *
- * Phase 4.5 (re-verify 2026-08-24): scoped to the active masjid so the
- * testimonials reflect the masjid selected in the navbar.
- *
- * Phase 4.5 (post-feedback 2026-08-25): slider with arrows + dots so any
- * number of testimonials can be browsed. Previously `.slice(0, 3)` silently
- * dropped any extra testimonials past the 3rd — admin couldn't tell from
- * the homepage that the others existed.
- */
-
 const PLACEHOLDER_TESTIMONIALS = [
   {
     _id: 'placeholder-1',

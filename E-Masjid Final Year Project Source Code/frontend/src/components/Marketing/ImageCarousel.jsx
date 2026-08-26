@@ -2,18 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-/**
- * "Life at the Masjid" — image carousel.
- *
- * Phase 4.5: Now fetched from GET /api/marketing/hero-slides. The admin panel
- * manages which images show in the carousel. The 6 Gemini-generated images
- * in /public/assets/images/gallery/ are seeded as the defaults so the
- * carousel still looks beautiful on a fresh seed.
- *
- * Phase 4.5 (re-verify 2026-08-24): scoped to the active masjid so the
- * carousel reflects the masjid selected in the navbar.
- */
-
 const DEFAULT_SLIDES = [
   { _id: 'default-1', image: '/assets/images/gallery/gallery-fajr.jpg',       caption: 'Fajr prayer at dawn — worshippers in sujood' },
   { _id: 'default-2', image: '/assets/images/gallery/gallery-quran.jpg',      caption: 'Quran study circle with our ustaad' },
@@ -59,7 +47,7 @@ export default function ImageCarousel() {
           })))
         }
       })
-      .catch(() => { /* fall back to defaults */ })
+      .catch(() => {  })
     return () => { mounted = false }
   }, [activeMosqueId])
 

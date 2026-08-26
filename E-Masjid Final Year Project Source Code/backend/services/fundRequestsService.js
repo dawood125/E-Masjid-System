@@ -245,8 +245,25 @@ async function castVote(id, body, user) {
   };
 
   const updated = await FundRequest.findOneAndUpdate(
-    { _id: id, status: 'pending', 'votes.member': { $ne: user._id }, mosqueId: user.mosqueId },
-    { $push: { votes: newVote } },
+    { _id: id, status: 'pending', mosqueId: user.mosqueId },
+    [
+      {
+        $set: {
+          votes: {
+            $concatArrays: [
+              {
+                $filter: {
+                  input: { $ifNull: ['$votes', []] },
+                  as: 'v',
+                  cond: { $ne: ['$$v.member', user._id] },
+                },
+              },
+              [newVote],
+            ],
+          },
+        },
+      },
+    ],
     { new: true }
   );
 
