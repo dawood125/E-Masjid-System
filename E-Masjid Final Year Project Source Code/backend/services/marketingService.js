@@ -17,7 +17,7 @@ function yearsSinceMosqueCreated(mosqueId) {
     .then((m) => {
       if (!m) return 0;
       const ms = Date.now() - new Date(m.createdAt).getTime();
-      return Math.max(1, Math.floor(ms / (365.25 * 24 * 3600 * 1000)));
+      return Math.floor(ms / (365.25 * 24 * 3600 * 1000));
     });
 }
 
@@ -39,7 +39,6 @@ async function aggregateStats(mosqueId) {
 async function aggregateImpact(mosqueId) {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600 * 1000);
   const oid = mosqueId ? require('mongoose').Types.ObjectId.createFromHexString(mosqueId) : null;
-  const userFilter = mosqueId ? { isActive: true, mosqueId: oid } : { isActive: true };
   const eventFilter = mosqueId ? { isActive: true, mosqueId: oid } : { isActive: true };
   const frFilter = mosqueId ? { status: { $in: ['approved', 'fulfilled'] }, mosqueId: oid } : { status: { $in: ['approved', 'fulfilled'] } };
   const nbFilter = mosqueId ? { status: 'accepted', mosqueId: oid } : { status: 'accepted' };
@@ -49,8 +48,7 @@ async function aggregateImpact(mosqueId) {
     { $count: 'count' },
   ]) : [];
   const prayersTracked = prayersTrackedRow[0]?.count || 0;
-  const totalUsers = await User.countDocuments(userFilter);
-  const prayersEstimated = Math.max(prayersTracked * 50, totalUsers * 200);
+  const prayersEstimated = prayersTracked * 50;
 
   const [studentsTaught, familiesSupported, nikahHosted] = await Promise.all([
     Event.countDocuments(eventFilter),

@@ -2,15 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
-const DEFAULT_SLIDES = [
-  { _id: 'default-1', image: '/assets/images/gallery/gallery-fajr.jpg',       caption: 'Fajr prayer at dawn — worshippers in sujood' },
-  { _id: 'default-2', image: '/assets/images/gallery/gallery-quran.jpg',      caption: 'Quran study circle with our ustaad' },
-  { _id: 'default-3', image: '/assets/images/gallery/gallery-madrassa.jpg',  caption: 'Children learning Arabic letters' },
-  { _id: 'default-4', image: '/assets/images/gallery/gallery-iftar.jpg',      caption: 'Community iftar during Ramadan' },
-  { _id: 'default-5', image: '/assets/images/gallery/gallery-nikah.jpg',      caption: 'A blessed Nikah ceremony' },
-  { _id: 'default-6', image: '/assets/images/gallery/gallery-courtyard.jpg', caption: 'Our peaceful courtyard at golden hour' },
-]
-
 function ChevronLeft(props) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -27,7 +18,8 @@ function ChevronRight(props) {
 }
 
 export default function ImageCarousel() {
-  const [slides, setSlides] = useState(DEFAULT_SLIDES)
+  const [slides, setSlides] = useState([])
+  const [loaded, setLoaded] = useState(false)
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const timerRef = useRef(null)
@@ -35,19 +27,24 @@ export default function ImageCarousel() {
 
   useEffect(() => {
     let mounted = true
+    setLoaded(false)
     api.getMarketingHeroSlides(activeMosqueId)
       .then((res) => {
         if (!mounted) return
-        if (res.data && res.data.length > 0) {
-          setSlides(res.data.map((s) => ({
-            _id: s._id,
-            image: s.image,
-            caption: s.caption || '',
-            link: s.link || '',
-          })))
-        }
+        const list = Array.isArray(res?.data) ? res.data : []
+        setSlides(list.map((s) => ({
+          _id: s._id,
+          image: s.image,
+          caption: s.caption || '',
+          link: s.link || '',
+        })))
       })
-      .catch(() => {  })
+      .catch(() => {
+        if (mounted) setSlides([])
+      })
+      .finally(() => {
+        if (mounted) setLoaded(true)
+      })
     return () => { mounted = false }
   }, [activeMosqueId])
 
@@ -59,6 +56,8 @@ export default function ImageCarousel() {
     timerRef.current = setInterval(next, 4500)
     return () => clearInterval(timerRef.current)
   }, [paused, next])
+
+  if (!loaded || slides.length === 0) return null
 
   return (
     <section

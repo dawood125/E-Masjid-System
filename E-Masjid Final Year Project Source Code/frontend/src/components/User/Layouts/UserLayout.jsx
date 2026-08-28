@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Navbar from '../../Common/Navbar'
 import Footer from '../../Common/Footer'
+import FirstVisitMosqueModal from '../../Common/FirstVisitMosqueModal.jsx'
 
 export default function UserLayout() {
   return (
@@ -10,6 +11,7 @@ export default function UserLayout() {
         <Outlet />
       </main>
       <Footer />
+      <FirstVisitMosqueModal />
     </div>
   )
 }
