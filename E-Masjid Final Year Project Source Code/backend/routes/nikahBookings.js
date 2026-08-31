@@ -10,11 +10,13 @@ router.get('/', protect, ctrl.listBookings);
 router.get('/availability', protect, ctrl.getAvailability);
 
 router.post('/', protect, authorize('community'), [
-  body('groomName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Groom name is required'),
-  body('brideName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Bride name is required'),
-  body('preferredDate').isISO8601().withMessage('Valid preferredDate is required'),
-  body('preferredTime').isString().trim().isLength({ min: 3, max: 20 }).withMessage('Valid preferredTime is required'),
-  body('contact').isString().trim().isLength({ min: 7, max: 40 }).withMessage('Valid contact is required'),
+  body('groomName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Groom name must be 2 to 100 characters'),
+  body('brideName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Bride name must be 2 to 100 characters'),
+  body('ceremonyDate').isISO8601().withMessage('Valid ceremony date is required'),
+  body('ceremonyTime').isString().trim().isLength({ min: 3, max: 20 }).withMessage('Valid ceremony time is required'),
+  body('phone').isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone number must be 7 to 20 characters'),
+  body('email').isString().trim().isEmail().withMessage('Valid email address is required'),
+  body('address').isString().trim().isLength({ min: 3, max: 500 }).withMessage('Address must be 3 to 500 characters'),
   body('notes').optional().isString().trim().isLength({ max: 1000 }).withMessage('Notes too long'),
   handleValidation,
 ], ctrl.createBooking);

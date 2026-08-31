@@ -1,17 +1,30 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useForceLogoutOnMount } from '../../../hooks/useForceLogoutOnMount.js'
 import { ROUTES } from '../../../utils/constants.js'
+import FormField from '../../Common/FormField.jsx'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateLogin(form) {
+  const errs = {}
+  if (!form.email.trim()) errs.email = 'Email is required'
+  else if (!EMAIL_RE.test(form.email.trim())) errs.email = 'Enter a valid email address'
+
+  if (!form.password) errs.password = 'Password is required'
+  return errs
+}
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '', role: 'community', remember: false })
+  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const { showToast } = useUI()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   useForceLogoutOnMount()
 
   useEffect(() => {
@@ -22,16 +35,31 @@ export default function Login() {
     }
   }, [showToast])
 
+  const update = (field, value) => {
+    setFormData((p) => ({ ...p, [field]: value }))
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const v = validateLogin(formData)
+    if (Object.keys(v).length > 0) {
+      setErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
     setLoading(true)
 
     try {
-      await login(formData.email, formData.password, formData.role)
+      await login(formData.email.trim(), formData.password, formData.role)
       showToast('Successfully logged in!', 'success')
 
-      
-      if (formData.role === 'scholar') {
+      const returnUrl = searchParams.get('returnUrl')
+      if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+        navigate(returnUrl)
+      } else if (formData.role === 'scholar') {
         navigate(ROUTES.SCHOLAR)
       } else {
         navigate(ROUTES.HOME)
@@ -62,89 +90,63 @@ export default function Login() {
                 <p className="mt-2 text-gray-600">Sign in to access your E-Masjid account</p>
               </div>
 
-              <form className="space-y-5" onSubmit={handleSubmit}>
-                <div>
-                  <label className="form-label" htmlFor="email">
-                    Email Address <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</i>
-                    <input
-                      id="email"
-                      type="email"
-                      className="form-input pl-12"
-                      placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label" htmlFor="password">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock</i>
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      className="form-input pl-12 pr-12"
-                      placeholder="Enter your password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      autoComplete="current-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-[#047857]"
-                      aria-label="Toggle password visibility"
-                    >
-                      <i className="material-icons-round">{showPassword ? 'visibility_off' : 'visibility'}</i>
-                    </button>
-                  </div>
-                </div>
+              <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+                <FormField
+                  name="email"
+                  label="Email Address"
+                  type="email"
+                  icon="mail"
+                  required
+                  value={formData.email}
+                  onChange={(e) => update('email', e.target.value)}
+                  error={errors.email}
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                />
+                <FormField
+                  name="password"
+                  label="Password"
+                  type="password"
+                  icon="lock"
+                  required
+                  value={formData.password}
+                  onChange={(e) => update('password', e.target.value)}
+                  error={errors.password}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  showPasswordToggle
+                />
 
                 <div className="flex items-center justify-between gap-2 text-sm">
-                  <label className="inline-flex items-center gap-2 text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={formData.remember}
-                      onChange={(e) => setFormData({ ...formData, remember: e.target.checked })}
-                      className="h-4 w-4 rounded border-gray-300 text-[#047857] focus:ring-[#047857]"
-                    />
-                    Remember me
-                  </label>
+                  <FormField
+                    name="remember"
+                    type="checkbox"
+                    value={formData.remember}
+                    onChange={(e) => update('remember', e.target.checked)}
+                    label="Remember me"
+                  />
                   <Link to={ROUTES.FORGOT_PASSWORD} className="font-medium text-[#047857] hover:text-[#065f46]">
                     Forgot Password?
                   </Link>
                 </div>
 
-                <div>
-                  <label className="form-label" htmlFor="role">Portal Access</label>
-                  <div className="relative">
-                    <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">badge</i>
-                    <select
-                      id="role"
-                      className="form-select pl-12"
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    >
-                      <option value="community">Community Member</option>
-                      <option value="scholar">Religious Scholar</option>
-                    </select>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Mosque admin?{' '}
-                    <Link to={ROUTES.ADMIN_LOGIN} className="font-semibold text-[#047857] hover:text-[#065f46]">
-                      Use dedicated admin login
-                    </Link>
-                  </p>
-                </div>
+                <FormField
+                  name="role"
+                  label="Portal Access"
+                  type="select"
+                  icon="badge"
+                  value={formData.role}
+                  onChange={(e) => update('role', e.target.value)}
+                >
+                  <option value="community">Community Member</option>
+                  <option value="scholar">Religious Scholar</option>
+                </FormField>
+                <p className="-mt-3 text-xs text-gray-500">
+                  Mosque admin?{' '}
+                  <Link to={ROUTES.ADMIN_LOGIN} className="font-semibold text-[#047857] hover:text-[#065f46]">
+                    Use dedicated admin login
+                  </Link>
+                </p>
 
                 <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 text-base bg-[#047857] hover:bg-[#064e3b]">
                   <i className="material-icons-round">login</i>

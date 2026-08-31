@@ -29,7 +29,7 @@ function monthIndex(month) {
 }
 
 async function listAdmin(query, user) {
-  const { type, month, page = 1, limit = 10, mosqueId } = query;
+  const { type, month, page = 1, limit = 10, mosqueId, isAnonymous } = query;
   const filter = {};
   if (user.role === 'manager') {
     const Mosque = require('../models/Mosque');
@@ -55,6 +55,8 @@ async function listAdmin(query, user) {
   if (month && month !== 'all') {
     filter.$expr = { $eq: [{ $month: '$createdAt' }, monthIndex(month)] };
   }
+  if (isAnonymous === 'true') filter.isAnonymous = true;
+  else if (isAnonymous === 'false') filter.isAnonymous = false;
   const total = await Donation.countDocuments(filter);
   const donations = await Donation.find(filter)
     .sort({ createdAt: -1 })
@@ -155,7 +157,44 @@ async function findByStripeSession(sessionId) {
     .select('donorName amount type paymentMethod isAnonymous stripeSessionId stripePaymentId status createdAt mosqueId')
     .lean();
   if (!donation) throw httpError(404, 'Donation not found yet');
+  if (donation.status === 'pending') {
+    const reconciled = await reconcilePendingWithStripe(sessionId, donation);
+    if (reconciled) return reconciled;
+  }
   return donation;
+}
+
+async function reconcilePendingWithStripe(sessionId, donation) {
+  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('your_test_key_here')) {
+    return null;
+  }
+  let session;
+  try {
+    const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
+    session = await stripe.checkout.sessions.retrieve(sessionId);
+  } catch (err) {
+    console.warn(`[donationsService] stripe retrieve failed for ${sessionId}: ${err.message}`);
+    return null;
+  }
+  if (!session) return null;
+  const isPaid = session.payment_status === 'paid' && session.status === 'complete';
+  if (!isPaid) return null;
+  const updates = {
+    status: 'completed',
+    stripeSessionId: session.id,
+  };
+  if (session.payment_intent) updates.stripePaymentId = session.payment_intent;
+  if (typeof session.amount_total === 'number' && Number.isFinite(session.amount_total)) {
+    updates.amount = session.amount_total / 100;
+  }
+  const updated = await Donation.findByIdAndUpdate(
+    donation._id,
+    { $set: updates },
+    { new: true }
+  )
+    .select('donorName amount type paymentMethod isAnonymous stripeSessionId stripePaymentId status createdAt mosqueId')
+    .lean();
+  return updated || donation;
 }
 
 async function createCash(input, user) {
@@ -209,6 +248,7 @@ async function createStripeCheckout(input) {
     mode: 'payment',
     payment_method_types: ['card'],
     client_reference_id: idempotencyKey,
+    ...(input.email ? { customer_email: sanitizeString(input.email) } : {}),
     line_items: [
       {
         price_data: {

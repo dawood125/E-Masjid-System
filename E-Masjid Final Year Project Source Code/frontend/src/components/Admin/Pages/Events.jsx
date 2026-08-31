@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { useAuth } from '../../../hooks/useAuth.js'
 import api from '../../../utils/api.js'
+import { API_BASE_URL } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
+import FormField from '../../Common/FormField.jsx'
 
 const PAGE_SIZE = 5
 
@@ -24,6 +26,11 @@ const STATUS_STYLES = {
 }
 
 const EVENT_ICON_BY_INDEX = ['mosque', 'school', 'volunteer_activism', 'menu_book', 'event_busy']
+
+function resolveImageUrl(path) {
+  if (!path) return null
+  return path.startsWith('http') ? path : `${API_BASE_URL}${path}`
+}
 
 function inferStatus(dateString) {
   const today = new Date()
@@ -80,8 +87,13 @@ export default function Events() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  const [registrationsEvent, setRegistrationsEvent] = useState(null)
+  const [registrations, setRegistrations] = useState([])
+  const [registrationsLoading, setRegistrationsLoading] = useState(false)
+  const [eventErrors, setEventErrors] = useState({})
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -114,6 +126,16 @@ export default function Events() {
     return () => { mounted = false }
   }, [showToast, user?.role])
 
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(imageFile)
+    setImagePreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [imageFile])
+
   const preparedEvents = useMemo(() => {
     return events.map((event, index) => {
       const status = inferStatus(event.date)
@@ -123,6 +145,7 @@ export default function Events() {
         registeredCount: event.registeredUsers?.length || event.registeredCount || 0,
         status,
         icon: EVENT_ICON_BY_INDEX[index % EVENT_ICON_BY_INDEX.length],
+        imageUrl: resolveImageUrl(event.image),
       }
     })
   }, [events])
@@ -168,6 +191,8 @@ export default function Events() {
       registrationRequired: evt.requiresRegistration === false ? 'no' : 'yes',
     })
     setImageFile(null)
+    setImagePreview(null)
+    setEventErrors({})
     setIsModalOpen(true)
   }
 
@@ -179,19 +204,45 @@ export default function Events() {
       maxParticipants: '', registrationRequired: 'yes',
     })
     setImageFile(null)
+    setImagePreview(null)
+    setEventErrors({})
     setIsModalOpen(true)
   }
 
   const handleSubmitEvent = async (event) => {
     event.preventDefault()
-    try {
-      const resolvedLocation = newEvent.locationPreset === '__custom__'
-        ? newEvent.customLocation.trim()
-        : newEvent.locationPreset
 
+    const errs = {}
+    if (!newEvent.title.trim()) errs.title = 'Event title is required'
+    if (!newEvent.description.trim()) errs.description = 'Description is required'
+    if (!newEvent.date) errs.date = 'Event date is required'
+    if (!newEvent.time) errs.time = 'Start time is required'
+
+    const resolvedLocation = newEvent.locationPreset === '__custom__'
+      ? newEvent.customLocation.trim()
+      : newEvent.locationPreset
+    if (!resolvedLocation) {
+      if (newEvent.locationPreset === '__custom__') errs.customLocation = 'Custom location is required'
+      else errs.locationPreset = 'Please select a location'
+    }
+
+    if (newEvent.maxParticipants && Number(newEvent.maxParticipants) < 1) {
+      errs.maxParticipants = 'Max participants must be at least 1'
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setEventErrors(errs)
+      const firstField = Object.keys(errs)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setEventErrors({})
+
+    try {
       const fd = new FormData()
-      fd.append('title', newEvent.title)
-      fd.append('description', newEvent.description)
+      fd.append('title', newEvent.title.trim())
+      fd.append('description', newEvent.description.trim())
       fd.append('date', newEvent.date)
       fd.append('time', newEvent.time)
       fd.append('location', resolvedLocation)
@@ -221,6 +272,7 @@ export default function Events() {
         location: '', locationPreset: '', customLocation: '',
         maxParticipants: '', registrationRequired: 'yes',
       })
+      setEventErrors({})
     } catch (err) {
       showToast(err.message || 'Failed to save event.', 'error')
     }
@@ -239,6 +291,27 @@ export default function Events() {
     } finally {
       setDeletingId(null)
     }
+  }
+
+  const openRegistrationsModal = async (evt) => {
+    setRegistrationsEvent(evt)
+    setRegistrations([])
+    setRegistrationsLoading(true)
+    try {
+      const res = await api.getEventRegistrations(evt.id)
+      setRegistrations(Array.isArray(res.data?.registrations) ? res.data.registrations : [])
+    } catch (err) {
+      showToast(err.message || 'Failed to load registrations.', 'error')
+      setRegistrationsEvent(null)
+    } finally {
+      setRegistrationsLoading(false)
+    }
+  }
+
+  const closeRegistrationsModal = () => {
+    setRegistrationsEvent(null)
+    setRegistrations([])
+    setRegistrationsLoading(false)
   }
 
   return (
@@ -372,8 +445,14 @@ export default function Events() {
                 <tr key={event.id}>
                   <td className="px-4 py-3">
                     <div className="flex items-start gap-3">
-                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
-                        <i className="material-icons-round text-base">{event.icon}</i>
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-primary-100">
+                        {event.imageUrl ? (
+                          <img src={event.imageUrl} alt={event.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-primary-700">
+                            <i className="material-icons-round text-base">{event.icon}</i>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{event.title}</p>
@@ -404,7 +483,9 @@ export default function Events() {
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => showToast(`Viewing registrations for ${event.title}`, 'info')}
+                        onClick={() => openRegistrationsModal(event)}
+                        title="View registrations"
+                        aria-label="View registrations"
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100"
                       >
                         <i className="material-icons-round text-base">groups</i>
@@ -478,73 +559,87 @@ export default function Events() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitEvent} className="space-y-4 px-6 py-5">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Event Title *</span>
-                <input
-                  type="text"
-                  value={newEvent.title}
-                  onChange={(event) => setNewEvent((prev) => ({ ...prev, title: event.target.value }))}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+            <form onSubmit={handleSubmitEvent} noValidate className="space-y-4 px-6 py-5">
+              <FormField
+                name="title"
+                label="Event Title"
+                required
+                value={newEvent.title}
+                onChange={(e) => {
+                  setNewEvent((prev) => ({ ...prev, title: e.target.value }))
+                  if (eventErrors.title) setEventErrors((p) => ({ ...p, title: null }))
+                }}
+                error={eventErrors.title}
+                placeholder="e.g. Family Iftaar Gathering"
+              />
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Description *</span>
-                <textarea
-                  rows={3}
-                  value={newEvent.description}
-                  onChange={(event) => setNewEvent((prev) => ({ ...prev, description: event.target.value }))}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+              <FormField
+                name="description"
+                label="Description"
+                type="textarea"
+                rows={3}
+                required
+                value={newEvent.description}
+                onChange={(e) => {
+                  setNewEvent((prev) => ({ ...prev, description: e.target.value }))
+                  if (eventErrors.description) setEventErrors((p) => ({ ...p, description: null }))
+                }}
+                error={eventErrors.description}
+                placeholder="Describe what attendees should expect"
+              />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Event Date *</span>
-                  <input
-                    type="date"
-                    value={newEvent.date}
-                    onChange={(event) => setNewEvent((prev) => ({ ...prev, date: event.target.value }))}
-                    required
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Start Time *</span>
-                  <input
-                    type="time"
-                    value={newEvent.time}
-                    onChange={(event) => setNewEvent((prev) => ({ ...prev, time: event.target.value }))}
-                    required
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">End Time</span>
-                  <input
-                    type="time"
-                    value={newEvent.endTime}
-                    onChange={(event) => setNewEvent((prev) => ({ ...prev, endTime: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  />
-                </label>
+                <FormField
+                  name="date"
+                  label="Event Date"
+                  type="date"
+                  required
+                  value={newEvent.date}
+                  onChange={(e) => {
+                    setNewEvent((prev) => ({ ...prev, date: e.target.value }))
+                    if (eventErrors.date) setEventErrors((p) => ({ ...p, date: null }))
+                  }}
+                  error={eventErrors.date}
+                />
+                <FormField
+                  name="time"
+                  label="Start Time"
+                  type="time"
+                  required
+                  value={newEvent.time}
+                  onChange={(e) => {
+                    setNewEvent((prev) => ({ ...prev, time: e.target.value }))
+                    if (eventErrors.time) setEventErrors((p) => ({ ...p, time: null }))
+                  }}
+                  error={eventErrors.time}
+                />
+                <FormField
+                  name="endTime"
+                  label="End Time"
+                  type="time"
+                  optional
+                  value={newEvent.endTime}
+                  onChange={(e) => setNewEvent((prev) => ({ ...prev, endTime: e.target.value }))}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Location *</span>
-                  <select
-                    value={newEvent.locationPreset}
-                    onChange={(event) => setNewEvent((prev) => ({
-                      ...prev,
-                      locationPreset: event.target.value,
-                      location: event.target.value === '__custom__' ? prev.customLocation : event.target.value,
-                    }))}
+                <div>
+                  <FormField
+                    name="locationPreset"
+                    label="Location"
+                    type="select"
                     required
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    value={newEvent.locationPreset}
+                    onChange={(e) => {
+                      setNewEvent((prev) => ({
+                        ...prev,
+                        locationPreset: e.target.value,
+                        location: e.target.value === '__custom__' ? prev.customLocation : e.target.value,
+                      }))
+                      if (eventErrors.locationPreset) setEventErrors((p) => ({ ...p, locationPreset: null }))
+                    }}
+                    error={eventErrors.locationPreset}
                   >
                     <option value="">Select location</option>
                     <option value="Main Prayer Hall">Main Prayer Hall</option>
@@ -552,42 +647,71 @@ export default function Events() {
                     <option value="Mosque Courtyard">Mosque Courtyard</option>
                     <option value="Classroom">Classroom</option>
                     <option value="__custom__">Other (specify)</option>
-                  </select>
+                  </FormField>
                   {newEvent.locationPreset === '__custom__' && (
-                    <input
-                      type="text"
-                      placeholder="Enter venue name or full address"
-                      value={newEvent.customLocation}
-                      onChange={(event) => setNewEvent((prev) => ({ ...prev, customLocation: event.target.value, location: event.target.value }))}
-                      required
-                      className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                    />
+                    <div className="mt-3">
+                      <FormField
+                        name="customLocation"
+                        label="Custom Location"
+                        required
+                        value={newEvent.customLocation}
+                        onChange={(e) => {
+                          setNewEvent((prev) => ({ ...prev, customLocation: e.target.value, location: e.target.value }))
+                          if (eventErrors.customLocation) setEventErrors((p) => ({ ...p, customLocation: null }))
+                        }}
+                        error={eventErrors.customLocation}
+                        placeholder="Enter venue name or full address"
+                      />
+                    </div>
                   )}
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Maximum Participants</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newEvent.maxParticipants}
-                    onChange={(event) => setNewEvent((prev) => ({ ...prev, maxParticipants: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  />
-                </label>
+                </div>
+                <FormField
+                  name="maxParticipants"
+                  label="Maximum Participants"
+                  type="number"
+                  optional
+                  value={newEvent.maxParticipants}
+                  onChange={(e) => {
+                    setNewEvent((prev) => ({ ...prev, maxParticipants: e.target.value }))
+                    if (eventErrors.maxParticipants) setEventErrors((p) => ({ ...p, maxParticipants: null }))
+                  }}
+                  error={eventErrors.maxParticipants}
+                  placeholder="e.g. 100"
+                />
               </div>
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Event Image</span>
+              <div>
+                <label className="form-label flex items-center gap-2">
+                  Event Image
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Optional</span>
+                </label>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(event) => setImageFile(event.target.files?.[0] || null)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                 />
-                {editingEvent?.image && !imageFile && (
-                  <p className="text-xs text-gray-500">Current image will be kept unless you upload a new one.</p>
+                {(imagePreview || (editingEvent && !imageFile)) && (
+                  <div className="mt-3">
+                    <p className="mb-1 text-xs font-medium text-gray-600">
+                      {imageFile ? 'New image preview' : 'Current image'}
+                    </p>
+                    <div className="relative h-40 w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                      <img
+                        src={imagePreview || resolveImageUrl(editingEvent?.image)}
+                        alt={imageFile ? 'Selected image preview' : 'Current event image'}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    {imageFile && (
+                      <p className="mt-1 text-xs text-gray-500">{imageFile.name}</p>
+                    )}
+                  </div>
                 )}
-              </label>
+                {editingEvent?.image && !imageFile && (
+                  <p className="mt-2 text-xs text-gray-500">Upload a new image to replace the current one.</p>
+                )}
+              </div>
 
               <div>
                 <p className="mb-2 text-sm font-medium text-gray-700">Registration Required?</p>
@@ -622,6 +746,7 @@ export default function Events() {
                     setIsModalOpen(false)
                     setEditingEvent(null)
                     setImageFile(null)
+                    setEventErrors({})
                   }}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                 >
@@ -671,6 +796,95 @@ export default function Events() {
                   {deletingId === confirmDelete.id ? 'Deleting...' : 'Delete Event'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {registrationsEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
+                  <i className="material-icons-round text-primary-700">groups</i>
+                  Event Registrations
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  <span className="font-semibold text-gray-900">{registrationsEvent.title}</span>
+                  <span className="mx-1">·</span>
+                  <span>
+                    {registrations.length}
+                    {registrationsEvent.maxParticipants ? ` / ${registrationsEvent.maxParticipants}` : ''} registered
+                  </span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeRegistrationsModal}
+                aria-label="Close registrations"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <i className="material-icons-round">close</i>
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+              {registrationsLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <i className="material-icons-round animate-spin text-3xl">progress_activity</i>
+                  <p className="mt-2 text-sm">Loading registrations...</p>
+                </div>
+              ) : registrations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 text-center">
+                  <i className="material-icons-round text-5xl text-gray-300">person_off</i>
+                  <p className="mt-3 font-semibold text-gray-700">No registrations yet</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    When community members register for this event, they will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">Name</th>
+                        <th className="px-4 py-3">Email</th>
+                        <th className="px-4 py-3">Phone</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {registrations.map((reg, idx) => (
+                        <tr key={reg._id || reg.id || `${reg.email}-${idx}`} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{reg.name || '—'}</td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {reg.email ? (
+                              <a href={`mailto:${reg.email}`} className="text-primary-700 hover:underline">
+                                {reg.email}
+                              </a>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">{reg.phone || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-gray-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeRegistrationsModal}
+                className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

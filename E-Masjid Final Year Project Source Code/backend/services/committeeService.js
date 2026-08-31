@@ -3,7 +3,12 @@ const { sanitizeString, isValidObjectId } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
 
 function generateTempPassword() {
-  return Math.random().toString(36).slice(-8);
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let out = '';
+  for (let i = 0; i < 10; i += 1) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
 }
 
 async function listForAdmin(user) {
@@ -15,15 +20,20 @@ async function create(input, user) {
   const existing = await User.findOne({ email });
   if (existing) throw httpError(400, 'Email already registered');
 
+  const providedPassword = typeof input.password === 'string' ? input.password : '';
+  const trimmedPassword = providedPassword.trim();
+  const finalPassword = trimmedPassword.length >= 6 ? trimmedPassword : generateTempPassword();
+
   const member = await User.create({
     name: sanitizeString(input.name),
     email,
     phone: sanitizeString(input.phone || ''),
-    password: generateTempPassword(),
+    password: finalPassword,
     role: 'committee',
     mosqueId: user.mosqueId,
   });
-  return member;
+
+  return { member, password: finalPassword };
 }
 
 async function update(id, body, user) {
@@ -37,6 +47,21 @@ async function update(id, body, user) {
   return member;
 }
 
+async function resetPassword(id, newPassword, user) {
+  if (!isValidObjectId(id)) throw httpError(400, 'Invalid member id');
+  if (typeof newPassword !== 'string' || newPassword.length < 6 || newPassword.length > 64) {
+    throw httpError(400, 'Password must be between 6 and 64 characters');
+  }
+
+  const member = await User.findOne({ _id: id, role: 'committee', mosqueId: user.mosqueId }).select('+password');
+  if (!member) throw httpError(404, 'Member not found');
+
+  member.password = newPassword;
+  await member.save();
+
+  return { password: newPassword };
+}
+
 async function remove(id, user) {
   if (!isValidObjectId(id)) throw httpError(400, 'Invalid member id');
   const member = await User.findOneAndDelete({
@@ -48,4 +73,4 @@ async function remove(id, user) {
   return member;
 }
 
-module.exports = { listForAdmin, create, update, remove };
+module.exports = { listForAdmin, create, update, resetPassword, remove };

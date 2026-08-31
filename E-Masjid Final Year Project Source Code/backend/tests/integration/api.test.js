@@ -176,9 +176,11 @@ describe('E-Masjid API (integration)', () => {
       .send({
         groomName: 'Imran',
         brideName: 'Aisha',
-        preferredDate: new Date().toISOString(),
-        preferredTime: '16:00',
-        contact: '03009998877',
+        ceremonyDate: new Date(Date.now() + 86400000).toISOString(),
+        ceremonyTime: '16:00',
+        phone: '03009998877',
+        email: 'imran@example.com',
+        address: 'House 5, Sheikhupura',
       });
     expect(create.status).toBe(201);
     const bookingId = create.body.data._id;
@@ -194,8 +196,8 @@ describe('E-Masjid API (integration)', () => {
       .set('Authorization', `Bearer ${scholarToken}`)
       .send({
         status: 'accepted',
-        confirmedDate: create.body.data.preferredDate,
-        confirmedTime: create.body.data.preferredTime,
+        confirmedDate: create.body.data.ceremonyDate,
+        confirmedTime: create.body.data.ceremonyTime,
       });
     expect(accept.status).toBe(200);
     expect(accept.body.data.status).toBe('accepted');

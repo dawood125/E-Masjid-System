@@ -195,8 +195,8 @@ export default function Home() {
 
       <section className="py-20 bg-white">
         <div className="container">
-          <div className="mb-10 flex items-end justify-between gap-4">
-            <div>
+          <div className="mb-10 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <span className="inline-flex items-center gap-2 rounded-full bg-primary-50 border border-[#047857]/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#047857]">
                 <i className="material-icons-round text-sm">campaign</i>
                 Stay informed
@@ -204,9 +204,9 @@ export default function Home() {
               <h2 className="mt-4 font-primary text-3xl md:text-4xl font-bold text-[#064e3b]">Latest Announcements</h2>
               <div className="mt-3 h-1 w-16 rounded-full bg-[#d4af37]" />
             </div>
-            <Link to={ROUTES.ANNOUNCEMENTS} className="btn btn-secondary btn-sm">
+            <Link to={ROUTES.ANNOUNCEMENTS} className="inline-flex items-center gap-1 self-start rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 sm:self-auto">
               View All
-              <i className="material-icons-round hidden sm:inline">arrow_forward</i>
+              <i className="material-icons-round text-base">arrow_forward</i>
             </Link>
           </div>
 
@@ -263,9 +263,12 @@ export default function Home() {
       <section className="bg-primary-50 py-20">
         <div className="container grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-8">
           <div>
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-primary text-3xl font-bold text-[#064e3b]">Upcoming Events</h2>
-              <Link to={ROUTES.EVENTS} className="btn btn-secondary btn-sm">View All</Link>
+              <Link to={ROUTES.EVENTS} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100">
+                View All
+                <i className="material-icons-round text-base">arrow_forward</i>
+              </Link>
             </div>
 
             {topEvents.length === 0 ? (

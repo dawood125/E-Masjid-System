@@ -3,42 +3,73 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
+import FormField from '../../Common/FormField.jsx'
+
+const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
+
+function validate(form) {
+  const errs = {}
+  if (!form.password) errs.password = 'New password is required'
+  else if (!PASSWORD_RULE.test(form.password))
+    errs.password = 'Password must be 8-64 characters with at least one letter and one number'
+
+  if (!form.confirmPassword) errs.confirmPassword = 'Please confirm your new password'
+  else if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match'
+
+  return errs
+}
 
 export default function ResetPassword() {
   const { token } = useParams()
   const navigate = useNavigate()
   const { showToast } = useUI()
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [formData, setFormData] = useState({ password: '', confirmPassword: '' })
+  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
-  const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
+  const update = (field, value) => {
+    setFormData((p) => ({ ...p, [field]: value }))
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!PASSWORD_RULE.test(password)) {
-      showToast('Password must be at least 8 characters and include at least one letter and one number.', 'warning')
-      return
-    }
-    if (password !== confirmPassword) {
-      showToast('Passwords do not match.', 'warning')
-      return
-    }
     if (!token) {
       showToast('Invalid reset token.', 'error')
       return
     }
 
+    const v = validate(formData)
+    if (Object.keys(v).length > 0) {
+      setErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+
     setLoading(true)
     try {
-      await api.resetPassword(token, { password, confirmPassword })
+      await api.resetPassword(token, { password: formData.password, confirmPassword: formData.confirmPassword })
       setDone(true)
       showToast('Password reset successful. Please login.', 'success')
       setTimeout(() => navigate(ROUTES.LOGIN), 1200)
     } catch (err) {
-      showToast(err.message || 'Failed to reset password.', 'error')
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => {
+          if (er.field) fieldErrors[er.field] = er.message
+        })
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(err.message || 'Failed to reset password.', 'error')
+        }
+      } else {
+        showToast(err.message || 'Failed to reset password.', 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -61,40 +92,30 @@ export default function ResetPassword() {
               Password updated successfully. Redirecting to login...
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <div>
-                <label className="form-label" htmlFor="password">New Password</label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    className="form-input pr-12"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    aria-label="Toggle password visibility"
-                  >
-                    <i className="material-icons-round text-base">{showPassword ? 'visibility_off' : 'visibility'}</i>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="form-label" htmlFor="confirmPassword">Confirm Password</label>
-                <input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
+            <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+              <FormField
+                name="password"
+                label="New Password"
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => update('password', e.target.value)}
+                error={errors.password}
+                hint="At least 8 characters with at least one letter and one number"
+                autoComplete="new-password"
+                showPasswordToggle
+              />
+              <FormField
+                name="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                required
+                value={formData.confirmPassword}
+                onChange={(e) => update('confirmPassword', e.target.value)}
+                error={errors.confirmPassword}
+                autoComplete="new-password"
+                showPasswordToggle
+              />
 
               <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 bg-[#047857] hover:bg-[#064e3b]">
                 {loading ? 'Resetting...' : 'Reset Password'}

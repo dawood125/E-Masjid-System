@@ -4,6 +4,9 @@ import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { API_BASE_URL } from '../../../utils/constants.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
+import FormField from '../../Common/FormField.jsx'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const categories = ['all', 'lecture', 'religious', 'education', 'community', 'youth']
 const categoryLabel = {
@@ -15,14 +18,28 @@ const categoryLabel = {
   youth: 'Youth',
 }
 
-const eventImages = [
-  'https://images.unsplash.com/photo-1585036156171-384164a8c675?w=900',
-  'https://images.unsplash.com/photo-1529390079861-591f8f0f88cf?w=900',
-  'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=900',
-  'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=900',
-  'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900',
-  'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=900',
-]
+const DEFAULT_EVENT_IMAGE =
+  'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=900'
+
+const FALLBACK_EVENT_IMAGE =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#047857"/>
+          <stop offset="100%" stop-color="#064e3b"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="800" fill="url(#g)"/>
+      <g fill="#ffffff" opacity="0.95">
+        <path d="M600 200 C500 280 460 360 460 440 L460 540 L740 540 L740 440 C740 360 700 280 600 200 Z"/>
+        <rect x="540" y="540" width="120" height="60" rx="6"/>
+        <circle cx="600" cy="430" r="22"/>
+      </g>
+      <text x="600" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#ffffff">Mosque Event</text>
+    </svg>`
+  )
 
 function inferCategory(title) {
   const t = title.toLowerCase()
@@ -33,11 +50,18 @@ function inferCategory(title) {
   return 'lecture'
 }
 
-function resolveEventImage(event, index) {
+function resolveEventImage(event) {
   if (event.image) {
     return event.image.startsWith('http') ? event.image : `${API_BASE_URL}${event.image}`
   }
-  return eventImages[index % eventImages.length]
+  return DEFAULT_EVENT_IMAGE
+}
+
+function handleImageError(event) {
+  if (event.currentTarget.dataset.fallback !== '1') {
+    event.currentTarget.dataset.fallback = '1'
+    event.currentTarget.src = FALLBACK_EVENT_IMAGE
+  }
 }
 
 function canRegister(event) {
@@ -66,6 +90,7 @@ export default function Events() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [registration, setRegistration] = useState({ name: '', phone: '', email: '' })
+  const [regErrors, setRegErrors] = useState({})
 
   useEffect(() => {
     let mounted = true
@@ -86,12 +111,12 @@ export default function Events() {
 
   const enrichedEvents = useMemo(
     () =>
-      events.map((event, index) => ({
+      events.map((event) => ({
         ...event,
         id: event._id || event.id,
         registeredCount: event.registeredUsers?.length || event.registeredCount || 0,
         category: inferCategory(event.title),
-        image: resolveEventImage(event, index),
+        image: resolveEventImage(event),
       })),
     [events]
   )
@@ -120,6 +145,18 @@ export default function Events() {
   const submitRegistration = async (e) => {
     e.preventDefault()
     if (!selectedEvent?.id) return
+
+    const errs = {}
+    if (!registration.name.trim()) errs.name = 'Full name is required'
+    if (!registration.phone.trim() || registration.phone.trim().length < 7) errs.phone = 'Phone number is required'
+    if (!registration.email.trim()) errs.email = 'Email is required'
+    else if (!EMAIL_RE.test(registration.email.trim())) errs.email = 'Enter a valid email address'
+    if (Object.keys(errs).length > 0) {
+      setRegErrors(errs)
+      return
+    }
+    setRegErrors({})
+
     try {
       await api.registerForEvent(selectedEvent.id)
       showToast('Event registration submitted successfully.', 'success')
@@ -216,7 +253,12 @@ export default function Events() {
                   )}
                 </div>
                 <div className="min-h-[320px]">
-                  <img src={featuredEvent.image} alt={featuredEvent.title} className="h-full w-full object-cover" />
+                  <img
+                    src={featuredEvent.image}
+                    alt={featuredEvent.title}
+                    onError={handleImageError}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               </div>
             </article>
@@ -235,7 +277,12 @@ export default function Events() {
               return (
                 <article key={event.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
                   <div className="relative h-52">
-                    <img src={event.image} alt={event.title} className="h-full w-full object-cover" />
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      onError={handleImageError}
+                      className="h-full w-full object-cover"
+                    />
                     <div className="absolute left-4 top-4 rounded-xl bg-white/95 px-3 py-2 text-center shadow">
                       <div className="text-xs uppercase text-gray-500">{badge.month}</div>
                       <div className="text-xl font-bold text-[#047857]">{badge.day}</div>
@@ -304,26 +351,52 @@ export default function Events() {
               </button>
             </div>
 
-            <form onSubmit={submitRegistration} className="space-y-4 p-5">
+            <form onSubmit={submitRegistration} noValidate className="space-y-4 p-5">
               <div className="rounded-xl bg-primary-50 p-4 text-sm text-gray-700">
                 <p className="inline-flex items-center gap-1 mr-4"><i className="material-icons-round text-base text-[#047857]">calendar_today</i>{formatDate(selectedEvent.date)}</p>
                 <p className="inline-flex items-center gap-1 mr-4"><i className="material-icons-round text-base text-[#047857]">schedule</i>{formatTime(selectedEvent.time)}</p>
                 <p className="inline-flex items-center gap-1"><i className="material-icons-round text-base text-[#047857]">location_on</i>{selectedEvent.location}</p>
               </div>
 
-              <div>
-                <label className="form-label" htmlFor="name">Full Name</label>
-                <input id="name" required className="form-input" value={registration.name} onChange={(e) => setRegistration((prev) => ({ ...prev, name: e.target.value }))} />
-              </div>
+              <FormField
+                name="name"
+                label="Full Name"
+                required
+                value={registration.name}
+                onChange={(e) => {
+                  setRegistration((prev) => ({ ...prev, name: e.target.value }))
+                  if (regErrors.name) setRegErrors((prev) => ({ ...prev, name: null }))
+                }}
+                error={regErrors.name}
+                placeholder="Your full name"
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="form-label" htmlFor="phone">Phone</label>
-                  <input id="phone" required className="form-input" value={registration.phone} onChange={(e) => setRegistration((prev) => ({ ...prev, phone: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="form-label" htmlFor="email">Email</label>
-                  <input id="email" type="email" required className="form-input" value={registration.email} onChange={(e) => setRegistration((prev) => ({ ...prev, email: e.target.value }))} />
-                </div>
+                <FormField
+                  name="phone"
+                  label="Phone"
+                  type="tel"
+                  required
+                  value={registration.phone}
+                  onChange={(e) => {
+                    setRegistration((prev) => ({ ...prev, phone: e.target.value }))
+                    if (regErrors.phone) setRegErrors((prev) => ({ ...prev, phone: null }))
+                  }}
+                  error={regErrors.phone}
+                  placeholder="03XX-XXXXXXX"
+                />
+                <FormField
+                  name="email"
+                  label="Email"
+                  type="email"
+                  required
+                  value={registration.email}
+                  onChange={(e) => {
+                    setRegistration((prev) => ({ ...prev, email: e.target.value }))
+                    if (regErrors.email) setRegErrors((prev) => ({ ...prev, email: null }))
+                  }}
+                  error={regErrors.email}
+                  placeholder="you@example.com"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

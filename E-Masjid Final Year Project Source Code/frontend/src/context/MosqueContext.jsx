@@ -6,15 +6,13 @@ import { AuthContext } from './AuthContext.jsx'
 export const MosqueContext = createContext()
 
 export function MosqueProvider({ children }) {
-  const { user } = useContext(AuthContext)
+  const { user, updateUser } = useContext(AuthContext)
   const [activeMosqueId, setActiveMosqueIdState] = useState(() => getActiveMosqueId() || '')
   const [mosques, setMosques] = useState([])
   const [loading, setLoading] = useState(true)
+  const [switching, setSwitching] = useState(false)
   const hasHydratedRef = useRef(false)
 
-  
-  
-  
   useEffect(() => {
     if (user?.mosqueId) {
       setActiveMosqueIdState(user.mosqueId)
@@ -22,7 +20,6 @@ export function MosqueProvider({ children }) {
     }
   }, [user?._id, user?.mosqueId])
 
-  
   useEffect(() => {
     let mounted = true
     async function loadMosques() {
@@ -31,13 +28,13 @@ export function MosqueProvider({ children }) {
         if (!mounted) return
         const list = Array.isArray(res?.data) ? res.data : []
         setMosques(list)
-        
+
         if (!getActiveMosqueId() && list.length > 0) {
           setActiveMosqueIdState(list[0]._id)
           setActiveMosqueId(list[0]._id)
         }
       } catch {
-        
+
       } finally {
         if (mounted) {
           setLoading(false)
@@ -49,15 +46,41 @@ export function MosqueProvider({ children }) {
     return () => { mounted = false }
   }, [])
 
-  const setActiveMosque = useCallback((mosqueId) => {
+  const setActiveMosque = useCallback(async (mosqueId) => {
+    const previousId = getActiveMosqueId() || ''
+
     if (!mosqueId) {
       clearActiveMosqueId()
       setActiveMosqueIdState('')
-      return
+      return { ok: true, mosqueId: '' }
     }
+
     setActiveMosqueId(mosqueId)
     setActiveMosqueIdState(mosqueId)
-  }, [])
+
+    if (!user || !user._id) {
+      return { ok: true, mosqueId }
+    }
+
+    setSwitching(true)
+    try {
+      const res = await api.updateMyMosque(mosqueId)
+      if (res?.success && res?.user) {
+        if (updateUser) {
+          updateUser({ mosqueId: res.user.mosqueId || mosqueId })
+        }
+        return { ok: true, mosqueId: res.user.mosqueId || mosqueId, user: res.user }
+      }
+      return { ok: false, mosqueId, error: 'Server did not confirm mosque update' }
+    } catch (err) {
+      setActiveMosqueIdState(previousId)
+      if (previousId) setActiveMosqueId(previousId)
+      else { clearActiveMosqueId() }
+      return { ok: false, mosqueId, error: err?.message || 'Failed to switch masjid' }
+    } finally {
+      setSwitching(false)
+    }
+  }, [user, updateUser])
 
   const activeMosque = activeMosqueId
     ? mosques.find((m) => String(m._id) === String(activeMosqueId)) || null
@@ -68,6 +91,7 @@ export function MosqueProvider({ children }) {
     activeMosque,
     mosques,
     loading,
+    switching,
     setActiveMosque,
   }
 

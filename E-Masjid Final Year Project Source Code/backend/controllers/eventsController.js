@@ -26,7 +26,7 @@ const getById = tryOrNext(async (req, res) => {
 });
 
 const getRegistrations = tryOrNext(async (req, res) => {
-  const result = await eventsService.getRegistrations(req.params.id);
+  const result = await eventsService.getRegistrations(req.params.id, req);
   res.json({ success: true, data: result });
 });
 

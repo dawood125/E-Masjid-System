@@ -68,9 +68,10 @@ async function listForCaller(req) {
   return { data: items, total, page: safePage, totalPages: Math.ceil(total / safeLimit) || 1 };
 }
 
-async function getRegistrations(id) {
+async function getRegistrations(id, req) {
   if (!isValidObjectId(id)) throw httpError(400, 'Invalid event id');
-  const event = await Event.findById(id)
+  const scope = await resolveScope(req);
+  const event = await Event.findOne({ _id: id, mosqueId: scope })
     .populate('registeredUsers', 'name email phone')
     .select('title registeredUsers')
     .lean();

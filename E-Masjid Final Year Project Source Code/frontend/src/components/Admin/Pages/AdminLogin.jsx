@@ -4,6 +4,17 @@ import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useForceLogoutOnMount } from '../../../hooks/useForceLogoutOnMount.js'
 import { ROUTES } from '../../../utils/constants.js'
+import FormField from '../../Common/FormField.jsx'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validate(form) {
+  const errs = {}
+  if (!form.email.trim()) errs.email = 'Email is required'
+  else if (!EMAIL_RE.test(form.email.trim())) errs.email = 'Enter a valid email address'
+  if (!form.password) errs.password = 'Password is required'
+  return errs
+}
 
 export default function AdminLogin() {
   const { isAuthenticated, user, login } = useAuth()
@@ -12,7 +23,7 @@ export default function AdminLogin() {
   useForceLogoutOnMount()
 
   const [formData, setFormData] = useState({ email: '', password: '' })
-  const [showPassword, setShowPassword] = useState(false)
+  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -29,12 +40,25 @@ export default function AdminLogin() {
     }
   }, [showToast])
 
+  const update = (field, value) => {
+    setFormData((p) => ({ ...p, [field]: value }))
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
+    const v = validate(formData)
+    if (Object.keys(v).length > 0) {
+      setErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
     setLoading(true)
 
     try {
-      await login(formData.email, formData.password, 'admin')
+      await login(formData.email.trim(), formData.password, 'admin')
       showToast('Admin logged in successfully.', 'success')
       navigate(ROUTES.ADMIN)
     } catch (err) {
@@ -79,10 +103,7 @@ export default function AdminLogin() {
 
           <div className="px-6 py-10 sm:px-10 sm:py-12">
             <div className="mx-auto max-w-md">
-              <Link
-                to={ROUTES.LOGIN}
-                className="inline-flex items-center gap-1 text-sm font-semibold text-[#047857] hover:text-[#065f46]"
-              >
+              <Link to={ROUTES.LOGIN} className="inline-flex items-center gap-1 text-sm font-semibold text-[#047857] hover:text-[#065f46]">
                 <i className="material-icons-round text-base">arrow_back</i>
                 Back to Community Login
               </Link>
@@ -101,52 +122,32 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label className="form-label" htmlFor="admin-email">
-                    Admin Email <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</i>
-                    <input
-                      id="admin-email"
-                      type="email"
-                      className="form-input pl-12"
-                      placeholder="Enter admin email"
-                      value={formData.email}
-                      onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label" htmlFor="admin-password">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock</i>
-                    <input
-                      id="admin-password"
-                      type={showPassword ? 'text' : 'password'}
-                      className="form-input pl-12 pr-12"
-                      placeholder="Enter admin password"
-                      value={formData.password}
-                      onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
-                      autoComplete="current-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-[#047857]"
-                      aria-label="Toggle password visibility"
-                    >
-                      <i className="material-icons-round">{showPassword ? 'visibility_off' : 'visibility'}</i>
-                    </button>
-                  </div>
-                </div>
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <FormField
+                  name="email"
+                  label="Admin Email"
+                  type="email"
+                  icon="mail"
+                  required
+                  value={formData.email}
+                  onChange={(e) => update('email', e.target.value)}
+                  error={errors.email}
+                  placeholder="Enter admin email"
+                  autoComplete="email"
+                />
+                <FormField
+                  name="password"
+                  label="Password"
+                  type="password"
+                  icon="lock"
+                  required
+                  value={formData.password}
+                  onChange={(e) => update('password', e.target.value)}
+                  error={errors.password}
+                  placeholder="Enter admin password"
+                  autoComplete="current-password"
+                  showPasswordToggle
+                />
 
                 <button
                   type="submit"

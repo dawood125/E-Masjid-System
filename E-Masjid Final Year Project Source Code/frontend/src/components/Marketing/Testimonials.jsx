@@ -98,8 +98,8 @@ export default function Testimonials() {
             Real stories from the families, elders, and youth who make our mosque a home.
           </p>
           {isPlaceholder && loaded && (
-            <p className="mt-2 text-xs text-amber-600 font-medium">
-              Showing placeholder. Log in as admin and add testimonials via the admin panel.
+            <p className="mt-2 text-xs text-gray-500 italic">
+              No community stories shared yet. As members and visitors share their experiences, they will appear here.
             </p>
           )}
         </div>

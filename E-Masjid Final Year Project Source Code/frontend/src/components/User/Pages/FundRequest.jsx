@@ -5,6 +5,7 @@ import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
+import FormField from '../../Common/FormField.jsx'
 
 const CATEGORIES = ['Medical', 'Education', 'Housing', 'Food', 'Clothing', 'Debt', 'Other']
 
@@ -34,14 +35,27 @@ export default function FundRequest() {
   const validate = () => {
     const errs = {}
     if (!formData.name.trim()) errs.name = 'Full name is required'
+    else if (formData.name.trim().length < 2) errs.name = 'Please enter your full name'
+
     if (!formData.email.trim()) errs.email = 'Email is required'
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) errs.email = 'Invalid email format'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) errs.email = 'Enter a valid email address'
+
     if (!formData.phone.trim()) errs.phone = 'Phone number is required'
-    if (!formData.amount || Number(formData.amount) <= 0) errs.amount = 'Valid amount is required'
+    else if (formData.phone.trim().length < 7) errs.phone = 'Phone number looks too short'
+
+    const amt = Number(formData.amount)
+    if (!formData.amount) errs.amount = 'Amount is required'
+    else if (Number.isNaN(amt) || amt <= 0) errs.amount = 'Enter a valid amount greater than zero'
+    else if (amt > 10000000) errs.amount = 'Amount seems unreasonably high'
+
     if (!formData.category) errs.category = 'Please select a category'
+
     if (!formData.reason.trim()) errs.reason = 'Please explain why you need assistance'
     else if (formData.reason.trim().length < 30) errs.reason = 'Please provide more detail (at least 30 characters)'
+    else if (formData.reason.trim().length > 500) errs.reason = 'Please keep it under 500 characters'
+
     if (!formData.agreeTerms) errs.agreeTerms = 'You must agree to the terms'
+
     if (!activeMosqueId) errs.mosqueId = 'Please select a mosque before submitting a request'
     return errs
   }
@@ -56,6 +70,9 @@ export default function FundRequest() {
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
+      const firstField = Object.keys(errs)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
       return
     }
     setErrors({})
@@ -64,18 +81,31 @@ export default function FundRequest() {
     try {
       const mosqueId = activeMosqueId
       await api.createFundRequest({
-        requesterName: formData.name,
-        requesterEmail: formData.email,
-        requesterPhone: formData.phone,
+        requesterName: formData.name.trim(),
+        requesterEmail: formData.email.trim(),
+        requesterPhone: formData.phone.trim(),
         amount: Number(formData.amount),
         category: formData.category,
-        reason: formData.reason,
+        reason: formData.reason.trim(),
         mosqueId,
       })
       setSubmitted(true)
       showToast('Request submitted successfully', 'success')
     } catch (e2) {
-      showToast(e2.message || 'Failed to submit request', 'error')
+      if (e2.errors && Array.isArray(e2.errors)) {
+        const fieldErrors = {}
+        e2.errors.forEach((er) => {
+          if (er.field) fieldErrors[er.field] = er.message
+        })
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(e2.message || 'Failed to submit request', 'error')
+        }
+      } else {
+        showToast(e2.message || 'Failed to submit request', 'error')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -136,7 +166,7 @@ export default function FundRequest() {
 
       <section className="py-12">
         <div className="container max-w-3xl">
-          <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-8 md:p-10 shadow-xl border border-gray-200">
+          <form onSubmit={handleSubmit} noValidate className="rounded-2xl bg-white p-8 md:p-10 shadow-xl border border-gray-200">
             <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-200">
               <div className="h-12 w-12 rounded-xl bg-primary-50 flex items-center justify-center">
                 <i className="material-icons-round text-[#047857] text-2xl">description</i>
@@ -147,75 +177,107 @@ export default function FundRequest() {
               </div>
             </div>
 
+            {errors.mosqueId && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <i className="material-icons-round align-middle mr-1">error</i>
+                {errors.mosqueId}
+              </div>
+            )}
+
             <h3 className="font-primary text-sm font-semibold text-[#047857] uppercase tracking-wider mb-4">Personal Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-              <div>
-                <label className="form-label">Full Name *</label>
-                <div className="relative">
-                  <i className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">person</i>
-                  <input type="text" className={`form-input ${errors.name ? 'border-red-500 focus:ring-red-500' : ''}`} placeholder="Enter your full name" value={formData.name} onChange={e => handleChange('name', e.target.value)} />
-                </div>
-                {errors.name && <p className="form-error">{errors.name}</p>}
-              </div>
-              <div>
-                <label className="form-label">Email Address *</label>
-                <div className="relative">
-                  <i className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">email</i>
-                  <input type="email" className={`form-input ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`} placeholder="your.email@example.com" value={formData.email} onChange={e => handleChange('email', e.target.value)} />
-                </div>
-                {errors.email && <p className="form-error">{errors.email}</p>}
-              </div>
+              <FormField
+                name="name"
+                label="Full Name"
+                icon="person"
+                required
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                error={errors.name}
+                placeholder="Enter your full name"
+                autoComplete="name"
+              />
+              <FormField
+                name="email"
+                label="Email Address"
+                type="email"
+                icon="email"
+                required
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                error={errors.email}
+                placeholder="your.email@example.com"
+                autoComplete="email"
+              />
               <div className="md:col-span-2">
-                <label className="form-label">Phone Number *</label>
-                <div className="relative">
-                  <i className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">phone</i>
-                  <input type="tel" className={`form-input ${errors.phone ? 'border-red-500 focus:ring-red-500' : ''}`} placeholder="03XX-XXXXXXX" value={formData.phone} onChange={e => handleChange('phone', e.target.value)} />
-                </div>
-                {errors.phone && <p className="form-error">{errors.phone}</p>}
+                <FormField
+                  name="phone"
+                  label="Phone Number"
+                  type="tel"
+                  icon="phone"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => handleChange('phone', e.target.value)}
+                  error={errors.phone}
+                  placeholder="03XX-XXXXXXX"
+                  autoComplete="tel"
+                />
               </div>
             </div>
 
             <h3 className="font-primary text-sm font-semibold text-[#047857] uppercase tracking-wider mb-4">Request Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-              <div>
-                <label className="form-label">Amount Needed (PKR) *</label>
-                <div className="relative">
-                  <i className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">payments</i>
-                  <input type="number" min="1" className={`form-input ${errors.amount ? 'border-red-500 focus:ring-red-500' : ''}`} placeholder="Enter amount in PKR" value={formData.amount} onChange={e => handleChange('amount', e.target.value)} />
-                </div>
-                {errors.amount && <p className="form-error">{errors.amount}</p>}
-              </div>
-              <div>
-                <label className="form-label">Category *</label>
-                <div className="relative">
-                  <i className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">category</i>
-                  <select className={`form-select ${errors.category ? 'border-red-500 focus:ring-red-500' : ''}`} value={formData.category} onChange={e => handleChange('category', e.target.value)}>
-                    <option value="">Select category</option>
-                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
-                {errors.category && <p className="form-error">{errors.category}</p>}
-              </div>
+              <FormField
+                name="amount"
+                label="Amount Needed (PKR)"
+                type="number"
+                icon="payments"
+                required
+                value={formData.amount}
+                onChange={(e) => handleChange('amount', e.target.value)}
+                error={errors.amount}
+                placeholder="Enter amount in PKR"
+              />
+              <FormField
+                name="category"
+                label="Category"
+                type="select"
+                icon="category"
+                required
+                value={formData.category}
+                onChange={(e) => handleChange('category', e.target.value)}
+                error={errors.category}
+              >
+                <option value="">Select category</option>
+                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </FormField>
             </div>
 
             <div className="mb-8">
-              <label className="form-label">Reason for Request *</label>
-              <div className="relative">
-                <textarea rows={5} className={`form-textarea pl-4 ${errors.reason ? 'border-red-500 focus:ring-red-500' : ''}`} placeholder="Please describe your situation in detail. The committee will use this information to evaluate your request..." value={formData.reason} onChange={e => handleChange('reason', e.target.value)} />
-              </div>
-              {errors.reason && <p className="form-error">{errors.reason}</p>}
-              <p className="mt-1 text-xs text-gray-400">{formData.reason.length}/500 characters</p>
+              <FormField
+                name="reason"
+                label="Reason for Request"
+                type="textarea"
+                rows={5}
+                required
+                value={formData.reason}
+                onChange={(e) => handleChange('reason', e.target.value)}
+                error={errors.reason}
+                placeholder="Please describe your situation in detail. The committee will use this information to evaluate your request..."
+                hint={`${formData.reason.length}/500 characters`}
+              />
             </div>
 
             <div className="mb-8 rounded-xl bg-amber-50 border border-amber-200 p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" className="mt-1 h-4 w-4 rounded border-gray-300 text-[#047857] focus:ring-[#047857]" checked={formData.agreeTerms} onChange={e => handleChange('agreeTerms', e.target.checked)} />
-                <span className="text-sm text-gray-700">
-                  I confirm that the information provided is accurate and I understand that the mosque committee will review and verify my request. I agree to provide any additional information if needed. *
-                </span>
-              </label>
-              {errors.agreeTerms && <p className="form-error mt-2">{errors.agreeTerms}</p>}
-              {errors.mosqueId && <p className="form-error mt-2">{errors.mosqueId}</p>}
+              <FormField
+                name="agreeTerms"
+                type="checkbox"
+                value={formData.agreeTerms}
+                onChange={(e) => handleChange('agreeTerms', e.target.checked)}
+                error={errors.agreeTerms}
+                label="I confirm that the information provided is accurate and I understand that the mosque committee will review and verify my request. I agree to provide any additional information if needed."
+                required
+              />
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">

@@ -105,6 +105,24 @@ function getMe(req, res) {
   res.json({ success: true, user: req.user });
 }
 
+async function updateMyMosque(req, res, next) {
+  try {
+    const { user, mosque } = await authService.setUserMosque(req.user._id, req.body.mosqueId);
+    res.json({
+      success: true,
+      user: publicUser(user),
+      mosque: {
+        _id: mosque._id,
+        name: mosque.name,
+        city: mosque.city,
+        address: mosque.address || '',
+        phone: mosque.phone || '',
+        email: mosque.email || '',
+      },
+    });
+  } catch (e) { next(e); }
+}
+
 function refreshToken(req, res) {
   const token = generateToken(req.user._id, req.user.role);
   setAuthCookie(res, token);
@@ -118,6 +136,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getMe,
+  updateMyMosque,
   refreshToken,
   TOKEN_COOKIE_NAME,
   setAuthCookie,

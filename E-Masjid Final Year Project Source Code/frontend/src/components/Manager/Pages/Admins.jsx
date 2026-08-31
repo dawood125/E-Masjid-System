@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
+import FormField from '../../Common/FormField.jsx'
 
 export default function ManageAdmins() {
   const [admins, setAdmins] = useState([])
@@ -43,30 +44,29 @@ export default function ManageAdmins() {
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="form-label">Search by name or email</label>
-            <input
-              className="form-input"
-              placeholder="e.g. Haji Ahmad"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="form-label">Filter by masjid</label>
-            <select
-              className="form-input"
-              value={filterMosque}
-              onChange={(e) => setFilterMosque(e.target.value)}
-            >
-              <option value="all">All masjids ({admins.length})</option>
-              {managedMosques.map((m) => (
-                <option key={m._id} value={m._id}>
-                  {m.name} — {m.city}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormField
+            name="search"
+            label="Search by name or email"
+            icon="search"
+            optional
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="e.g. Haji Ahmad"
+          />
+          <FormField
+            name="filterMosque"
+            label="Filter by masjid"
+            type="select"
+            value={filterMosque}
+            onChange={(e) => setFilterMosque(e.target.value)}
+          >
+            <option value="all">All masjids ({admins.length})</option>
+            {managedMosques.map((m) => (
+              <option key={m._id} value={m._id}>
+                {m.name} — {m.city}
+              </option>
+            ))}
+          </FormField>
         </div>
       </div>
 

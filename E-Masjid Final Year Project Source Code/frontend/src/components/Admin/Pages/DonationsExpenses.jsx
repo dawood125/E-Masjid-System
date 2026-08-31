@@ -4,6 +4,26 @@ import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
+import FormField from '../../Common/FormField.jsx'
+
+function validateDonation(form) {
+  const errs = {}
+  if (!form.isAnonymous && !form.donorName.trim()) errs.donorName = 'Donor name is required when not anonymous'
+  const amt = Number(form.amount)
+  if (!form.amount && form.amount !== 0) errs.amount = 'Amount is required'
+  else if (Number.isNaN(amt) || amt <= 0) errs.amount = 'Enter a valid amount greater than 0'
+  return errs
+}
+
+function validateExpense(form) {
+  const errs = {}
+  if (!form.description.trim()) errs.description = 'Description is required'
+  else if (form.description.trim().length < 3) errs.description = 'Please write a longer description'
+  const amt = Number(form.amount)
+  if (!form.amount && form.amount !== 0) errs.amount = 'Amount is required'
+  else if (Number.isNaN(amt) || amt <= 0) errs.amount = 'Enter a valid amount greater than 0'
+  return errs
+}
 
 const DONATION_TYPE_COLORS = {
   zakat: 'bg-emerald-100 text-emerald-700',
@@ -63,10 +83,12 @@ export default function DonationsExpenses() {
     note: '',
     category: 'Utilities',
   })
+  const [recordErrors, setRecordErrors] = useState({})
 
   const [activeTab, setActiveTab] = useState('donations')
   const [typeFilter, setTypeFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [anonFilter, setAnonFilter] = useState('all')
   const [donationPage, setDonationPage] = useState(1)
   const [expensePage, setExpensePage] = useState(1)
   const [confirmDeleteDonation, setConfirmDeleteDonation] = useState(null)
@@ -88,6 +110,7 @@ export default function DonationsExpenses() {
       expenseParams.push(`mosqueId=${mosqueId}`)
     }
     if (typeFilter !== 'all') donationParams.push(`type=${typeFilter}`)
+    if (anonFilter !== 'all') donationParams.push(`isAnonymous=${anonFilter}`)
     if (categoryFilter !== 'all') expenseParams.push(`category=${categoryFilter}`)
     ;(async () => {
       try {
@@ -112,7 +135,7 @@ export default function DonationsExpenses() {
     })()
     return () => { cancelled = true }
   
-  }, [donationSafePage, expenseSafePage, typeFilter, categoryFilter, showToast])
+  }, [donationSafePage, expenseSafePage, typeFilter, categoryFilter, anonFilter, showToast])
 
   const donationTypes = useMemo(() => {
     return ['all', ...new Set(donations.map((donation) => donation.type.toLowerCase()))]
@@ -131,6 +154,7 @@ export default function DonationsExpenses() {
   const handleSwitchTab = (tab) => {
     setActiveTab(tab)
     setCategoryFilter('all')
+    setAnonFilter('all')
   }
 
   const onAddRecord = () => {
@@ -145,6 +169,7 @@ export default function DonationsExpenses() {
       note: '',
       category: 'Utilities',
     })
+    setRecordErrors({})
     setIsCreateOpen(true)
   }
 
@@ -160,12 +185,24 @@ export default function DonationsExpenses() {
       note: donation.note || donation.description || '',
       category: 'Utilities',
     })
+    setRecordErrors({})
     setIsCreateOpen(true)
   }
 
   const handleCreateRecord = async (event) => {
     event.preventDefault()
     if (submittingRef.current) return
+
+    const v = activeTab === 'donations' ? validateDonation(recordForm) : validateExpense(recordForm)
+    if (Object.keys(v).length > 0) {
+      setRecordErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setRecordErrors({})
+
     submittingRef.current = true
     setSubmitting(true)
     try {
@@ -221,7 +258,18 @@ export default function DonationsExpenses() {
         category: 'Utilities',
       })
     } catch (err) {
-      showToast(err.message || 'Failed to add record.', 'error')
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => { if (er.field) fieldErrors[er.field] = er.message })
+        if (Object.keys(fieldErrors).length > 0) {
+          setRecordErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(err.message || 'Failed to add record.', 'error')
+        }
+      } else {
+        showToast(err.message || 'Failed to add record.', 'error')
+      }
     } finally {
       submittingRef.current = false
       setSubmitting(false)
@@ -330,6 +378,26 @@ export default function DonationsExpenses() {
               </select>
             </label>
 
+            {activeTab === 'donations' && (
+              <label className="relative">
+                <span className="pointer-events-none absolute left-3 top-2.5 text-gray-400">
+                  <i className="material-icons-round text-base">visibility_off</i>
+                </span>
+                <select
+                  value={anonFilter}
+                  onChange={(event) => {
+                    setAnonFilter(event.target.value)
+                    setDonationPage(1)
+                  }}
+                  className="min-w-[160px] rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-primary-500 focus:outline-none"
+                >
+                  <option value="all">All Donors</option>
+                  <option value="false">Named Donors</option>
+                  <option value="true">Anonymous Only</option>
+                </select>
+              </label>
+            )}
+
             <button
               type="button"
               onClick={onAddRecord}
@@ -373,7 +441,17 @@ export default function DonationsExpenses() {
                         <p className="font-medium text-gray-900">{formatDate(donation.date)}</p>
                         <p className="text-xs text-gray-500">{formatRecordTime(donation.date) || '—'}</p>
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{donation.donorName}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{donation.donorName}</span>
+                          {donation.isAnonymous && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600" title="Donor chose to remain anonymous">
+                              <i className="material-icons-round text-xs">visibility_off</i>
+                              Anonymous
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{donation.type}</span>
                       </td>
@@ -492,6 +570,7 @@ export default function DonationsExpenses() {
                                 category: expense.category || 'Utilities',
                                 _editExpenseId: expense.id,
                               })
+                              setRecordErrors({})
                               setActiveTab('expenses')
                               setIsCreateOpen(true)
                             }}
@@ -565,7 +644,7 @@ export default function DonationsExpenses() {
                 <i className="material-icons-round">close</i>
               </button>
             </div>
-            <form onSubmit={handleCreateRecord} className="space-y-4 px-6 py-5">
+            <form onSubmit={handleCreateRecord} noValidate className="space-y-4 px-6 py-5">
               {activeTab === 'donations' ? (
                 <>
                   <label className="flex items-center gap-3 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2.5">
@@ -579,102 +658,109 @@ export default function DonationsExpenses() {
                     <span className="text-sm font-medium text-gray-700">Anonymous Donor</span>
                   </label>
                   {!recordForm.isAnonymous && (
-                    <label className="block space-y-2">
-                      <span className="text-sm font-medium text-gray-700">Donor Name</span>
-                      <input
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                        value={recordForm.donorName}
-                        onChange={(e) => setRecordForm((p) => ({ ...p, donorName: e.target.value }))}
-                        disabled={submitting}
-                      />
-                    </label>
-                  )}
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="space-y-2">
-                      <span className="text-sm font-medium text-gray-700">Type</span>
-                      <select
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                        value={recordForm.type}
-                        onChange={(e) => setRecordForm((p) => ({ ...p, type: e.target.value }))}
-                        disabled={submitting}
-                      >
-                        <option>Sadaqah</option>
-                        <option>Zakat</option>
-                        <option>Masjid Fund</option>
-                      </select>
-                    </label>
-                    <label className="space-y-2">
-                      <span className="text-sm font-medium text-gray-700">Payment Method</span>
-                      <select
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                        value={recordForm.paymentMethod}
-                        onChange={(e) => setRecordForm((p) => ({ ...p, paymentMethod: e.target.value }))}
-                        disabled
-                      >
-                        <option>Cash</option>
-                      </select>
-                    </label>
-                  </div>
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Description / Note</span>
-                    <input
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                      placeholder="e.g., For new carpet"
-                      value={recordForm.note}
-                      onChange={(e) => setRecordForm((p) => ({ ...p, note: e.target.value }))}
+                    <FormField
+                      name="donorName"
+                      label="Donor Name"
+                      required
+                      value={recordForm.donorName}
+                      onChange={(e) => {
+                        setRecordForm((p) => ({ ...p, donorName: e.target.value }))
+                        if (recordErrors.donorName) setRecordErrors((prev) => ({ ...prev, donorName: null }))
+                      }}
+                      error={recordErrors.donorName}
+                      placeholder="Donor's full name (or walk-in)"
                       disabled={submitting}
                     />
-                  </label>
+                  )}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      name="type"
+                      label="Type"
+                      type="select"
+                      value={recordForm.type}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, type: e.target.value }))}
+                      disabled={submitting}
+                    >
+                      <option>Sadaqah</option>
+                      <option>Zakat</option>
+                      <option>Masjid Fund</option>
+                    </FormField>
+                    <FormField
+                      name="paymentMethod"
+                      label="Payment Method"
+                      type="select"
+                      value={recordForm.paymentMethod}
+                      onChange={(e) => setRecordForm((p) => ({ ...p, paymentMethod: e.target.value }))}
+                      disabled
+                      hint="Cash donations only at the moment"
+                    >
+                      <option>Cash</option>
+                    </FormField>
+                  </div>
+                  <FormField
+                    name="note"
+                    label="Description / Note"
+                    optional
+                    value={recordForm.note}
+                    onChange={(e) => setRecordForm((p) => ({ ...p, note: e.target.value }))}
+                    error={recordErrors.note}
+                    placeholder="e.g., For new carpet"
+                    disabled={submitting}
+                  />
                 </>
               ) : (
                 <>
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Description</span>
-                    <input
-                      required
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                      value={recordForm.description}
-                      onChange={(e) => setRecordForm((p) => ({ ...p, description: e.target.value }))}
-                      disabled={submitting}
-                    />
-                  </label>
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Category</span>
-                    <select
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                      value={recordForm.category}
-                      onChange={(e) => setRecordForm((p) => ({ ...p, category: e.target.value }))}
-                      disabled={submitting}
-                    >
-                      <option>Utilities</option>
-                      <option>Salary</option>
-                      <option>Renovation</option>
-                      <option>Charity</option>
-                      <option>Maintenance</option>
-                      <option>Events</option>
-                      <option>Education</option>
-                      <option>Equipment</option>
-                      <option>Other</option>
-                    </select>
-                  </label>
+                  <FormField
+                    name="description"
+                    label="Description"
+                    required
+                    value={recordForm.description}
+                    onChange={(e) => {
+                      setRecordForm((p) => ({ ...p, description: e.target.value }))
+                      if (recordErrors.description) setRecordErrors((prev) => ({ ...prev, description: null }))
+                    }}
+                    error={recordErrors.description}
+                    placeholder="What was this expense for?"
+                    disabled={submitting}
+                  />
+                  <FormField
+                    name="category"
+                    label="Category"
+                    type="select"
+                    value={recordForm.category}
+                    onChange={(e) => setRecordForm((p) => ({ ...p, category: e.target.value }))}
+                    disabled={submitting}
+                  >
+                    <option>Utilities</option>
+                    <option>Salary</option>
+                    <option>Renovation</option>
+                    <option>Charity</option>
+                    <option>Maintenance</option>
+                    <option>Events</option>
+                    <option>Education</option>
+                    <option>Equipment</option>
+                    <option>Other</option>
+                  </FormField>
                 </>
               )}
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Amount (PKR)</span>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-                  value={recordForm.amount}
-                  onChange={(e) => setRecordForm((p) => ({ ...p, amount: e.target.value }))}
-                  disabled={submitting}
-                />
-              </label>
+              <FormField
+                name="amount"
+                label="Amount (PKR)"
+                type="number"
+                required
+                value={recordForm.amount}
+                onChange={(e) => {
+                  setRecordForm((p) => ({ ...p, amount: e.target.value }))
+                  if (recordErrors.amount) setRecordErrors((prev) => ({ ...prev, amount: null }))
+                }}
+                error={recordErrors.amount}
+                placeholder="e.g., 5000"
+                disabled={submitting}
+              />
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => { setIsCreateOpen(false); setEditingDonation(null) }}
+                  onClick={() => { setIsCreateOpen(false); setEditingDonation(null); setRecordErrors({}) }}
                   disabled={submitting}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                 >

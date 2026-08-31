@@ -328,53 +328,53 @@ export default function PrayerTimes() {
 
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-base">
+              <table className="min-w-full text-sm sm:text-base">
                 <thead className="bg-[#064e3b] text-white">
                   <tr>
-                    <th className="px-6 py-4 text-left font-semibold">Day / Date</th>
-                    <th className="px-6 py-4 text-center font-semibold">Fajr</th>
+                    <th className="px-3 py-3 text-left font-semibold sm:px-6 sm:py-4">Day / Date</th>
+                    <th className="px-2 py-3 text-center font-semibold sm:px-6 sm:py-4">Fajr</th>
                     {hasSunrise && (
-                      <th className="px-6 py-4 text-center font-semibold text-amber-200">Sunrise</th>
+                      <th className="hidden sm:table-cell px-2 py-3 text-center font-semibold text-amber-200 sm:px-6 sm:py-4">Sunrise</th>
                     )}
-                    <th className="px-6 py-4 text-center font-semibold">Dhuhr</th>
-                    <th className="px-6 py-4 text-center font-semibold">Asr</th>
-                    <th className="px-6 py-4 text-center font-semibold">Maghrib</th>
-                    <th className="px-6 py-4 text-center font-semibold">Isha</th>
+                    <th className="px-2 py-3 text-center font-semibold sm:px-6 sm:py-4">Dhuhr</th>
+                    <th className="hidden sm:table-cell px-2 py-3 text-center font-semibold sm:px-6 sm:py-4">Asr</th>
+                    <th className="px-2 py-3 text-center font-semibold sm:px-6 sm:py-4">Maghrib</th>
+                    <th className="px-2 py-3 text-center font-semibold sm:px-6 sm:py-4">Isha</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {(weekTimes.length > 0 ? weekTimes : []).map((day) => {
-                    
+
                     const isToday = isSameLocalDay(day.date)
                     const hasJummah = Boolean(day.jummah)
                     const isFriday = new Date(day.date).getDay() === 5
                     return (
                       <tr key={day.date} className={`transition-colors ${isToday ? 'bg-[#f0fdf4]' : 'bg-white hover:bg-gray-50'}`}>
-                        <td className="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap">
+                        <td className="px-3 py-3 font-semibold text-gray-800 whitespace-nowrap sm:px-6 sm:py-4">
                           {new Date(day.date).toLocaleDateString('en-US', {
                             weekday: 'long',
                             day: 'numeric',
                             month: 'short',
                           })}
-                          {isToday && <span className="ml-3 rounded-full bg-[#047857] px-3 py-1 text-xs font-bold uppercase text-white shadow-sm">Today</span>}
+                          {isToday && <span className="ml-2 rounded-full bg-[#047857] px-2 py-0.5 text-[10px] font-bold uppercase text-white shadow-sm sm:ml-3 sm:px-3 sm:py-1 sm:text-xs">Today</span>}
                         </td>
-                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.fajr)}</td>
+                        <td className="px-2 py-3 text-center font-medium text-gray-700 sm:px-6 sm:py-4">{formatTime(day.fajr)}</td>
                         {hasSunrise && (
-                          <td className="px-6 py-4 text-center font-medium text-amber-600 bg-amber-50/50">{day.sunrise ? formatTime(day.sunrise) : '—'}</td>
+                          <td className="hidden sm:table-cell px-2 py-3 text-center font-medium text-amber-600 bg-amber-50/50 sm:px-6 sm:py-4">{day.sunrise ? formatTime(day.sunrise) : '—'}</td>
                         )}
-                        <td className="px-6 py-4 text-center font-medium text-gray-700">
+                        <td className="px-2 py-3 text-center font-medium text-gray-700 sm:px-6 sm:py-4">
                           {hasJummah && isFriday ? (
                             <span className="inline-flex flex-col items-center">
                               <span className="font-bold text-[#047857]">{formatTime(day.jummah)}</span>
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#047857] mt-1">Jummah</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#047857] mt-0.5 sm:text-[11px] sm:mt-1">Jummah</span>
                             </span>
                           ) : (
                             formatTime(day.zuhr)
                           )}
                         </td>
-                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.asr)}</td>
-                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.maghrib)}</td>
-                        <td className="px-6 py-4 text-center font-medium text-gray-700">{formatTime(day.isha)}</td>
+                        <td className="hidden sm:table-cell px-2 py-3 text-center font-medium text-gray-700 sm:px-6 sm:py-4">{formatTime(day.asr)}</td>
+                        <td className="px-2 py-3 text-center font-medium text-gray-700 sm:px-6 sm:py-4">{formatTime(day.maghrib)}</td>
+                        <td className="px-2 py-3 text-center font-medium text-gray-700 sm:px-6 sm:py-4">{formatTime(day.isha)}</td>
                       </tr>
                     )
                   })}
@@ -386,6 +386,7 @@ export default function PrayerTimes() {
                 </tbody>
               </table>
             </div>
+            <p className="border-t border-gray-100 px-4 py-2 text-center text-xs text-gray-500 sm:hidden">Swipe to see more prayer times →</p>
           </div>
         </div>
       </section>

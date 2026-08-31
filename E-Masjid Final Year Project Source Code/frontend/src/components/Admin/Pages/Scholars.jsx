@@ -2,6 +2,30 @@ import { useEffect, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { formatDate } from '../../../utils/formatters.js'
+import FormField from '../../Common/FormField.jsx'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[+\d][\d\s\-()]{6,20}$/
+
+function validateScholar(form) {
+  const errs = {}
+  if (!form.name.trim()) errs.name = 'Full name is required'
+  else if (form.name.trim().length < 2) errs.name = 'Please enter the full name'
+  if (!form.email.trim()) errs.email = 'Email is required'
+  else if (!EMAIL_RE.test(form.email.trim())) errs.email = 'Enter a valid email address'
+  if (!form.phone.trim()) errs.phone = 'Phone number is required'
+  else if (!PHONE_RE.test(form.phone.trim())) errs.phone = 'Enter a valid phone number'
+  return errs
+}
+
+function validatePassword(form) {
+  const errs = {}
+  if (!form.password) errs.password = 'Password is required'
+  else if (form.password.length < 6) errs.password = 'Password must be at least 6 characters'
+  if (!form.confirmPassword) errs.confirmPassword = 'Please confirm the password'
+  else if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match'
+  return errs
+}
 
 function randomCompletedCount(seedIndex) {
   return 8 + seedIndex * 7
@@ -43,6 +67,9 @@ export default function Scholars() {
     confirmPassword: '',
   })
   const [editForm, setEditForm] = useState({ name: '', phone: '', specialization: '', email: '' })
+  const [editErrors, setEditErrors] = useState({})
+  const [addErrors, setAddErrors] = useState({})
+  const [resetErrors, setResetErrors] = useState({})
   const [resetForm, setResetForm] = useState({ password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(true)
   const [assigningId, setAssigningId] = useState(null)
@@ -105,22 +132,24 @@ export default function Scholars() {
   const submitAddScholar = async (event) => {
     event.preventDefault()
 
-    if (newScholar.password.length < 6) {
-      showToast('Password must be at least 6 characters.', 'warning')
+    const v = validateScholar(newScholar)
+    const p = validatePassword(newScholar)
+    const merged = { ...v, ...p }
+    if (Object.keys(merged).length > 0) {
+      setAddErrors(merged)
+      const firstField = Object.keys(merged)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
       return
     }
-
-    if (newScholar.password !== newScholar.confirmPassword) {
-      showToast('Passwords do not match.', 'error')
-      return
-    }
+    setAddErrors({})
 
     try {
       const res = await api.createScholar({
-        name: newScholar.name,
-        email: newScholar.email,
-        phone: newScholar.phone,
-        specialization: newScholar.specialization || 'Nikah Services',
+        name: newScholar.name.trim(),
+        email: newScholar.email.trim(),
+        phone: newScholar.phone.trim(),
+        specialization: newScholar.specialization.trim() || 'Nikah Services',
         password: newScholar.password,
       })
       const created = { ...res.data, isActive: true }
@@ -140,7 +169,18 @@ export default function Scholars() {
         showToast('Scholar account created successfully.', 'success')
       }
     } catch (err) {
-      showToast(err.message || 'Failed to create scholar.', 'error')
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => { if (er.field) fieldErrors[er.field] = er.message })
+        if (Object.keys(fieldErrors).length > 0) {
+          setAddErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(err.message || 'Failed to create scholar.', 'error')
+        }
+      } else {
+        showToast(err.message || 'Failed to create scholar.', 'error')
+      }
     }
   }
 
@@ -148,12 +188,22 @@ export default function Scholars() {
     event.preventDefault()
     if (!selectedScholar) return
 
+    const v = validateScholar(editForm)
+    if (Object.keys(v).length > 0) {
+      setEditErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setEditErrors({})
+
     try {
       const res = await api.updateScholar(selectedScholar.id, {
-        name: editForm.name,
-        email: editForm.email,
-        phone: editForm.phone,
-        specialization: editForm.specialization,
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim(),
+        specialization: editForm.specialization.trim() || 'Nikah Services',
       })
       setScholars((prev) =>
         prev.map((item) => (item.id === selectedScholar.id ? { ...item, ...res.data, id: item.id } : item))
@@ -162,22 +212,33 @@ export default function Scholars() {
       setSelectedScholar(null)
       showToast(`${editForm.name} updated.`, 'success')
     } catch (err) {
-      showToast(err.message || 'Failed to update scholar.', 'error')
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => { if (er.field) fieldErrors[er.field] = er.message })
+        if (Object.keys(fieldErrors).length > 0) {
+          setEditErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(err.message || 'Failed to update scholar.', 'error')
+        }
+      } else {
+        showToast(err.message || 'Failed to update scholar.', 'error')
+      }
     }
   }
 
   const submitResetPassword = async (event) => {
     event.preventDefault()
 
-    if (resetForm.password.length < 6) {
-      showToast('Password must be at least 6 characters.', 'warning')
+    const v = validatePassword(resetForm)
+    if (Object.keys(v).length > 0) {
+      setResetErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
       return
     }
-
-    if (resetForm.password !== resetForm.confirmPassword) {
-      showToast('Passwords do not match.', 'error')
-      return
-    }
+    setResetErrors({})
 
     try {
       const res = await api.resetScholarPassword(selectedScholar.id, resetForm.password)
@@ -466,79 +527,84 @@ export default function Scholars() {
               </button>
             </div>
 
-            <form onSubmit={submitAddScholar} className="space-y-4 px-6 py-5">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Full Name *</span>
-                <input
-                  type="text"
-                  required
-                  value={newScholar.name}
-                  onChange={(event) => setNewScholar((prev) => ({ ...prev, name: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Email *</span>
-                <input
-                  type="email"
-                  required
-                  value={newScholar.email}
-                  onChange={(event) => setNewScholar((prev) => ({ ...prev, email: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Phone *</span>
-                <input
-                  type="tel"
-                  required
-                  value={newScholar.phone}
-                  onChange={(event) => setNewScholar((prev) => ({ ...prev, phone: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Specialization</span>
-                <input
-                  type="text"
-                  value={newScholar.specialization}
-                  onChange={(event) => setNewScholar((prev) => ({ ...prev, specialization: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+            <form onSubmit={submitAddScholar} noValidate className="space-y-4 px-6 py-5">
+              <FormField
+                name="name"
+                label="Full Name"
+                required
+                value={newScholar.name}
+                onChange={(e) => {
+                  setNewScholar((prev) => ({ ...prev, name: e.target.value }))
+                  if (addErrors.name) setAddErrors((prev) => ({ ...prev, name: null }))
+                }}
+                error={addErrors.name}
+                placeholder="Scholar full name"
+              />
+              <FormField
+                name="email"
+                label="Email"
+                type="email"
+                required
+                value={newScholar.email}
+                onChange={(e) => {
+                  setNewScholar((prev) => ({ ...prev, email: e.target.value }))
+                  if (addErrors.email) setAddErrors((prev) => ({ ...prev, email: null }))
+                }}
+                error={addErrors.email}
+                placeholder="scholar@example.com"
+              />
+              <FormField
+                name="phone"
+                label="Phone"
+                type="tel"
+                required
+                value={newScholar.phone}
+                onChange={(e) => {
+                  setNewScholar((prev) => ({ ...prev, phone: e.target.value }))
+                  if (addErrors.phone) setAddErrors((prev) => ({ ...prev, phone: null }))
+                }}
+                error={addErrors.phone}
+                placeholder="03XX-XXXXXXX"
+              />
+              <FormField
+                name="specialization"
+                label="Specialization"
+                optional
+                value={newScholar.specialization}
+                onChange={(e) => setNewScholar((prev) => ({ ...prev, specialization: e.target.value }))}
+                error={addErrors.specialization}
+                placeholder="e.g., Nikah Services"
+                hint="Defaults to 'Nikah Services' when left blank"
+              />
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Initial Password *</span>
-                <div className="relative">
-                  <input
-                    type={showAddPassword ? 'text' : 'password'}
-                    minLength={6}
-                    required
-                    value={newScholar.password}
-                    onChange={(event) => setNewScholar((prev) => ({ ...prev, password: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-primary-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAddPassword((prev) => !prev)}
-                    className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-                  >
-                    <i className="material-icons-round text-base">{showAddPassword ? 'visibility_off' : 'visibility'}</i>
-                  </button>
-                </div>
-              </label>
+              <FormField
+                name="password"
+                label="Initial Password"
+                type="password"
+                required
+                value={newScholar.password}
+                onChange={(e) => {
+                  setNewScholar((prev) => ({ ...prev, password: e.target.value }))
+                  if (addErrors.password) setAddErrors((prev) => ({ ...prev, password: null, confirmPassword: null }))
+                }}
+                error={addErrors.password}
+                placeholder="At least 6 characters"
+                showPasswordToggle
+              />
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Confirm Password *</span>
-                <input
-                  type="password"
-                  minLength={6}
-                  required
-                  value={newScholar.confirmPassword}
-                  onChange={(event) => setNewScholar((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+              <FormField
+                name="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                required
+                value={newScholar.confirmPassword}
+                onChange={(e) => {
+                  setNewScholar((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                  if (addErrors.confirmPassword) setAddErrors((prev) => ({ ...prev, confirmPassword: null }))
+                }}
+                error={addErrors.confirmPassword}
+                placeholder="Repeat the password"
+              />
 
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
@@ -570,46 +636,54 @@ export default function Scholars() {
               </button>
             </div>
 
-            <form onSubmit={submitEditScholar} className="space-y-4 px-6 py-5">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Full Name *</span>
-                <input
-                  type="text"
-                  required
-                  value={editForm.name}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Email *</span>
-                <input
-                  type="email"
-                  required
-                  value={editForm.email}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, email: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Phone *</span>
-                <input
-                  type="tel"
-                  required
-                  value={editForm.phone}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, phone: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Specialization</span>
-                <input
-                  type="text"
-                  value={editForm.specialization}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, specialization: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+            <form onSubmit={submitEditScholar} noValidate className="space-y-4 px-6 py-5">
+              <FormField
+                name="name"
+                label="Full Name"
+                required
+                value={editForm.name}
+                onChange={(e) => {
+                  setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                  if (editErrors.name) setEditErrors((prev) => ({ ...prev, name: null }))
+                }}
+                error={editErrors.name}
+                placeholder="Scholar full name"
+              />
+              <FormField
+                name="email"
+                label="Email"
+                type="email"
+                required
+                value={editForm.email}
+                onChange={(e) => {
+                  setEditForm((prev) => ({ ...prev, email: e.target.value }))
+                  if (editErrors.email) setEditErrors((prev) => ({ ...prev, email: null }))
+                }}
+                error={editErrors.email}
+                placeholder="scholar@example.com"
+              />
+              <FormField
+                name="phone"
+                label="Phone"
+                type="tel"
+                required
+                value={editForm.phone}
+                onChange={(e) => {
+                  setEditForm((prev) => ({ ...prev, phone: e.target.value }))
+                  if (editErrors.phone) setEditErrors((prev) => ({ ...prev, phone: null }))
+                }}
+                error={editErrors.phone}
+                placeholder="03XX-XXXXXXX"
+              />
+              <FormField
+                name="specialization"
+                label="Specialization"
+                optional
+                value={editForm.specialization}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, specialization: e.target.value }))}
+                error={editErrors.specialization}
+                placeholder="e.g., Nikah Services"
+              />
 
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
@@ -647,39 +721,35 @@ export default function Scholars() {
               </p>
 
               {!revealedPassword && (
-                <form onSubmit={submitResetPassword} className="space-y-4">
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-gray-700">New Password *</span>
-                    <div className="relative">
-                      <input
-                        type={showResetPassword ? 'text' : 'password'}
-                        minLength={6}
-                        required
-                        value={resetForm.password}
-                        onChange={(event) => setResetForm((prev) => ({ ...prev, password: event.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-primary-500 focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowResetPassword((prev) => !prev)}
-                        className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-                      >
-                        <i className="material-icons-round text-base">{showResetPassword ? 'visibility_off' : 'visibility'}</i>
-                      </button>
-                    </div>
-                  </label>
+                <form onSubmit={submitResetPassword} noValidate className="space-y-4">
+                  <FormField
+                    name="password"
+                    label="New Password"
+                    type="password"
+                    required
+                    value={resetForm.password}
+                    onChange={(e) => {
+                      setResetForm((prev) => ({ ...prev, password: e.target.value }))
+                      if (resetErrors.password) setResetErrors((prev) => ({ ...prev, password: null, confirmPassword: null }))
+                    }}
+                    error={resetErrors.password}
+                    placeholder="At least 6 characters"
+                    showPasswordToggle
+                  />
 
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-gray-700">Confirm New Password *</span>
-                    <input
-                      type="password"
-                      minLength={6}
-                      required
-                      value={resetForm.confirmPassword}
-                      onChange={(event) => setResetForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                    />
-                  </label>
+                  <FormField
+                    name="confirmPassword"
+                    label="Confirm New Password"
+                    type="password"
+                    required
+                    value={resetForm.confirmPassword}
+                    onChange={(e) => {
+                      setResetForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                      if (resetErrors.confirmPassword) setResetErrors((prev) => ({ ...prev, confirmPassword: null }))
+                    }}
+                    error={resetErrors.confirmPassword}
+                    placeholder="Repeat the new password"
+                  />
 
                   <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                     <button

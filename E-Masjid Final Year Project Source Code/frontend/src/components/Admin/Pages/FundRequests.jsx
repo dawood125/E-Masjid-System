@@ -3,6 +3,7 @@ import api from '../../../utils/api.js'
 import { formatDate, formatCurrency } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
+import FormField from '../../Common/FormField.jsx'
 
 const statusConfig = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-800', icon: 'schedule', label: 'Pending' },
@@ -18,6 +19,7 @@ export default function AdminFundRequests() {
   const [selectedId, setSelectedId] = useState(null)
   const [finalNote, setFinalNote] = useState('')
   const [overrideStatus, setOverrideStatus] = useState('')
+  const [finalErrors, setFinalErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -64,20 +66,28 @@ export default function AdminFundRequests() {
     setSelectedId(req._id)
     setFinalNote('')
     setOverrideStatus('')
+    setFinalErrors({})
   }
 
   const closeFinalize = () => {
     setSelectedId(null)
     setFinalNote('')
     setOverrideStatus('')
+    setFinalErrors({})
   }
 
   const handleFinalize = async () => {
     if (!selected) return
+    const errs = {}
     if (autoStatus === 'tied' && !overrideStatus) {
-      showToast('Votes are tied — please pick a side or cancel', 'warning')
+      errs.overrideStatus = 'Votes are tied — please pick approve or reject'
+    }
+    if (Object.keys(errs).length > 0) {
+      setFinalErrors(errs)
+      showToast(errs.overrideStatus, 'warning')
       return
     }
+    setFinalErrors({})
     const body = {}
     if (autoStatus === 'tied') body.overrideStatus = overrideStatus
     if (finalNote.trim()) body.finalNote = finalNote.trim()
@@ -90,6 +100,11 @@ export default function AdminFundRequests() {
       closeFinalize()
       showToast(`Request ${updated.status}! Email sent to requester.`, 'success')
     } catch (e) {
+      if (e.errors && Array.isArray(e.errors)) {
+        const fieldErrors = {}
+        e.errors.forEach((er) => { if (er.field) fieldErrors[er.field] = er.message })
+        if (Object.keys(fieldErrors).length > 0) setFinalErrors(fieldErrors)
+      }
       showToast(e.message || 'Failed to finalize request', 'error')
     } finally {
       setSubmitting(false)
@@ -235,7 +250,7 @@ export default function AdminFundRequests() {
                 )}
               </div>
 
-              <div className="rounded-xl border-2 border-dashed border-gray-300 p-4">
+              <div className={`rounded-xl border-2 border-dashed p-4 ${finalErrors.overrideStatus ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Auto Outcome</p>
                 {autoStatus === 'tied' ? (
                   <p className="mt-2 text-sm text-amber-700">
@@ -251,34 +266,47 @@ export default function AdminFundRequests() {
                 {autoStatus === 'tied' && (
                   <div className="mt-3 flex gap-2">
                     <button
-                      onClick={() => setOverrideStatus('approved')}
+                      type="button"
+                      onClick={() => {
+                        setOverrideStatus('approved')
+                        if (finalErrors.overrideStatus) setFinalErrors((p) => ({ ...p, overrideStatus: null }))
+                      }}
                       className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-semibold ${overrideStatus === 'approved' ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-300 text-gray-600 hover:border-green-400'}`}
                     >
                       <i className="material-icons-round align-middle text-base">thumb_up</i> Approve
                     </button>
                     <button
-                      onClick={() => setOverrideStatus('rejected')}
+                      type="button"
+                      onClick={() => {
+                        setOverrideStatus('rejected')
+                        if (finalErrors.overrideStatus) setFinalErrors((p) => ({ ...p, overrideStatus: null }))
+                      }}
                       className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-semibold ${overrideStatus === 'rejected' ? 'border-red-600 bg-red-50 text-red-800' : 'border-gray-300 text-gray-600 hover:border-red-400'}`}
                     >
                       <i className="material-icons-round align-middle text-base">thumb_down</i> Reject
                     </button>
                   </div>
                 )}
+                {finalErrors.overrideStatus && (
+                  <p className="form-error mt-2">{finalErrors.overrideStatus}</p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Final Note <span className="text-gray-400 font-normal">(visible to requester in their email)</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={finalNote}
-                  onChange={(e) => setFinalNote(e.target.value)}
-                  placeholder="e.g. Approved; please collect from the office."
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:ring-2 focus:ring-[#047857] focus:border-transparent"
-                  disabled={submitting}
-                />
-              </div>
+              <FormField
+                name="finalNote"
+                label={
+                  <span>
+                    Final Note <span className="text-gray-400 font-normal">(visible to requester in their email)</span>
+                  </span>
+                }
+                type="textarea"
+                rows={3}
+                optional
+                value={finalNote}
+                onChange={(e) => setFinalNote(e.target.value)}
+                placeholder="e.g. Approved; please collect from the office."
+                disabled={submitting}
+              />
             </div>
 
             <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-2">

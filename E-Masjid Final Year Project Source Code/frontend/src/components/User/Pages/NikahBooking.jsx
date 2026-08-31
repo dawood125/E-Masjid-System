@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
+import FormField from '../../Common/FormField.jsx'
 import SlotPicker from '../SlotPicker.jsx'
 
 const requirements = [
@@ -13,6 +15,37 @@ const requirements = [
   'Divorce Decree / Death Certificate (if applicable)',
   'Meher Amount (to be agreed upon)',
 ]
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validate(form) {
+  const errors = {}
+  if (!form.groomName.trim()) errors.groomName = 'Groom name is required'
+  else if (form.groomName.trim().length < 2) errors.groomName = 'Groom name must be at least 2 characters'
+  else if (form.groomName.trim().length > 100) errors.groomName = 'Groom name must be under 100 characters'
+
+  if (!form.brideName.trim()) errors.brideName = 'Bride name is required'
+  else if (form.brideName.trim().length < 2) errors.brideName = 'Bride name must be at least 2 characters'
+  else if (form.brideName.trim().length > 100) errors.brideName = 'Bride name must be under 100 characters'
+
+  if (!form.phone.trim()) errors.phone = 'Contact number is required'
+  else if (form.phone.trim().length < 7) errors.phone = 'Contact number looks too short'
+  else if (form.phone.trim().length > 20) errors.phone = 'Contact number is too long'
+
+  if (!form.email.trim()) errors.email = 'Email is required'
+  else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
+
+  if (!form.address.trim()) errors.address = 'Residential address is required'
+  else if (form.address.trim().length < 3) errors.address = 'Address must be at least 3 characters'
+  else if (form.address.trim().length > 500) errors.address = 'Address is too long'
+
+  if (!form.ceremonyDate) errors.ceremonyDate = 'Please choose a ceremony date'
+  if (!form.ceremonyTime) errors.ceremonyTime = 'Please choose a ceremony time'
+
+  if (form.notes && form.notes.length > 1000) errors.notes = 'Notes must be under 1000 characters'
+
+  return errors
+}
 
 export default function NikahBooking() {
   const [formData, setFormData] = useState({
@@ -25,34 +58,61 @@ export default function NikahBooking() {
     ceremonyTime: '',
     notes: '',
   })
+  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [bookingId, setBookingId] = useState('')
   const { showToast } = useUI()
+  const { activeMosque } = useMosque()
+
+  const update = (field, value) => {
+    setFormData((p) => ({ ...p, [field]: value }))
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: undefined }))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.ceremonyDate || !formData.ceremonyTime) {
-      showToast('Please choose both a date and a time slot.', 'warning')
+    const v = validate(formData)
+    if (Object.keys(v).length > 0) {
+      setErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
       return
     }
     setLoading(true)
+    setErrors({})
 
     try {
       const res = await api.createNikahBooking({
-        groomName: formData.groomName,
-        brideName: formData.brideName,
-        preferredDate: formData.ceremonyDate,
-        preferredTime: formData.ceremonyTime,
-        contact: formData.phone,
-        notes: formData.notes,
+        groomName: formData.groomName.trim(),
+        brideName: formData.brideName.trim(),
+        ceremonyDate: formData.ceremonyDate,
+        ceremonyTime: formData.ceremonyTime,
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: formData.address.trim(),
+        notes: formData.notes.trim() || undefined,
       })
       const id = res.data?._id || res.data?.id || `${Date.now()}`
       setBookingId(id)
       setShowSuccess(true)
       showToast('Nikah booking request submitted successfully', 'success')
     } catch (err) {
-      showToast(err.message || 'Failed to submit booking request', 'error')
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => {
+          if (er.field) fieldErrors[er.field] = er.message
+        })
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(err.message || 'Failed to submit booking request', 'error')
+        }
+      } else {
+        showToast(err.message || 'Failed to submit booking request', 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -70,6 +130,7 @@ export default function NikahBooking() {
       ceremonyTime: '',
       notes: '',
     })
+    setErrors({})
   }
 
   return (
@@ -86,7 +147,7 @@ export default function NikahBooking() {
         <div className="relative z-10 px-4 text-white animate-fade-in">
           <h1 className="font-primary text-5xl font-bold">Book Your Nikah Ceremony</h1>
           <p className="mt-4 mx-auto max-w-3xl text-lg text-white/90">
-            Begin your blessed journey with us. Fill out the form below to request a Nikah booking at Masjid Al-Noor, Sheikhupura.
+            Begin your blessed journey with us. Fill out the form below to request a Nikah booking at {activeMosque?.name || 'our masjid'}{activeMosque?.city ? `, ${activeMosque.city}` : ''}.
           </p>
         </div>
       </section>
@@ -102,27 +163,33 @@ export default function NikahBooking() {
               <p className="mt-2 text-gray-600">Please provide accurate details for the official registry.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-7 p-6">
+            <form onSubmit={handleSubmit} noValidate className="space-y-7 p-6">
               <div>
                 <h3 className="mb-4 inline-flex items-center gap-2 font-primary text-xl font-bold text-gray-900">
                   <i className="material-icons-round text-[#047857]">people</i>
                   Couple Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Groom&apos;s Full Name <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">person</i>
-                      <input className="form-input pl-12" required value={formData.groomName} onChange={(e) => setFormData((p) => ({ ...p, groomName: e.target.value }))} placeholder="e.g. Abdullah Ahmed" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="form-label">Bride&apos;s Full Name <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">person</i>
-                      <input className="form-input pl-12" required value={formData.brideName} onChange={(e) => setFormData((p) => ({ ...p, brideName: e.target.value }))} placeholder="e.g. Fatima Khan" />
-                    </div>
-                  </div>
+                  <FormField
+                    name="groomName"
+                    label="Groom's Full Name"
+                    icon="person"
+                    required
+                    value={formData.groomName}
+                    onChange={(e) => update('groomName', e.target.value)}
+                    error={errors.groomName}
+                    placeholder="e.g. Abdullah Ahmed"
+                  />
+                  <FormField
+                    name="brideName"
+                    label="Bride's Full Name"
+                    icon="person"
+                    required
+                    value={formData.brideName}
+                    onChange={(e) => update('brideName', e.target.value)}
+                    error={errors.brideName}
+                    placeholder="e.g. Fatima Khan"
+                  />
                 </div>
               </div>
 
@@ -132,27 +199,43 @@ export default function NikahBooking() {
                   Contact Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Contact Number <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">call</i>
-                      <input className="form-input pl-12" required value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} placeholder="03XX-XXXXXXX" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="form-label">Email Address <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</i>
-                      <input type="email" className="form-input pl-12" required value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
-                    </div>
-                  </div>
+                  <FormField
+                    name="phone"
+                    label="Contact Number"
+                    type="tel"
+                    icon="call"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => update('phone', e.target.value)}
+                    error={errors.phone}
+                    placeholder="03XX-XXXXXXX"
+                    autoComplete="tel"
+                  />
+                  <FormField
+                    name="email"
+                    label="Email Address"
+                    type="email"
+                    icon="mail"
+                    required
+                    value={formData.email}
+                    onChange={(e) => update('email', e.target.value)}
+                    error={errors.email}
+                    placeholder="email@example.com"
+                    autoComplete="email"
+                  />
                 </div>
                 <div className="mt-4">
-                  <label className="form-label">Residential Address <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">home</i>
-                    <input className="form-input pl-12" required value={formData.address} onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))} placeholder="House # 123, Street 5, Civil Lines, Sheikhupura" />
-                  </div>
+                  <FormField
+                    name="address"
+                    label="Residential Address"
+                    icon="home"
+                    required
+                    value={formData.address}
+                    onChange={(e) => update('address', e.target.value)}
+                    error={errors.address}
+                    placeholder="House # 123, Street 5, Civil Lines, Sheikhupura"
+                    autoComplete="street-address"
+                  />
                 </div>
               </div>
 
@@ -163,18 +246,41 @@ export default function NikahBooking() {
                 </h3>
                 <SlotPicker
                   value={{ date: formData.ceremonyDate, time: formData.ceremonyTime }}
-                  onChange={({ date, time }) =>
-                    setFormData((p) => ({ ...p, ceremonyDate: date, ceremonyTime: time !== undefined ? time : p.ceremonyTime }))
-                  }
+                  onChange={({ date, time }) => {
+                    setFormData((p) => ({
+                      ...p,
+                      ceremonyDate: date !== undefined ? date : p.ceremonyDate,
+                      ceremonyTime: time !== undefined ? time : p.ceremonyTime,
+                    }))
+                    setErrors((p) => ({
+                      ...p,
+                      ceremonyDate: date ? undefined : p.ceremonyDate,
+                      ceremonyTime: time ? undefined : p.ceremonyTime,
+                    }))
+                  }}
                 />
+                {(errors.ceremonyDate || errors.ceremonyTime) && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {errors.ceremonyDate || errors.ceremonyTime}
+                  </p>
+                )}
                 <p className="mt-3 inline-flex items-center gap-1 text-xs text-gray-500">
                   <i className="material-icons-round text-sm">info</i>Please arrive 30 minutes before your slot. Already-confirmed slots are disabled.
                 </p>
               </div>
 
               <div>
-                <label className="form-label">Special Requests or Notes (Optional)</label>
-                <textarea rows={4} className="form-textarea" value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} placeholder="Enter any additional requirements or special requests here..." />
+                <FormField
+                  name="notes"
+                  label="Special Requests or Notes"
+                  type="textarea"
+                  rows={4}
+                  optional
+                  value={formData.notes}
+                  onChange={(e) => update('notes', e.target.value)}
+                  error={errors.notes}
+                  placeholder="Enter any additional requirements or special requests here..."
+                />
               </div>
 
               <div className="border-t border-gray-200 pt-5">
@@ -213,9 +319,13 @@ export default function NikahBooking() {
               </h3>
               <p className="mt-3 text-sm text-gray-700">If you have questions regarding the Nikah process or requirements, please contact our office.</p>
               <div className="mt-4 space-y-2 text-sm text-gray-700">
-                <p className="inline-flex items-center gap-2"><i className="material-icons-round text-[#047857] text-base">call</i>0321-5551234</p>
+                {activeMosque?.phone && (
+                  <p className="inline-flex items-center gap-2"><i className="material-icons-round text-[#047857] text-base">call</i>{activeMosque.phone}</p>
+                )}
                 <p className="inline-flex items-center gap-2"><i className="material-icons-round text-[#047857] text-base">schedule</i>Mon - Sat: 9:00 AM - 5:00 PM</p>
-                <p className="inline-flex items-center gap-2"><i className="material-icons-round text-[#047857] text-base">location_on</i>Masjid Al-Noor, Sheikhupura</p>
+                {activeMosque?.name && (
+                  <p className="inline-flex items-center gap-2"><i className="material-icons-round text-[#047857] text-base">location_on</i>{activeMosque.name}{activeMosque.city ? `, ${activeMosque.city}` : ''}</p>
+                )}
               </div>
             </div>
           </aside>

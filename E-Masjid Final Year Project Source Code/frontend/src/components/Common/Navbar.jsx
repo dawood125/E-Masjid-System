@@ -165,8 +165,8 @@ function UserAvatarMenu({ user, logout }) {
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
-  const { toggleMobileMenu, mobileMenuOpen, closeMobileMenu } = useUI()
-  const { mosques, activeMosque, setActiveMosque } = useMosque()
+  const { toggleMobileMenu, mobileMenuOpen, closeMobileMenu, showToast } = useUI()
+  const { mosques, activeMosque, setActiveMosque, switching } = useMosque()
   const location = useLocation()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMosqueModalOpen, setIsMosqueModalOpen] = useState(false)
@@ -180,15 +180,14 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleMosqueChange = useCallback((mosque) => {
-    
-    if (!mosque) {
-      setActiveMosque('')
-    } else {
-      setActiveMosque(mosque._id)
-    }
+  const handleMosqueChange = useCallback(async (mosque) => {
+    const target = mosque?._id || ''
     setIsMosqueModalOpen(false)
-  }, [setActiveMosque])
+    const result = await setActiveMosque(target)
+    if (result && result.ok === false) {
+      showToast(result.error || 'Could not switch masjid', 'error')
+    }
+  }, [setActiveMosque, showToast])
 
   
   const primaryLinks = [
@@ -277,10 +276,11 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setIsMosqueModalOpen(true)}
+              disabled={switching}
               title={activeMosque ? `${activeMosque.name} (${activeMosque.city})` : 'Select a mosque'}
-              className="min-w-0 w-32 2xl:w-48 truncate rounded-lg border border-gray-300 bg-white pl-2 pr-7 py-2 text-sm text-gray-700 text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="min-w-0 w-32 2xl:w-48 truncate rounded-lg border border-gray-300 bg-white pl-2 pr-7 py-2 text-sm text-gray-700 text-left focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60"
             >
-              {activeMosque ? `${activeMosque.name}` : 'Select a mosque'}
+              {switching ? 'Updating...' : activeMosque ? `${activeMosque.name}` : 'Select a mosque'}
             </button>
             <i className="material-icons-round absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 text-base pointer-events-none">expand_more</i>
           </div>

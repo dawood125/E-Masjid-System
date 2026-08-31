@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
     try {
       await api.logout()
     } catch (e) {
-      
+
     }
     setUser(null)
     localStorage.removeItem('user')
@@ -131,6 +131,15 @@ export function AuthProvider({ children }) {
     setError(null)
     return redirectPath
   }, [user])
+
+  const updateUser = useCallback((patch) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...patch }
+      localStorage.setItem('user', JSON.stringify(next))
+      return next
+    })
+  }, [])
 
   const isAuthenticated = !!user
   const userRole = user?.role || null
@@ -142,6 +151,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated,
     userRole,
   }

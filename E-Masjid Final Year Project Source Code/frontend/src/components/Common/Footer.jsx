@@ -1,8 +1,16 @@
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../utils/constants.js'
+import { useMosque } from '../../hooks/useMosque.js'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
+  const { activeMosque } = useMosque()
+  const mosqueName = activeMosque?.name || 'E-Masjid'
+  const mosqueCity = activeMosque?.city || ''
+  const mosqueAddress = activeMosque?.address || ''
+  const mosquePhone = activeMosque?.phone || ''
+  const mosqueEmail = activeMosque?.email || ''
+  const addressLine = [mosqueAddress, mosqueCity].filter(Boolean).join(', ')
 
   return (
     <footer className="mt-0 border-t-4 border-[#d4af37] bg-[#111827] text-white">
@@ -12,9 +20,9 @@ export default function Footer() {
             <div className="mb-4 h-12 w-12 rounded-xl bg-[#047857] flex items-center justify-center">
               <i className="material-icons-round text-white text-2xl">mosque</i>
             </div>
-            <h3 className="font-primary text-2xl font-bold mb-3">Masjid Al-Noor</h3>
+            <h3 className="font-primary text-2xl font-bold mb-3">{mosqueName}</h3>
             <p className="text-gray-400 leading-relaxed">
-              A place for worship, learning, and community gathering. We are dedicated to serving the spiritual and social needs of our community in Sheikhupura.
+              A place for worship, learning, and community gathering. We are dedicated to serving the spiritual and social needs of our community.
             </p>
             <div className="mt-5 flex gap-3">
               {['facebook', 'smart_display', 'chat'].map((icon) => (
@@ -69,25 +77,31 @@ export default function Footer() {
           <div>
             <h4 className="font-primary text-xl font-semibold text-[#d4af37] mb-5">Contact Us</h4>
             <div className="space-y-4 text-gray-400">
-              <p className="flex items-start gap-3">
-                <i className="material-icons-round mt-0.5 text-[#10b981]">location_on</i>
-                <span>Near Civil Lines,<br />Main GT Road,<br />Sheikhupura, Punjab</span>
-              </p>
-              <p className="flex items-center gap-3">
-                <i className="material-icons-round text-[#10b981]">call</i>
-                <span>0321-5551234</span>
-              </p>
-              <p className="flex items-center gap-3">
-                <i className="material-icons-round text-[#10b981]">mail</i>
-                <span>info@masjidalnoor.pk</span>
-              </p>
+              {addressLine && (
+                <p className="flex items-start gap-3">
+                  <i className="material-icons-round mt-0.5 text-[#10b981]">location_on</i>
+                  <span>{addressLine}</span>
+                </p>
+              )}
+              {mosquePhone && (
+                <p className="flex items-center gap-3">
+                  <i className="material-icons-round text-[#10b981]">call</i>
+                  <a href={`tel:${mosquePhone.replace(/\s+/g, '')}`} className="hover:text-white transition-colors">{mosquePhone}</a>
+                </p>
+              )}
+              {mosqueEmail && (
+                <p className="flex items-center gap-3">
+                  <i className="material-icons-round text-[#10b981]">mail</i>
+                  <a href={`mailto:${mosqueEmail}`} className="hover:text-white transition-colors">{mosqueEmail}</a>
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         <div className="border-t border-white/10 pt-6 text-center text-sm text-gray-400">
           <p>
-            © {currentYear} Masjid Al-Noor, Sheikhupura. All rights reserved. |
+            © {currentYear} {mosqueName}{mosqueCity ? `, ${mosqueCity}` : ''}. All rights reserved. |
             <a href="#" className="ml-2 hover:text-white">Privacy Policy</a> |
             <a href="#" className="ml-2 hover:text-white">Terms of Use</a>
           </p>

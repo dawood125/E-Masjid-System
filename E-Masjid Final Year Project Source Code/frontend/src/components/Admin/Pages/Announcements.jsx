@@ -5,6 +5,7 @@ import { useAuth } from '../../../hooks/useAuth.js'
 import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { formatDate } from '../../../utils/formatters.js'
+import FormField from '../../Common/FormField.jsx'
 
 const FILTERS = ['all', 'published', 'urgent', 'draft']
 const PAGE_SIZE = 6
@@ -29,6 +30,7 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAnnouncement, setEditingAnnouncement] = useState(null)
+  const [announcementErrors, setAnnouncementErrors] = useState({})
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
     content: '',
@@ -101,6 +103,7 @@ export default function Announcements() {
   const openCreateModal = () => {
     setEditingAnnouncement(null)
     setNewAnnouncement({ title: '', content: '', publishDate: '', urgent: false, mode: 'publish' })
+    setAnnouncementErrors({})
     setIsModalOpen(true)
   }
 
@@ -110,21 +113,39 @@ export default function Announcements() {
       title: item.title,
       content: item.content,
       publishDate: item.publishDate ? new Date(item.publishDate).toISOString().slice(0, 10) : '',
-      urgent: item.isUrgent || false, 
+      urgent: item.isUrgent || false,
       mode: item.status === 'draft' ? 'draft' : 'publish',
     })
+    setAnnouncementErrors({})
     setIsModalOpen(true)
   }
 
   const handleAnnouncementSubmit = async (event) => {
     event.preventDefault()
 
+    const errs = {}
+    if (!newAnnouncement.title.trim()) errs.title = 'Announcement title is required'
+    else if (newAnnouncement.title.trim().length < 3) errs.title = 'Title must be at least 3 characters'
+    else if (newAnnouncement.title.trim().length > 200) errs.title = 'Title must be under 200 characters'
+
+    if (!newAnnouncement.content.trim()) errs.content = 'Announcement content is required'
+    else if (newAnnouncement.content.trim().length < 5) errs.content = 'Please write a longer announcement'
+
+    if (Object.keys(errs).length > 0) {
+      setAnnouncementErrors(errs)
+      const firstField = Object.keys(errs)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setAnnouncementErrors({})
+
     try {
       const payload = {
-        title: newAnnouncement.title,
-        content: newAnnouncement.content,
+        title: newAnnouncement.title.trim(),
+        content: newAnnouncement.content.trim(),
         isUrgent: newAnnouncement.urgent,
-        publishedBy: user?.name || 'Admin', 
+        publishedBy: user?.name || 'Admin',
         status: newAnnouncement.mode === 'draft' ? 'draft' : 'published',
       }
       if (newAnnouncement.publishDate) payload.publishDate = newAnnouncement.publishDate
@@ -145,7 +166,18 @@ export default function Announcements() {
       setEditingAnnouncement(null)
       setNewAnnouncement({ title: '', content: '', publishDate: '', urgent: false, mode: 'publish' })
     } catch (err) {
-      showToast(err.message || 'Failed to save announcement.', 'error')
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => { if (er.field) fieldErrors[er.field] = er.message })
+        if (Object.keys(fieldErrors).length > 0) {
+          setAnnouncementErrors(fieldErrors)
+          showToast('Please fix the highlighted fields', 'error')
+        } else {
+          showToast(err.message || 'Failed to save announcement.', 'error')
+        }
+      } else {
+        showToast(err.message || 'Failed to save announcement.', 'error')
+      }
     }
   }
 
@@ -437,49 +469,52 @@ export default function Announcements() {
               </button>
             </div>
 
-            <form onSubmit={handleAnnouncementSubmit} className="space-y-4 px-6 py-5">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Announcement Title *</span>
-                <input
-                  type="text"
-                  value={newAnnouncement.title}
-                  onChange={(event) => setNewAnnouncement((prev) => ({ ...prev, title: event.target.value }))}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+            <form onSubmit={handleAnnouncementSubmit} noValidate className="space-y-4 px-6 py-5">
+              <FormField
+                name="title"
+                label="Announcement Title"
+                required
+                value={newAnnouncement.title}
+                onChange={(e) => {
+                  setNewAnnouncement((prev) => ({ ...prev, title: e.target.value }))
+                  if (announcementErrors.title) setAnnouncementErrors((p) => ({ ...p, title: null }))
+                }}
+                error={announcementErrors.title}
+                placeholder="e.g. Eid Prayer Schedule"
+              />
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Content *</span>
-                <textarea
-                  rows={6}
-                  value={newAnnouncement.content}
-                  onChange={(event) => setNewAnnouncement((prev) => ({ ...prev, content: event.target.value }))}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-              </label>
+              <FormField
+                name="content"
+                label="Content"
+                type="textarea"
+                rows={6}
+                required
+                value={newAnnouncement.content}
+                onChange={(e) => {
+                  setNewAnnouncement((prev) => ({ ...prev, content: e.target.value }))
+                  if (announcementErrors.content) setAnnouncementErrors((p) => ({ ...p, content: null }))
+                }}
+                error={announcementErrors.content}
+                placeholder="Write the announcement message that community members will see"
+              />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Publication Date</span>
-                  <input
-                    type="date"
-                    value={newAnnouncement.publishDate}
-                    min={todayStr}
-                    onChange={(event) => setNewAnnouncement((prev) => ({ ...prev, publishDate: event.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                  />
-                </label>
+                <FormField
+                  name="publishDate"
+                  label="Publication Date"
+                  type="date"
+                  optional
+                  value={newAnnouncement.publishDate}
+                  onChange={(e) => setNewAnnouncement((prev) => ({ ...prev, publishDate: e.target.value }))}
+                />
 
-                <label className="inline-flex items-center gap-3 self-end rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={newAnnouncement.urgent}
-                    onChange={(event) => setNewAnnouncement((prev) => ({ ...prev, urgent: event.target.checked }))}
-                  />
-                  Mark as urgent
-                </label>
+                <FormField
+                  name="urgent"
+                  type="checkbox"
+                  value={newAnnouncement.urgent}
+                  onChange={(e) => setNewAnnouncement((prev) => ({ ...prev, urgent: e.target.checked }))}
+                  label="Mark as urgent"
+                />
               </div>
 
               <div>
@@ -511,7 +546,7 @@ export default function Announcements() {
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => { setIsModalOpen(false); setEditingAnnouncement(null) }}
+                  onClick={() => { setIsModalOpen(false); setEditingAnnouncement(null); setAnnouncementErrors({}) }}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                 >
                   Cancel

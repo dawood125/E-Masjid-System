@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../utils/api.js'
 import { useUI } from '../../../hooks/useUI.js'
+import FormField from '../../Common/FormField.jsx'
 
 const TABS = [
   { key: 'campaigns',   label: 'Campaigns',   icon: 'volunteer_activism' },
@@ -8,33 +9,73 @@ const TABS = [
   { key: 'hero-slides',  label: 'Hero Slides',  icon: 'image' },
 ]
 
-function Field({ label, type = 'text', value, onChange, placeholder, required, children, rows }) {
+function Field({ label, name, type = 'text', value, onChange, placeholder, required, optional, error, rows, children, onClearError }) {
+  if (children) {
+    return (
+      <FormField
+        name={name}
+        label={label}
+        type="select"
+        required={required}
+        optional={optional}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        error={error}
+        placeholder={placeholder}
+      >
+        {children}
+      </FormField>
+    )
+  }
   return (
-    <label className="block">
-      <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
-      </span>
-      {children ? children : (
-        rows ? (
-          <textarea
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            rows={rows}
-            className="form-input min-h-[80px]"
-          />
-        ) : (
-          <input
-            type={type}
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="form-input"
-          />
-        )
-      )}
-    </label>
+    <FormField
+      name={name}
+      label={label}
+      type={type === 'number' ? 'number' : rows ? 'textarea' : 'text'}
+      required={required}
+      optional={optional}
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value)
+        if (onClearError) onClearError()
+      }}
+      error={error}
+      placeholder={placeholder}
+      rows={rows}
+    />
   )
+}
+
+function validateCampaign(form) {
+  const errs = {}
+  if (!form.title.trim()) errs.title = 'Title is required'
+  else if (form.title.trim().length < 3) errs.title = 'Title must be at least 3 characters'
+  const target = Number(form.targetAmount)
+  if (form.targetAmount === '' || form.targetAmount === null || form.targetAmount === undefined) errs.targetAmount = 'Target amount is required'
+  else if (Number.isNaN(target) || target < 0) errs.targetAmount = 'Enter a valid non-negative amount'
+  const raised = Number(form.raisedAmount)
+  if (form.raisedAmount !== '' && form.raisedAmount !== null && form.raisedAmount !== undefined) {
+    if (Number.isNaN(raised) || raised < 0) errs.raisedAmount = 'Enter a valid non-negative amount'
+  }
+  const days = Number(form.daysLeft)
+  if (days < 0) errs.daysLeft = 'Days left must be 0 or more'
+  return errs
+}
+
+function validateTestimonial(form) {
+  const errs = {}
+  if (!form.name.trim()) errs.name = 'Name is required'
+  if (!form.role.trim()) errs.role = 'Role is required'
+  if (!form.quote.trim()) errs.quote = 'Quote is required'
+  else if (form.quote.trim().length < 10) errs.quote = 'Quote must be at least 10 characters'
+  return errs
+}
+
+function validateHeroSlide(form) {
+  const errs = {}
+  if (!form.image.trim()) errs.image = 'Image URL is required'
+  else if (!/^https?:\/\/|\/assets\//.test(form.image.trim())) errs.image = 'Use an absolute http(s) URL or a /assets/ path'
+  return errs
 }
 
 function Modal({ open, onClose, title, children, wide }) {
@@ -72,6 +113,7 @@ function CampaignsTab({ showToast }) {
   const [isOpen, setIsOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [form, setForm] = useState(blankCampaign)
+  const [formErrors, setFormErrors] = useState({})
 
   function blankCampaign() {
     return { title: '', subtitle: '', targetAmount: '', raisedAmount: '', daysLeft: '30', image: '', isActive: true, isFeatured: false, order: '0' }
@@ -85,7 +127,7 @@ function CampaignsTab({ showToast }) {
   }, [showToast])
   useEffect(() => { load() }, [load])
 
-  const openNew = () => { setForm(blankCampaign()); setEditing(null); setIsOpen(true) }
+  const openNew = () => { setForm(blankCampaign()); setFormErrors({}); setEditing(null); setIsOpen(true) }
   const openEdit = (c) => {
     setForm({
       title: c.title || '',
@@ -98,12 +140,22 @@ function CampaignsTab({ showToast }) {
       isFeatured: !!c.isFeatured,
       order: c.order ?? '0',
     })
+    setFormErrors({})
     setEditing(c)
     setIsOpen(true)
   }
-  const close = () => { setIsOpen(false); setEditing(null) }
+  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}) }
 
   const save = async () => {
+    const v = validateCampaign(form)
+    if (Object.keys(v).length > 0) {
+      setFormErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setFormErrors({})
     try {
       const payload = {
         ...form,
@@ -173,15 +225,15 @@ function CampaignsTab({ showToast }) {
       )}
 
       <Modal open={isOpen} onClose={close} title={editing ? 'Edit Campaign' : 'New Campaign'} wide>
-        <div className="space-y-4">
-          <Field label="Title" value={form.title} onChange={(v) => setForm({ ...form, title: v })} required placeholder="Help Us Build a New Minaret" />
-          <Field label="Subtitle" value={form.subtitle} onChange={(v) => setForm({ ...form, subtitle: v })} placeholder="Our community has grown..." rows={2} />
+        <form onSubmit={(e) => { e.preventDefault(); save() }} noValidate className="space-y-4">
+          <Field label="Title" name="title" value={form.title} onChange={(v) => setForm({ ...form, title: v })} required placeholder="Help Us Build a New Minaret" error={formErrors.title} onClearError={() => formErrors.title && setFormErrors((p) => ({ ...p, title: null }))} />
+          <Field label="Subtitle" name="subtitle" value={form.subtitle} onChange={(v) => setForm({ ...form, subtitle: v })} placeholder="Our community has grown..." rows={2} />
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Target Amount (PKR)" type="number" value={form.targetAmount} onChange={(v) => setForm({ ...form, targetAmount: v })} required placeholder="800000" />
-            <Field label="Raised Amount (PKR)" type="number" value={form.raisedAmount} onChange={(v) => setForm({ ...form, raisedAmount: v })} placeholder="320000" />
-            <Field label="Days Left" type="number" value={form.daysLeft} onChange={(v) => setForm({ ...form, daysLeft: v })} placeholder="30" />
-            <Field label="Order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
-            <Field label="Image URL (optional)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} placeholder="https://..." />
+            <Field label="Target Amount (PKR)" name="targetAmount" type="number" value={form.targetAmount} onChange={(v) => setForm({ ...form, targetAmount: v })} required placeholder="800000" error={formErrors.targetAmount} onClearError={() => formErrors.targetAmount && setFormErrors((p) => ({ ...p, targetAmount: null }))} />
+            <Field label="Raised Amount (PKR)" name="raisedAmount" type="number" value={form.raisedAmount} onChange={(v) => setForm({ ...form, raisedAmount: v })} placeholder="320000" error={formErrors.raisedAmount} onClearError={() => formErrors.raisedAmount && setFormErrors((p) => ({ ...p, raisedAmount: null }))} />
+            <Field label="Days Left" name="daysLeft" type="number" value={form.daysLeft} onChange={(v) => setForm({ ...form, daysLeft: v })} placeholder="30" error={formErrors.daysLeft} onClearError={() => formErrors.daysLeft && setFormErrors((p) => ({ ...p, daysLeft: null }))} />
+            <Field label="Order" name="order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
+            <Field label="Image URL (optional)" name="image" value={form.image} onChange={(v) => setForm({ ...form, image: v })} placeholder="https://..." />
           </div>
           <div className="flex items-center gap-6 pt-2">
             <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -194,10 +246,10 @@ function CampaignsTab({ showToast }) {
             </label>
           </div>
           <div className="flex justify-end gap-3 pt-4">
-            <button onClick={close} className="btn btn-secondary">Cancel</button>
-            <button onClick={save} className="btn btn-primary">{editing ? 'Save Changes' : 'Create Campaign'}</button>
+            <button type="button" onClick={close} className="btn btn-secondary">Cancel</button>
+            <button type="submit" className="btn btn-primary">{editing ? 'Save Changes' : 'Create Campaign'}</button>
           </div>
-        </div>
+        </form>
       </Modal>
 
       <ConfirmDelete open={!!confirmDel} name={confirmDel?.title} onCancel={() => setConfirmDel(null)} onConfirm={doDelete} />
@@ -212,6 +264,7 @@ function TestimonialsTab({ showToast }) {
   const [isOpen, setIsOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [form, setForm] = useState({ name: '', role: '', quote: '', photo: '/assets/images/testimonials/testimonial-1.jpg', order: '0', isActive: true })
+  const [formErrors, setFormErrors] = useState({})
 
   const load = useCallback(() => {
     api.adminListTestimonials()
@@ -221,7 +274,7 @@ function TestimonialsTab({ showToast }) {
   }, [showToast])
   useEffect(() => { load() }, [load])
 
-  const openNew = () => { setForm({ name: '', role: '', quote: '', photo: '/assets/images/testimonials/testimonial-1.jpg', order: '0', isActive: true }); setEditing(null); setIsOpen(true) }
+  const openNew = () => { setForm({ name: '', role: '', quote: '', photo: '/assets/images/testimonials/testimonial-1.jpg', order: '0', isActive: true }); setFormErrors({}); setEditing(null); setIsOpen(true) }
   const openEdit = (t) => {
     setForm({
       name: t.name || '',
@@ -231,12 +284,22 @@ function TestimonialsTab({ showToast }) {
       order: t.order ?? '0',
       isActive: t.isActive !== false,
     })
+    setFormErrors({})
     setEditing(t)
     setIsOpen(true)
   }
-  const close = () => { setIsOpen(false); setEditing(null) }
+  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}) }
 
   const save = async () => {
+    const v = validateTestimonial(form)
+    if (Object.keys(v).length > 0) {
+      setFormErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setFormErrors({})
     try {
       const payload = { ...form, order: Number(form.order) || 0 }
       if (editing) {
@@ -299,21 +362,21 @@ function TestimonialsTab({ showToast }) {
       )}
 
       <Modal open={isOpen} onClose={close} title={editing ? 'Edit Testimonial' : 'New Testimonial'}>
-        <div className="space-y-4">
-          <Field label="Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
-          <Field label="Role / Title" value={form.role} onChange={(v) => setForm({ ...form, role: v })} required placeholder="Community Member, Mother of two" />
-          <Field label="Quote" value={form.quote} onChange={(v) => setForm({ ...form, quote: v })} required rows={4} placeholder="Our mosque changed my family's life..." />
-          <Field label="Photo URL" value={form.photo} onChange={(v) => setForm({ ...form, photo: v })} placeholder="/assets/images/testimonials/testimonial-1.jpg" />
-          <Field label="Display Order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
+        <form onSubmit={(e) => { e.preventDefault(); save() }} noValidate className="space-y-4">
+          <Field label="Name" name="name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required error={formErrors.name} onClearError={() => formErrors.name && setFormErrors((p) => ({ ...p, name: null }))} />
+          <Field label="Role / Title" name="role" value={form.role} onChange={(v) => setForm({ ...form, role: v })} required placeholder="Community Member, Mother of two" error={formErrors.role} onClearError={() => formErrors.role && setFormErrors((p) => ({ ...p, role: null }))} />
+          <Field label="Quote" name="quote" value={form.quote} onChange={(v) => setForm({ ...form, quote: v })} required rows={4} placeholder="Our mosque changed my family's life..." error={formErrors.quote} onClearError={() => formErrors.quote && setFormErrors((p) => ({ ...p, quote: null }))} />
+          <Field label="Photo URL" name="photo" optional value={form.photo} onChange={(v) => setForm({ ...form, photo: v })} placeholder="/assets/images/testimonials/testimonial-1.jpg" />
+          <Field label="Display Order" name="order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
           <label className="inline-flex items-center gap-2 cursor-pointer pt-1">
             <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 rounded" />
             <span className="text-sm font-medium">Active (visible on homepage)</span>
           </label>
           <div className="flex justify-end gap-3 pt-4">
-            <button onClick={close} className="btn btn-secondary">Cancel</button>
-            <button onClick={save} className="btn btn-primary">{editing ? 'Save Changes' : 'Create Testimonial'}</button>
+            <button type="button" onClick={close} className="btn btn-secondary">Cancel</button>
+            <button type="submit" className="btn btn-primary">{editing ? 'Save Changes' : 'Create Testimonial'}</button>
           </div>
-        </div>
+        </form>
       </Modal>
 
       <ConfirmDelete open={!!confirmDel} name={confirmDel?.name} onCancel={() => setConfirmDel(null)} onConfirm={doDelete} />
@@ -328,6 +391,7 @@ function HeroSlidesTab({ showToast }) {
   const [isOpen, setIsOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [form, setForm] = useState({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', link: '', order: '0', isActive: true })
+  const [formErrors, setFormErrors] = useState({})
 
   const load = useCallback(() => {
     api.adminListHeroSlides()
@@ -337,7 +401,7 @@ function HeroSlidesTab({ showToast }) {
   }, [showToast])
   useEffect(() => { load() }, [load])
 
-  const openNew = () => { setForm({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', link: '', order: '0', isActive: true }); setEditing(null); setIsOpen(true) }
+  const openNew = () => { setForm({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', link: '', order: '0', isActive: true }); setFormErrors({}); setEditing(null); setIsOpen(true) }
   const openEdit = (s) => {
     setForm({
       image: s.image || '',
@@ -347,12 +411,22 @@ function HeroSlidesTab({ showToast }) {
       order: s.order ?? '0',
       isActive: s.isActive !== false,
     })
+    setFormErrors({})
     setEditing(s)
     setIsOpen(true)
   }
-  const close = () => { setIsOpen(false); setEditing(null) }
+  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}) }
 
   const save = async () => {
+    const v = validateHeroSlide(form)
+    if (Object.keys(v).length > 0) {
+      setFormErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      return
+    }
+    setFormErrors({})
     try {
       const payload = { ...form, order: Number(form.order) || 0 }
       if (editing) {
@@ -412,21 +486,21 @@ function HeroSlidesTab({ showToast }) {
       )}
 
       <Modal open={isOpen} onClose={close} title={editing ? 'Edit Hero Slide' : 'New Hero Slide'}>
-        <div className="space-y-4">
-          <Field label="Image URL" value={form.image} onChange={(v) => setForm({ ...form, image: v })} required placeholder="/assets/images/gallery/gallery-fajr.jpg" />
-          <Field label="Mobile Image URL (optional, 9:16 crop)" value={form.mobileImage} onChange={(v) => setForm({ ...form, mobileImage: v })} placeholder="/assets/images/hero/hero-mobile.jpg" />
-          <Field label="Caption" value={form.caption} onChange={(v) => setForm({ ...form, caption: v })} placeholder="Fajr prayer at dawn" />
-          <Field label="Link URL (optional)" value={form.link} onChange={(v) => setForm({ ...form, link: v })} placeholder="/events" />
-          <Field label="Display Order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
+        <form onSubmit={(e) => { e.preventDefault(); save() }} noValidate className="space-y-4">
+          <Field label="Image URL" name="image" value={form.image} onChange={(v) => setForm({ ...form, image: v })} required placeholder="/assets/images/gallery/gallery-fajr.jpg" error={formErrors.image} onClearError={() => formErrors.image && setFormErrors((p) => ({ ...p, image: null }))} />
+          <Field label="Mobile Image URL (optional, 9:16 crop)" name="mobileImage" optional value={form.mobileImage} onChange={(v) => setForm({ ...form, mobileImage: v })} placeholder="/assets/images/hero/hero-mobile.jpg" />
+          <Field label="Caption" name="caption" optional value={form.caption} onChange={(v) => setForm({ ...form, caption: v })} placeholder="Fajr prayer at dawn" />
+          <Field label="Link URL (optional)" name="link" optional value={form.link} onChange={(v) => setForm({ ...form, link: v })} placeholder="/events" />
+          <Field label="Display Order" name="order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
           <label className="inline-flex items-center gap-2 cursor-pointer pt-1">
             <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 rounded" />
             <span className="text-sm font-medium">Active (visible on homepage)</span>
           </label>
           <div className="flex justify-end gap-3 pt-4">
-            <button onClick={close} className="btn btn-secondary">Cancel</button>
-            <button onClick={save} className="btn btn-primary">{editing ? 'Save Changes' : 'Create Slide'}</button>
+            <button type="button" onClick={close} className="btn btn-secondary">Cancel</button>
+            <button type="submit" className="btn btn-primary">{editing ? 'Save Changes' : 'Create Slide'}</button>
           </div>
-        </div>
+        </form>
       </Modal>
 
       <ConfirmDelete open={!!confirmDel} name={confirmDel?.caption || confirmDel?.image} onCancel={() => setConfirmDel(null)} onConfirm={doDelete} />

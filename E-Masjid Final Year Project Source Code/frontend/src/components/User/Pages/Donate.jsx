@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
+import { useAuth } from '../../../hooks/useAuth.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency } from '../../../utils/formatters.js'
 import api from '../../../utils/api.js'
+
+const DRAFT_KEY = 'donateFormDraft'
+const initialState = {
+  amount: 1000,
+  customAmount: '',
+  type: 'sadaqah',
+  donorName: '',
+  email: '',
+  phone: '',
+  isAnonymous: false,
+}
 
 const donationTypes = [
   { value: 'sadaqah', label: 'Sadaqah', icon: 'favorite' },
@@ -18,25 +30,33 @@ const MAX_POLL_ATTEMPTS = 20
 
 export default function Donate() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { showToast } = useUI()
-  const { activeMosqueId } = useMosque()
+  const { activeMosqueId, activeMosque } = useMosque()
+  const { isAuthenticated } = useAuth()
   const pollRef = useRef(null)
 
-  const [donationData, setDonationData] = useState({
-    amount: 1000,
-    customAmount: '',
-    type: 'sadaqah',
-    donorName: '',
-    email: '',
-    phone: '',
-    isAnonymous: false,
-  })
+  const [donationData, setDonationData] = useState(initialState)
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showConfirming, setShowConfirming] = useState(false)
   const [transactionId, setTransactionId] = useState('')
   const [confirmedAmount, setConfirmedAmount] = useState(0)
   const [confirmError, setConfirmError] = useState('')
+  const [nameError, setNameError] = useState('')
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === 'object') {
+          setDonationData((prev) => ({ ...prev, ...parsed }))
+        }
+        sessionStorage.removeItem(DRAFT_KEY)
+      }
+    } catch (e) {}
+  }, [])
 
   useEffect(() => {
     const successFlag = searchParams.get('success')
@@ -80,7 +100,7 @@ export default function Donate() {
           } else if (attempts >= MAX_POLL_ATTEMPTS) {
             stopPolling()
             setShowConfirming(false)
-            setConfirmError('We are still confirming your payment. You will receive an email shortly.')
+            setConfirmError("Your donation is taking longer than expected to confirm. Please refresh this page in a minute, or contact the masjid office if you have any questions.")
             setSearchParams({}, { replace: true })
           }
         } catch (err) {
@@ -141,9 +161,25 @@ export default function Donate() {
       return
     }
 
+    const trimmedName = (donationData.donorName || '').trim()
+    if (!trimmedName) {
+      setNameError('Please enter your full name so we can record your donation properly.')
+      return
+    }
+    setNameError('')
+
     const mosqueId = activeMosqueId
     if (!mosqueId) {
       showToast('Please select a mosque from the navbar first', 'warning')
+      return
+    }
+
+    if (!isAuthenticated) {
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...donationData, donorName: trimmedName }))
+      } catch (e) {}
+      showToast('Please sign in to complete your donation', 'info')
+      navigate(`${ROUTES.LOGIN}?returnUrl=${encodeURIComponent('/donate')}`)
       return
     }
 
@@ -156,15 +192,21 @@ export default function Donate() {
           ? 'Masjid Fund'
           : 'Sadaqah'
 
-      const res = await api.createOnlineDonation({
-        donorName: donationData.donorName,
-        email: donationData.email,
-        phone: donationData.phone,
+      const payload = {
+        donorName: trimmedName,
         amount: effectiveAmount,
         type: backendType,
         isAnonymous: !!donationData.isAnonymous,
         mosqueId,
-      })
+      }
+      if (donationData.email && donationData.email.trim()) {
+        payload.email = donationData.email.trim()
+      }
+      if (donationData.phone && donationData.phone.trim()) {
+        payload.phone = donationData.phone.trim()
+      }
+
+      const res = await api.createOnlineDonation(payload)
 
       if (res.url) {
         window.location.assign(res.url)
@@ -186,15 +228,8 @@ export default function Donate() {
     setShowSuccess(false)
     setConfirmError('')
     setConfirmedAmount(0)
-    setDonationData({
-      amount: 1000,
-      customAmount: '',
-      type: 'sadaqah',
-      donorName: '',
-      email: '',
-      phone: '',
-      isAnonymous: false,
-    })
+    setNameError('')
+    setDonationData(initialState)
   }
 
   return (
@@ -223,12 +258,14 @@ export default function Donate() {
               <p className="mt-3 text-white/80">Tirmidhi</p>
             </div>
 
-            <div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-4 inline-flex items-center gap-2 text-gray-700">
-              <i className="material-icons-round text-[#047857]">phone_in_talk</i>
-              <span>
-                Need help donating? Call <strong>0321-5551234</strong>
-              </span>
-            </div>
+            {activeMosque?.phone && (
+              <div className="mt-6 rounded-xl border border-primary-200 bg-primary-50 p-4 inline-flex items-center gap-2 text-gray-700">
+                <i className="material-icons-round text-[#047857]">phone_in_talk</i>
+                <span>
+                  Need help donating? Call <strong>{activeMosque.phone}</strong>
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="rounded-3xl border border-gray-200 bg-white shadow-xl animate-fade-in-up">
@@ -294,17 +331,36 @@ export default function Donate() {
               </div>
 
               <div>
-                <label className="form-label">
-                  Your Details <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Optional</span>
+                <label className="form-label" htmlFor="donorName">
+                  Donor Name <span className="text-red-500">*</span>
                 </label>
+                <input
+                  id="donorName"
+                  type="text"
+                  className={`form-input ${nameError ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                  placeholder="Full Name"
+                  value={donationData.donorName}
+                  onChange={(e) => {
+                      setDonationData((prev) => ({ ...prev, donorName: e.target.value }))
+                      if (nameError) setNameError('')
+                    }}
+                />
+                {nameError && (
+                  <p className="mt-1 text-xs text-red-600">{nameError}</p>
+                )}
+                <p className="mt-2 text-xs text-gray-500">
+                  <i className="material-icons-round align-middle text-sm">info</i>{' '}
+                  Your name appears on the transparency report so the community can see your contribution.
+                </p>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2">
+                  <label className="form-label mb-0">
+                    Contact <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Optional</span>
+                  </label>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Full Name"
-                    value={donationData.donorName}
-                    onChange={(e) => setDonationData((prev) => ({ ...prev, donorName: e.target.value }))}
-                  />
                   <input
                     type="tel"
                     className="form-input"
@@ -312,14 +368,14 @@ export default function Donate() {
                     value={donationData.phone}
                     onChange={(e) => setDonationData((prev) => ({ ...prev, phone: e.target.value }))}
                   />
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="Email"
+                    value={donationData.email}
+                    onChange={(e) => setDonationData((prev) => ({ ...prev, email: e.target.value }))}
+                  />
                 </div>
-                <input
-                  type="email"
-                  className="form-input mt-3"
-                  placeholder="Email (for receipt)"
-                  value={donationData.email}
-                  onChange={(e) => setDonationData((prev) => ({ ...prev, email: e.target.value }))}
-                />
                 <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4">
                   <label className="flex items-center gap-3 cursor-pointer select-none">
                     <input
@@ -383,7 +439,9 @@ export default function Donate() {
             </div>
             <h3 className="mt-5 font-primary text-2xl font-bold text-gray-900">We&apos;re still confirming</h3>
             <p className="mt-3 text-sm text-gray-600">{confirmError}</p>
-            <button type="button" className="btn btn-primary mt-5 bg-[#047857]" onClick={() => setConfirmError('')}>OK</button>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button type="button" className="btn btn-primary bg-[#047857]" onClick={() => setConfirmError('')}>OK</button>
+            </div>
           </div>
         </div>
       )}
@@ -402,7 +460,10 @@ export default function Donate() {
               {formatCurrency(confirmedAmount || effectiveAmount)}
             </div>
             <p className="mt-3 text-sm text-gray-600">
-              <strong>Transaction ID:</strong> {transactionId}<br />A receipt has been sent to your email address.
+              <strong>Transaction ID:</strong> {transactionId}
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              May Allah accept your contribution and reward you abundantly.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link to={ROUTES.TRANSPARENCY} className="btn btn-secondary">View Transparency Report</Link>

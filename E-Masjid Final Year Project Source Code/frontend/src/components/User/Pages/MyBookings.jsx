@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { useAuth } from '../../../context/AuthContext.jsx'
+import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate } from '../../../utils/formatters.js'
@@ -31,6 +32,7 @@ function statusMeta(status) {
 export default function MyBookings() {
   const { showToast } = useUI()
   const { user } = useAuth()
+  const { activeMosque } = useMosque()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [cancellingId, setCancellingId] = useState(null)
@@ -246,8 +248,12 @@ export default function MyBookings() {
               <h4 className="font-primary text-xl font-bold text-gray-900">Need Help?</h4>
               <p className="mt-1 text-gray-600">If you have questions about your booking or need to make changes, please contact us:</p>
               <div className="mt-3 flex flex-wrap gap-3">
-                <a href="tel:03215551234" className="inline-flex items-center gap-1 text-[#047857] font-semibold"><i className="material-icons-round text-base">call</i>0321-5551234</a>
-                <a href="mailto:info@masjidalnoor.pk" className="inline-flex items-center gap-1 text-[#047857] font-semibold"><i className="material-icons-round text-base">mail</i>info@masjidalnoor.pk</a>
+                {activeMosque?.phone && (
+                  <a href={`tel:${activeMosque.phone.replace(/\s+/g, '')}`} className="inline-flex items-center gap-1 text-[#047857] font-semibold"><i className="material-icons-round text-base">call</i>{activeMosque.phone}</a>
+                )}
+                {activeMosque?.email && (
+                  <a href={`mailto:${activeMosque.email}`} className="inline-flex items-center gap-1 text-[#047857] font-semibold"><i className="material-icons-round text-base">mail</i>{activeMosque.email}</a>
+                )}
               </div>
             </div>
           </div>

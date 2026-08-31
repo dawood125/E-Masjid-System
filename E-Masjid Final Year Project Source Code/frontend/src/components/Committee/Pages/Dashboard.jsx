@@ -4,6 +4,7 @@ import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
+import FormField from '../../Common/FormField.jsx'
 
 const statusConfig = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-800', icon: 'schedule', label: 'Pending' },
@@ -222,13 +223,17 @@ export default function CommitteeDashboard() {
                   <div className="mt-5 border-t border-gray-100 pt-5">
                     {votingId === req._id ? (
                       <div className="space-y-3 animate-fade-in">
-                        <textarea
+                        <FormField
+                          name={`voteNote-${req._id}`}
+                          label="Note for your vote"
+                          type="textarea"
                           rows={3}
-                          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:ring-2 focus:ring-[#047857] focus:border-transparent"
-                          placeholder="Optional note: what you saw during investigation..."
+                          optional
                           value={voteNote}
-                          onChange={e => setVoteNote(e.target.value)}
+                          onChange={(e) => setVoteNote(e.target.value)}
+                          placeholder="Optional note: what you saw during investigation..."
                           disabled={submittingId === req._id}
+                          hint="Visible to other committee members and the admin"
                         />
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => handleVote(req._id, 'approve')} disabled={submittingId === req._id} className="btn bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">

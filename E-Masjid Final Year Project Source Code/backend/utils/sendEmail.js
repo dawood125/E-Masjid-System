@@ -5,6 +5,24 @@ function stripMailPassword(raw) {
   return raw.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
 }
 
+function resolveProvider() {
+  const raw = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase();
+  return raw === 'resend' ? 'resend' : 'smtp';
+}
+
+function buildResendTransportOptions() {
+  const apiKey = stripMailPassword(process.env.RESEND_API_KEY || process.env.EMAIL_PASS);
+  if (!apiKey) {
+    throw new Error('Resend is not configured. Set RESEND_API_KEY in .env');
+  }
+  return {
+    host: 'smtp.resend.com',
+    port: 465,
+    secure: true,
+    auth: { user: 'resend', pass: apiKey },
+  };
+}
+
 function buildSmtpTransportOptions() {
   const host = process.env.EMAIL_HOST;
   const port = Number(process.env.EMAIL_PORT || 587);
@@ -26,6 +44,12 @@ function buildSmtpTransportOptions() {
   };
 }
 
+function buildTransportOptions() {
+  return resolveProvider() === 'resend'
+    ? buildResendTransportOptions()
+    : buildSmtpTransportOptions();
+}
+
 function resolveFromAddress() {
   return process.env.EMAIL_FROM || process.env.EMAIL_USER || null;
 }
@@ -45,7 +69,7 @@ const sendEmail = async ({ to, subject, html, text, replyTo }) => {
   }
   const fromName = resolveFromName();
 
-  const transporter = nodemailer.createTransport(buildSmtpTransportOptions());
+  const transporter = nodemailer.createTransport(buildTransportOptions());
   const mail = {
     from: `"${fromName}" <${fromEmail}>`,
     to,

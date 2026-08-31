@@ -285,7 +285,6 @@ export default function Transparency() {
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-green-100 text-green-700">
                 <i className="material-icons-round">volunteer_activism</i>
               </span>
-              <span className="text-xs uppercase text-gray-500">FY 2024-2025</span>
             </div>
             <p className="mt-3 text-sm text-gray-500">Total Donations Received</p>
             <h3 className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(totalDonations)}</h3>
@@ -303,7 +302,6 @@ export default function Transparency() {
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 text-red-700">
                 <i className="material-icons-round">account_balance_wallet</i>
               </span>
-              <span className="text-xs uppercase text-gray-500">FY 2024-2025</span>
             </div>
             <p className="mt-3 text-sm text-gray-500">Total Funds Utilized</p>
             <h3 className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(totalExpenses)}</h3>
@@ -377,19 +375,20 @@ export default function Transparency() {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <section className="rounded-2xl border border-gray-200 bg-white shadow-sm animate-fade-in-up">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-5 py-4">
               <h3 className="inline-flex items-center gap-2 font-primary text-xl font-bold text-gray-900">
                 <i className="material-icons-round text-[#047857]">history</i>
                 Donation History
               </h3>
               {donationViewAll ? (
-                <button type="button" className="text-sm font-semibold text-gray-500 hover:text-gray-700" onClick={() => setDonationViewAll(false)}>
-                  <i className="material-icons-round text-base align-middle">unfold_less</i>
-                  <span className="ml-1">Collapse</span>
+                <button type="button" className="inline-flex min-h-[44px] items-center gap-1 rounded-md px-3 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100" onClick={() => setDonationViewAll(false)}>
+                  <i className="material-icons-round text-base">unfold_less</i>
+                  <span>Collapse</span>
                 </button>
               ) : (
-                <button type="button" className="text-sm font-semibold text-[#047857]" onClick={handleViewAllDonations}>
-                  View All
+                <button type="button" className="inline-flex min-h-[44px] items-center gap-1 rounded-md px-3 py-2 text-sm font-semibold text-[#047857] transition-colors hover:bg-emerald-50" onClick={handleViewAllDonations}>
+                  <span>View All</span>
+                  <i className="material-icons-round text-base">arrow_forward</i>
                 </button>
               )}
             </div>
@@ -451,19 +450,20 @@ export default function Transparency() {
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-white shadow-sm animate-fade-in-up">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-5 py-4">
               <h3 className="inline-flex items-center gap-2 font-primary text-xl font-bold text-gray-900">
                 <i className="material-icons-round text-[#047857]">receipt_long</i>
                 Expense History
               </h3>
               {expenseViewAll ? (
-                <button type="button" className="text-sm font-semibold text-gray-500 hover:text-gray-700" onClick={() => setExpenseViewAll(false)}>
-                  <i className="material-icons-round text-base align-middle">unfold_less</i>
-                  <span className="ml-1">Collapse</span>
+                <button type="button" className="inline-flex min-h-[44px] items-center gap-1 rounded-md px-3 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100" onClick={() => setExpenseViewAll(false)}>
+                  <i className="material-icons-round text-base">unfold_less</i>
+                  <span>Collapse</span>
                 </button>
               ) : (
-                <button type="button" className="text-sm font-semibold text-[#047857]" onClick={handleViewAllExpenses}>
-                  View All
+                <button type="button" className="inline-flex min-h-[44px] items-center gap-1 rounded-md px-3 py-2 text-sm font-semibold text-[#047857] transition-colors hover:bg-emerald-50" onClick={handleViewAllExpenses}>
+                  <span>View All</span>
+                  <i className="material-icons-round text-base">arrow_forward</i>
                 </button>
               )}
             </div>

@@ -1,11 +1,34 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
+import { useMosque } from '../../../hooks/useMosque.js'
 import { ROUTES } from '../../../utils/constants.js'
 import MosqueSearchModal from '../../Auth/Pages/MosqueSearchModal.jsx'
+import FormField from '../../Common/FormField.jsx'
 
 const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateStep1(form) {
+  const errs = {}
+  if (!form.name || form.name.trim().length < 2) errs.name = 'Name is required (at least 2 characters)'
+  else if (form.name.trim().length > 100) errs.name = 'Name is too long'
+
+  if (!form.email || !EMAIL_RE.test(form.email.trim())) errs.email = 'Please enter a valid email address'
+
+  if (!form.phone || form.phone.trim().length < 7) errs.phone = 'Phone is required (at least 7 characters)'
+
+  if (!form.password) errs.password = 'Password is required'
+  else if (!PASSWORD_RULE.test(form.password)) errs.password = 'Password must be 8-64 characters with at least 1 letter and 1 number'
+
+  if (!form.confirmPassword) errs.confirmPassword = 'Please confirm your password'
+  else if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match'
+
+  if (!form.terms) errs.terms = 'Please accept terms and privacy policy'
+
+  return errs
+}
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -18,16 +41,15 @@ export default function Register() {
     address: '',
     city: '',
     mosqueId: '',
-    selectedMosque: null, 
+    selectedMosque: null,
   })
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const [step, setStep] = useState(1)
   const [isMosqueModalOpen, setIsMosqueModalOpen] = useState(false)
   const { register } = useAuth()
   const { showToast } = useUI()
+  const { activeMosque } = useMosque()
   const navigate = useNavigate()
 
   const handleSelectMosque = (mosque) => {
@@ -35,73 +57,64 @@ export default function Register() {
       ...prev,
       mosqueId: mosque?._id || '',
       selectedMosque: mosque || null,
-      
       city: mosque?.city || prev.city,
     }))
     setIsMosqueModalOpen(false)
   }
 
+  const update = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (fieldErrors[field]) setFieldErrors((prev) => ({ ...prev, [field]: null }))
+  }
+
   const goToStep2 = (e) => {
     e?.preventDefault()
-    setFieldErrors({})
-
-    
-    
-    
-    
-    const errors = {}
-    if (!formData.name || formData.name.trim().length < 2) {
-      errors.name = 'Name is required (at least 2 characters)'
-    }
-    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address'
-    }
-    if (!formData.phone || formData.phone.trim().length < 7) {
-      errors.phone = 'Phone is required (at least 7 characters)'
-    }
-    if (!formData.password) {
-      errors.password = 'Password is required'
-    } else if (!PASSWORD_RULE.test(formData.password)) {
-      errors.password = 'Password must be at least 8 characters and include at least 1 letter and 1 number'
-    }
-    if (!formData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password'
-    } else if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match'
-    }
-    if (!formData.terms) {
-      errors.terms = 'Please accept terms and privacy policy'
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
-      const summary = Object.values(errors).filter(Boolean).join(' • ')
-      showToast(summary || 'Please fix the errors below.', 'error')
+    const errs = validateStep1(formData)
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      const firstField = Object.keys(errs)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
       return
     }
+    setFieldErrors({})
     setStep(2)
   }
+
+  const isStep1Valid = useMemo(() => {
+    return Object.keys(validateStep1(formData)).length === 0
+  }, [formData])
 
   const goBackToStep1 = () => setStep(1)
 
   const handleSubmit = async () => {
+    const errs = {}
+    if (!formData.mosqueId) {
+      errs.mosqueId = 'Please select a home masjid to continue'
+    }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      const el = document.querySelector('[name="mosqueId"]')
+      if (el && el.focus) el.focus()
+      showToast(errs.mosqueId, 'warning')
+      return
+    }
+
     setFieldErrors({})
     setLoading(true)
 
     try {
       await register({
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         password: formData.password,
-        phone: formData.phone,
-        address: formData.address || undefined,
-        city: formData.city || undefined,
-        mosqueId: formData.mosqueId || undefined,
+        phone: formData.phone.trim(),
+        address: formData.address.trim() || undefined,
+        city: formData.city.trim() || undefined,
+        mosqueId: formData.mosqueId,
       })
       showToast(
-        formData.selectedMosque
-          ? `Account created! Welcome to ${formData.selectedMosque.name}.`
-          : 'Account created successfully!',
+        `Account created! Welcome to ${formData.selectedMosque?.name || 'your masjid'}.`,
         'success'
       )
       navigate(ROUTES.HOME)
@@ -121,17 +134,6 @@ export default function Register() {
       setLoading(false)
     }
   }
-
-  const FieldError = ({ name }) =>
-    fieldErrors[name] ? (
-      <p className="mt-1.5 text-xs text-red-600 inline-flex items-center gap-1">
-        <i className="material-icons-round text-sm">error_outline</i>
-        {fieldErrors[name]}
-      </p>
-    ) : null
-
-  const inputClass = (name) =>
-    `form-input pl-12${fieldErrors[name] ? ' border-red-400 focus:ring-red-200' : ''}`
 
   const passwordScore = Math.min(
     4,
@@ -183,7 +185,7 @@ export default function Register() {
                 alt="Masjid Al-Noor Interior"
                 className="h-44 w-full object-cover"
               />
-              <div className="px-4 py-3 text-sm text-white/90">Masjid Al-Noor, Sheikhupura</div>
+              <div className="px-4 py-3 text-sm text-white/90">{activeMosque?.name || 'E-Masjid'}{activeMosque?.city ? `, ${activeMosque.city}` : ''}</div>
             </div>
           </div>
 
@@ -204,85 +206,58 @@ export default function Register() {
                   <p className="mt-2 text-gray-600">Please fill in your details to register</p>
 
                   <form onSubmit={goToStep2} className="mt-6 space-y-5" noValidate>
-                    <div>
-                      <label className="form-label" htmlFor="name">Full Name <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">person</i>
-                        <input
-                          id="name"
-                          type="text"
-                          className={inputClass('name')}
-                          placeholder="Enter your full name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          autoComplete="name"
-                          required
-                        />
-                      </div>
-                      <FieldError name="name" />
-                    </div>
-
-                    <div>
-                      <label className="form-label" htmlFor="email">Email Address <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</i>
-                        <input
-                          id="email"
-                          type="email"
-                          className={inputClass('email')}
-                          placeholder="Enter your email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          autoComplete="email"
-                          required
-                        />
-                      </div>
-                      <FieldError name="email" />
-                    </div>
-
-                    <div>
-                      <label className="form-label" htmlFor="phone">Phone Number <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">phone</i>
-                        <input
-                          id="phone"
-                          type="tel"
-                          className={inputClass('phone')}
-                          placeholder="03XX-XXXXXXX"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          autoComplete="tel"
-                          required
-                        />
-                      </div>
-                      <FieldError name="phone" />
-                    </div>
+                    <FormField
+                      name="name"
+                      label="Full Name"
+                      icon="person"
+                      required
+                      value={formData.name}
+                      onChange={(e) => update('name', e.target.value)}
+                      error={fieldErrors.name}
+                      placeholder="Enter your full name"
+                      autoComplete="name"
+                    />
+                    <FormField
+                      name="email"
+                      label="Email Address"
+                      type="email"
+                      icon="mail"
+                      required
+                      value={formData.email}
+                      onChange={(e) => update('email', e.target.value)}
+                      error={fieldErrors.email}
+                      placeholder="Enter your email"
+                      autoComplete="email"
+                    />
+                    <FormField
+                      name="phone"
+                      label="Phone Number"
+                      type="tel"
+                      icon="phone"
+                      required
+                      value={formData.phone}
+                      onChange={(e) => update('phone', e.target.value)}
+                      error={fieldErrors.phone}
+                      placeholder="03XX-XXXXXXX"
+                      autoComplete="tel"
+                    />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="form-label" htmlFor="password">Password <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                          <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock</i>
-                          <input
-                            id="password"
-                            type={showPassword ? 'text' : 'password'}
-                            className={inputClass('password').replace('pl-12', 'pl-12 pr-12')}
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            autoComplete="new-password"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-[#047857]"
-                            aria-label="Toggle password visibility"
-                          >
-                            <i className="material-icons-round">{showPassword ? 'visibility_off' : 'visibility'}</i>
-                          </button>
-                        </div>
-                        <div className="mt-3 grid grid-cols-4 gap-1.5">
+                        <FormField
+                          name="password"
+                          label="Password"
+                          type="password"
+                          icon="lock"
+                          required
+                          value={formData.password}
+                          onChange={(e) => update('password', e.target.value)}
+                          error={fieldErrors.password}
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                          showPasswordToggle
+                        />
+                        <div className="mt-2 grid grid-cols-4 gap-1.5">
                           {[1, 2, 3, 4].map((bar) => (
                             <div
                               key={bar}
@@ -290,56 +265,45 @@ export default function Register() {
                             />
                           ))}
                         </div>
-                        <p className="mt-2 text-xs text-gray-500 inline-flex items-center gap-1">
-                          <i className="material-icons-round text-sm">info</i>
-                          At least 8 characters, with 1 letter and 1 number
-                        </p>
-                        <FieldError name="password" />
                       </div>
-
-                      <div>
-                        <label className="form-label" htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                          <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">lock</i>
-                          <input
-                            id="confirmPassword"
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            className={inputClass('confirmPassword').replace('pl-12', 'pl-12 pr-12')}
-                            placeholder="••••••••"
-                            value={formData.confirmPassword}
-                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                            autoComplete="new-password"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword((prev) => !prev)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-[#047857]"
-                            aria-label="Toggle confirm password visibility"
-                          >
-                            <i className="material-icons-round">{showConfirmPassword ? 'visibility_off' : 'visibility'}</i>
-                          </button>
-                        </div>
-                        <FieldError name="confirmPassword" />
-                      </div>
+                      <FormField
+                        name="confirmPassword"
+                        label="Confirm Password"
+                        type="password"
+                        icon="lock"
+                        required
+                        value={formData.confirmPassword}
+                        onChange={(e) => update('confirmPassword', e.target.value)}
+                        error={fieldErrors.confirmPassword}
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        showPasswordToggle
+                      />
                     </div>
 
-                    <label className="flex items-start gap-3 text-sm text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={formData.terms}
-                        onChange={(e) => setFormData({ ...formData, terms: e.target.checked })}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-[#047857] focus:ring-[#047857]"
-                      />
-                      <span>
-                        I agree to the <a href="#" className="text-[#047857] hover:underline">Terms &amp; Conditions</a> and <a href="#" className="text-[#047857] hover:underline">Privacy Policy</a> of Masjid Al-Noor E-Masjid System.
-                      </span>
-                    </label>
+                    <FormField
+                      name="terms"
+                      type="checkbox"
+                      required
+                      value={formData.terms}
+                      onChange={(e) => update('terms', e.target.checked)}
+                      error={fieldErrors.terms}
+                      label={<>I agree to the <a href="#" className="text-[#047857] hover:underline">Terms &amp; Conditions</a> and <a href="#" className="text-[#047857] hover:underline">Privacy Policy</a> of Masjid Al-Noor E-Masjid System.</>}
+                    />
 
-                    <button type="submit" className="btn btn-primary w-full py-3 text-base bg-[#047857] hover:bg-[#064e3b]">
+                    <button
+                      type="submit"
+                      disabled={!isStep1Valid}
+                      className="btn btn-primary w-full py-3 text-base bg-[#047857] hover:bg-[#064e3b] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       Continue
                       <i className="material-icons-round">arrow_forward</i>
                     </button>
+                    {!isStep1Valid && (
+                      <p className="-mt-2 text-center text-xs text-gray-500">
+                        Fill all required fields above to continue
+                      </p>
+                    )}
                   </form>
                 </>
               )}
@@ -347,45 +311,48 @@ export default function Register() {
               {step === 2 && (
                 <>
                   <h2 className="font-primary text-3xl font-bold text-gray-900">Find Your Home Mosque</h2>
-                  <p className="mt-2 text-gray-600">Pick a mosque near you (or skip and add one later).</p>
+                  <p className="mt-2 text-gray-600">Pick a masjid near you to finish creating your account.</p>
 
                   <div className="mt-6 space-y-4">
-                    <div>
-                      <label className="form-label" htmlFor="address">Street Address (optional)</label>
-                      <div className="relative">
-                        <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">home</i>
-                        <input
-                          id="address"
-                          type="text"
-                          className="form-input pl-12"
-                          placeholder="House #, Street, Area"
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        />
-                      </div>
-                    </div>
+                    <FormField
+                      name="address"
+                      label="Street Address"
+                      icon="home"
+                      optional
+                      value={formData.address}
+                      onChange={(e) => update('address', e.target.value)}
+                      placeholder="House #, Street, Area"
+                    />
+                    <FormField
+                      name="city"
+                      label="City"
+                      icon="location_city"
+                      optional
+                      value={formData.city}
+                      onChange={(e) => update('city', e.target.value)}
+                      placeholder="Lahore, Sheikhupura, Karachi..."
+                    />
 
                     <div>
-                      <label className="form-label" htmlFor="city">City</label>
-                      <div className="relative">
-                        <i className="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">location_city</i>
-                        <input
-                          id="city"
-                          type="text"
-                          className="form-input pl-12"
-                          placeholder="Lahore, Sheikhupura, Karachi..."
-                          value={formData.city}
-                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="form-label">Home Mosque (optional)</label>
+                      <label htmlFor="mosqueId-trigger" className="form-label flex items-center gap-2">
+                        <span>Home Mosque <span className="text-red-500">*</span></span>
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Required</span>
+                      </label>
                       <button
+                        id="mosqueId-trigger"
+                        name="mosqueId"
                         type="button"
-                        onClick={() => setIsMosqueModalOpen(true)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-[#047857]/40 bg-primary-50 hover:bg-primary-100 transition-colors text-left"
+                        onClick={() => {
+                          if (fieldErrors.mosqueId) setFieldErrors((p) => ({ ...p, mosqueId: null }))
+                          setIsMosqueModalOpen(true)
+                        }}
+                        aria-invalid={!!fieldErrors.mosqueId}
+                        aria-describedby={fieldErrors.mosqueId ? 'mosqueId-error' : undefined}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed text-left transition-colors ${
+                          fieldErrors.mosqueId
+                            ? 'border-red-400 bg-red-50'
+                            : 'border-[#047857]/40 bg-primary-50 hover:bg-primary-100'
+                        }`}
                       >
                         <div className="h-10 w-10 rounded-full bg-[#047857] text-white flex items-center justify-center shrink-0">
                           <i className="material-icons-round">mosque</i>
@@ -398,7 +365,7 @@ export default function Register() {
                             </>
                           ) : (
                             <>
-                              <p className="font-semibold text-[#047857]">Choose a home mosque</p>
+                              <p className="font-semibold text-[#047857]">Choose a home masjid</p>
                               <p className="text-xs text-gray-500">Search by name or city</p>
                             </>
                           )}
@@ -409,6 +376,11 @@ export default function Register() {
                           <i className="material-icons-round text-[#047857]">chevron_right</i>
                         )}
                       </button>
+                      {fieldErrors.mosqueId && (
+                        <p id="mosqueId-error" className="form-error mt-2">
+                          {fieldErrors.mosqueId}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-3 pt-2">
@@ -423,8 +395,8 @@ export default function Register() {
                       <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={loading}
-                        className="btn btn-primary flex-1 py-3 text-base bg-[#047857] hover:bg-[#064e3b] disabled:opacity-50"
+                        disabled={loading || !formData.mosqueId}
+                        className="btn btn-primary flex-1 py-3 text-base bg-[#047857] hover:bg-[#064e3b] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <i className="material-icons-round">person_add</i>
                         {loading ? 'Creating account...' : 'Create Account'}
@@ -433,7 +405,7 @@ export default function Register() {
 
                     {!formData.selectedMosque && (
                       <p className="text-center text-xs text-gray-500 -mt-2">
-                        You can always add a mosque later from the public dropdown.
+                        A masjid is required so you can book nikah, submit fund requests, and receive announcements.
                       </p>
                     )}
                   </div>

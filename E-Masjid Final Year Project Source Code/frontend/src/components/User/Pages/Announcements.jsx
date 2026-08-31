@@ -6,7 +6,7 @@ import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatDate } from '../../../utils/formatters.js'
 
-const filters = ['all', 'news', 'important', 'event', 'community']
+const filters = ['all', 'news', 'important']
 
 function islamicDateLabel() {
   try {

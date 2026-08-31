@@ -24,6 +24,19 @@ function yesterdayISO() {
   return d.toISOString();
 }
 
+function bookingPayload(overrides = {}) {
+  return {
+    groomName: 'Groom',
+    brideName: 'Bride',
+    ceremonyDate: tomorrowISO(),
+    ceremonyTime: '16:00',
+    phone: '03001234567',
+    email: 'test@example.com',
+    address: 'House 1, Sheikhupura',
+    ...overrides,
+  };
+}
+
 describe('Nikah bookings module scope + behavior (Phase 12)', () => {
   let mongod;
   let mosqueA;
@@ -121,7 +134,7 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
     test('POST /api/nikah-bookings without token returns 401', async () => {
       const res = await request(app)
         .post('/api/nikah-bookings')
-        .send({ groomName: 'X', brideName: 'Y', preferredDate: tomorrowISO(), preferredTime: '16:00', contact: '0300' });
+        .send({ groomName: 'X', brideName: 'Y', ceremonyDate: tomorrowISO(), ceremonyTime: '16:00', phone: '0300' });
       expect(res.status).toBe(401);
     });
   });
@@ -134,9 +147,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Ahmad',
           brideName: 'Fatima',
-          preferredDate: tomorrowISO(5),
-          preferredTime: '16:00',
-          contact: '03001234567',
+          ceremonyDate: tomorrowISO(5),
+          ceremonyTime: '16:00',
+          phone: '03001234567',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
           notes: 'Please confirm soon.',
         });
       expect(res.status).toBe(201);
@@ -165,9 +180,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Bilal',
           brideName: 'Ayesha',
-          preferredDate: tomorrowISO(6),
-          preferredTime: '11:00',
-          contact: '03009998877',
+          ceremonyDate: tomorrowISO(6),
+          ceremonyTime: '11:00',
+          phone: '03009998877',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -187,9 +204,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Cas',
           brideName: 'Dee',
-          preferredDate: tomorrowISO(7),
-          preferredTime: '12:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(7),
+          ceremonyTime: '12:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -206,9 +225,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Eman',
           brideName: 'Fizz',
-          preferredDate: tomorrowISO(8),
-          preferredTime: '14:00',
-          contact: '03007778888',
+          ceremonyDate: tomorrowISO(8),
+          ceremonyTime: '14:00',
+          phone: '03007778888',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -217,8 +238,8 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .set('Authorization', `Bearer ${scholarAToken}`)
         .send({
           status: 'accepted',
-          confirmedDate: created.body.data.preferredDate,
-          confirmedTime: created.body.data.preferredTime,
+          confirmedDate: created.body.data.ceremonyDate,
+          confirmedTime: created.body.data.ceremonyTime,
         });
 
       const cancel = await request(app)
@@ -234,9 +255,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Gee',
           brideName: 'Hee',
-          preferredDate: tomorrowISO(9),
-          preferredTime: '15:00',
-          contact: '03006665544',
+          ceremonyDate: tomorrowISO(9),
+          ceremonyTime: '15:00',
+          phone: '03006665544',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -249,16 +272,18 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
   });
 
   describe('Slot conflict + date validation', () => {
-    test('rejects past preferredDate (400)', async () => {
+    test('rejects past ceremonyDate (400)', async () => {
       const res = await request(app)
         .post('/api/nikah-bookings')
         .set('Authorization', `Bearer ${userAToken}`)
         .send({
           groomName: 'Past',
           brideName: 'Date',
-          preferredDate: yesterdayISO(),
-          preferredTime: '16:00',
-          contact: '03004443322',
+          ceremonyDate: yesterdayISO(),
+          ceremonyTime: '16:00',
+          phone: '03004443322',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       expect(res.status).toBe(400);
       expect(res.body.message).toMatch(/past/i);
@@ -272,9 +297,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'First',
           brideName: 'Couple',
-          preferredDate: day,
-          preferredTime: '17:00',
-          contact: '03001231234',
+          ceremonyDate: day,
+          ceremonyTime: '17:00',
+          phone: '03001231234',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       expect(first.status).toBe(201);
 
@@ -294,9 +321,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Second',
           brideName: 'Couple',
-          preferredDate: day,
-          preferredTime: '17:00',
-          contact: '03005678901',
+          ceremonyDate: day,
+          ceremonyTime: '17:00',
+          phone: '03005678901',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       expect(dup.status).toBe(409);
       expect(dup.body.message).toMatch(/slot/i);
@@ -309,9 +338,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'A',
           brideName: 'B',
-          preferredDate: tomorrowISO(11),
-          preferredTime: '16:00',
-          contact: '0300',
+          ceremonyDate: tomorrowISO(11),
+          ceremonyTime: '16:00',
+          phone: '0300',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       expect(res.status).toBe(400);
     });
@@ -337,9 +368,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Reject',
           brideName: 'Test',
-          preferredDate: tomorrowISO(12),
-          preferredTime: '10:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(12),
+          ceremonyTime: '10:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -357,9 +390,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Rej2',
           brideName: 'Test',
-          preferredDate: tomorrowISO(13),
-          preferredTime: '11:00',
-          contact: '03002223344',
+          ceremonyDate: tomorrowISO(13),
+          ceremonyTime: '11:00',
+          phone: '03002223344',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -379,9 +414,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Other',
           brideName: 'Mosque',
-          preferredDate: tomorrowISO(14),
-          preferredTime: '12:00',
-          contact: '03003334455',
+          ceremonyDate: tomorrowISO(14),
+          ceremonyTime: '12:00',
+          phone: '03003334455',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -413,9 +450,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Xavier',
           brideName: 'Yusra',
-          preferredDate: tomorrowISO(15),
-          preferredTime: '15:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(15),
+          ceremonyTime: '15:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -446,9 +485,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Assign',
           brideName: 'Test',
-          preferredDate: tomorrowISO(16),
-          preferredTime: '14:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(16),
+          ceremonyTime: '14:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -467,9 +508,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Cross',
           brideName: 'Assign',
-          preferredDate: tomorrowISO(17),
-          preferredTime: '15:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(17),
+          ceremonyTime: '15:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -487,9 +530,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'SAssign',
           brideName: 'Deny',
-          preferredDate: tomorrowISO(18),
-          preferredTime: '16:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(18),
+          ceremonyTime: '16:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -507,9 +552,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'NS',
           brideName: 'Role',
-          preferredDate: tomorrowISO(19),
-          preferredTime: '17:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(19),
+          ceremonyTime: '17:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -527,9 +574,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Deact',
           brideName: 'Assign',
-          preferredDate: tomorrowISO(20),
-          preferredTime: '20:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(20),
+          ceremonyTime: '20:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -554,9 +603,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Cal',
           brideName: 'Diya',
-          preferredDate: tomorrowISO(21),
-          preferredTime: '10:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(21),
+          ceremonyTime: '10:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       expect(res.status).toBe(403);
     });
@@ -569,9 +620,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Mo',
           brideName: 'Ga',
-          preferredDate: tomorrowISO(22),
-          preferredTime: '11:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(22),
+          ceremonyTime: '11:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       expect(res.status).toBe(403);
     });
@@ -583,9 +636,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'CAssign',
           brideName: 'Deny',
-          preferredDate: tomorrowISO(23),
-          preferredTime: '12:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(23),
+          ceremonyTime: '12:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -605,9 +660,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'DeactS',
           brideName: 'Deny',
-          preferredDate: tomorrowISO(24),
-          preferredTime: '14:00',
-          contact: '03001112233',
+          ceremonyDate: tomorrowISO(24),
+          ceremonyTime: '14:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
         });
       const id = created.body.data._id;
 
@@ -618,8 +675,8 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .set('Authorization', `Bearer ${scholarAToken}`)
         .send({
           status: 'accepted',
-          confirmedDate: created.body.data.preferredDate,
-          confirmedTime: created.body.data.preferredTime,
+          confirmedDate: created.body.data.ceremonyDate,
+          confirmedTime: created.body.data.ceremonyTime,
         });
       expect(evil.status).toBe(401);
 
@@ -655,9 +712,11 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
         .send({
           groomName: 'Race Groom',
           brideName: 'Race Bride',
-          preferredDate: day,
-          preferredTime: '11:00',
-          contact: '03001112233',
+          ceremonyDate: day,
+          ceremonyTime: '11:00',
+          phone: '03001112233',
+          email: 'test@example.com',
+          address: 'House 1, Sheikhupura',
           ...overrides,
         });
       expect(res.status).toBe(201);
@@ -689,7 +748,7 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
     });
 
     test('accept racing reject — only one transition lands', async () => {
-      const { id, day } = await seedPendingBooking({ preferredTime: '12:00' });
+      const { id, day } = await seedPendingBooking({ ceremonyTime: '12:00' });
 
       const [accept, reject] = await Promise.all([
         request(app)
@@ -710,7 +769,7 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
     });
 
     test('two simultaneous admin assigns to same booking — only one wins', async () => {
-      const { id } = await seedPendingBooking({ preferredTime: '14:00' });
+      const { id } = await seedPendingBooking({ ceremonyTime: '14:00' });
 
       const [first, second] = await Promise.all([
         request(app)
@@ -732,7 +791,7 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
     });
 
     test('community cancel racing scholar accept — only one transition lands', async () => {
-      const { id, day } = await seedPendingBooking({ preferredTime: '15:00' });
+      const { id, day } = await seedPendingBooking({ ceremonyTime: '15:00' });
 
       const [accept, cancel] = await Promise.all([
         request(app)

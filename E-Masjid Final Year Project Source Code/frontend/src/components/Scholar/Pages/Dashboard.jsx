@@ -3,6 +3,7 @@ import { useUI } from '../../../hooks/useUI.js'
 import { useAuth } from '../../../context/AuthContext.jsx'
 import api from '../../../utils/api.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
+import FormField from '../../Common/FormField.jsx'
 
 function getDaysLeft(dateString) {
   const now = new Date()
@@ -18,6 +19,7 @@ export default function ScholarDashboard() {
   const [selectedBookingId, setSelectedBookingId] = useState(null)
   const [rejectModalBookingId, setRejectModalBookingId] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [rejectError, setRejectError] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -76,15 +78,23 @@ export default function ScholarDashboard() {
   const openRejectModal = (id) => {
     setRejectModalBookingId(id)
     setRejectReason('')
+    setRejectError(null)
   }
 
   const submitReject = async () => {
     if (!rejectModalBooking) return
     const trimmed = rejectReason.trim()
     if (!trimmed) {
-      showToast('Please provide a reason for rejection.', 'warning')
+      setRejectError('Please provide a reason for rejection')
+      const el = document.querySelector('[name="rejectionReason"]')
+      if (el && el.focus) el.focus()
       return
     }
+    if (trimmed.length < 10) {
+      setRejectError('Reason should be at least 10 characters so the applicant understands')
+      return
+    }
+    setRejectError(null)
     try {
       const res = await api.updateNikahBooking(rejectModalBooking.id, {
         status: 'rejected',
@@ -96,6 +106,11 @@ export default function ScholarDashboard() {
       setRejectReason('')
       setSelectedBookingId(null)
     } catch (err) {
+      if (err.errors && Array.isArray(err.errors)) {
+        const fieldErrors = {}
+        err.errors.forEach((er) => { if (er.field) fieldErrors[er.field] = er.message })
+        if (fieldErrors.rejectionReason) setRejectError(fieldErrors.rejectionReason)
+      }
       showToast(err.message || 'Failed to reject booking.', 'error')
     }
   }
@@ -377,7 +392,7 @@ export default function ScholarDashboard() {
                 <i className="material-icons-round text-red-600">cancel</i>
                 Reject Booking
               </h3>
-              <button type="button" onClick={() => setRejectModalBookingId(null)} className="text-gray-500 hover:text-gray-700">
+              <button type="button" onClick={() => { setRejectModalBookingId(null); setRejectReason(''); setRejectError(null) }} className="text-gray-500 hover:text-gray-700">
                 <i className="material-icons-round">close</i>
               </button>
             </div>
@@ -387,23 +402,26 @@ export default function ScholarDashboard() {
                 Reject booking <span className="font-mono font-semibold text-gray-900">NKH-{String(rejectModalBooking.id).slice(-6).toUpperCase()}</span> for {rejectModalBooking.groomName} & {rejectModalBooking.brideName}?
               </p>
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Reason for rejection *</span>
-                <textarea
-                  rows={4}
-                  required
-                  value={rejectReason}
-                  onChange={(event) => setRejectReason(event.target.value)}
-                  placeholder="e.g. Schedule conflict with Jummah prayer on the requested date."
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                />
-                <span className="block text-xs text-gray-500">The applicant will see this reason in their booking status.</span>
-              </label>
+              <FormField
+                name="rejectionReason"
+                label="Reason for rejection"
+                type="textarea"
+                rows={4}
+                required
+                value={rejectReason}
+                onChange={(event) => {
+                  setRejectReason(event.target.value)
+                  if (rejectError) setRejectError(null)
+                }}
+                error={rejectError}
+                placeholder="e.g. Schedule conflict with Jummah prayer on the requested date."
+                hint="The applicant will see this reason in their booking status."
+              />
 
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => setRejectModalBookingId(null)}
+                  onClick={() => { setRejectModalBookingId(null); setRejectReason(''); setRejectError(null) }}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                 >
                   Cancel

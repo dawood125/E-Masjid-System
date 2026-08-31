@@ -61,6 +61,7 @@ class ApiService {
   forgotPassword(email) { return this.request('POST', '/api/auth/forgot-password', { email }) }
   resetPassword(token, data) { return this.request('POST', `/api/auth/reset-password/${token}`, data) }
   getMe() { return this.request('GET', '/api/auth/me') }
+  updateMyMosque(mosqueId) { return this.request('PUT', '/api/auth/me/mosque', { mosqueId }) }
   refreshToken() { return this.request('POST', '/api/auth/refresh-token') }
   logout() { return this.request('POST', '/api/auth/logout') }
 
@@ -124,6 +125,7 @@ class ApiService {
   updateEventWithImage(id, formData) { return this.uploadRequest('PUT', `/api/events/${id}`, formData) }
   deleteEvent(id) { return this.request('DELETE', `/api/events/${id}`) }
   registerForEvent(id) { return this.request('POST', `/api/events/${id}/register`) }
+  getEventRegistrations(id) { return this.request('GET', `/api/events/${id}/registrations`) }
 
   getAnnouncements(params = '') { return this.request('GET', `/api/announcements${params ? '?' + params : ''}`) }
   getAdminAnnouncements(params = '') { return this.request('GET', `/api/announcements/admin${params ? '?' + params : ''}`) }
@@ -214,6 +216,7 @@ class ApiService {
   getCommitteeMembers() { return this.request('GET', '/api/committee') }
   createCommitteeMember(data) { return this.request('POST', '/api/committee', data) }
   updateCommitteeMember(id, data) { return this.request('PUT', `/api/committee/${id}`, data) }
+  resetCommitteeMemberPassword(id, password) { return this.request('POST', `/api/committee/${id}/reset-password`, { password }) }
   deleteCommitteeMember(id) { return this.request('DELETE', `/api/committee/${id}`) }
 }
 

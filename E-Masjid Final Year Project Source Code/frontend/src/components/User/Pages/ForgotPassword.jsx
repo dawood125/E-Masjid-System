@@ -3,9 +3,13 @@ import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
+import FormField from '../../Common/FormField.jsx'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
+  const [emailError, setEmailError] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
@@ -13,10 +17,19 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!email.trim()) {
+      setEmailError('Email is required')
+      return
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmailError('Enter a valid email address')
+      return
+    }
+    setEmailError(null)
     setLoading(true)
 
     try {
-      await api.forgotPassword(email)
+      await api.forgotPassword(email.trim())
       setSubmitted(true)
       showToast('Reset link sent to your email!', 'success')
     } catch (err) {
@@ -63,24 +76,22 @@ export default function ForgotPassword() {
                     </div>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                      <label className="form-label" htmlFor="email">
-                        Email Address <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <i className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">mail</i>
-                        <input
-                          id="email"
-                          type="email"
-                          className="form-input pl-12"
-                          placeholder="Enter your registered email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
+                  <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                    <FormField
+                      name="email"
+                      label="Email Address"
+                      type="email"
+                      icon="mail"
+                      required
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value)
+                        if (emailError) setEmailError(null)
+                      }}
+                      error={emailError}
+                      placeholder="Enter your registered email"
+                      autoComplete="email"
+                    />
 
                     <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 bg-[#047857] hover:bg-[#064e3b]">
                       <i className="material-icons-round">send</i>

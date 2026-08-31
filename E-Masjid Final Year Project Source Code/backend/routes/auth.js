@@ -54,6 +54,19 @@ router.post('/reset-password/:token', [
 
 router.get('/me', protect, authController.getMe);
 
+router.put('/me/mosque', [
+  protect,
+  body('mosqueId').isString().notEmpty().withMessage('Mosque id is required'),
+  handleValidation,
+], async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.body.mosqueId)) {
+      return res.status(400).json({ success: false, message: 'Invalid mosque id' });
+    }
+    return authController.updateMyMosque(req, res, next);
+  } catch (e) { next(e); }
+});
+
 router.post('/refresh-token', protect, authController.refreshToken);
 
 router.post('/logout', authController.logout);

@@ -5,6 +5,22 @@ import { useAuth } from '../../../hooks/useAuth.js'
 import api from '../../../utils/api.js'
 import { formatTime } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
+import FormField from '../../Common/FormField.jsx'
+
+const REQUIRED_DAILY = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha', 'jummah']
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+
+function validatePrayerTimes(times) {
+  const errs = {}
+  REQUIRED_DAILY.forEach((key) => {
+    if (!times[key]) errs[key] = 'Time is required'
+    else if (!TIME_RE.test(times[key])) errs[key] = 'Enter a valid time (HH:MM)'
+  })
+  if (times.sunrise && !TIME_RE.test(times.sunrise)) errs.sunrise = 'Enter a valid time (HH:MM)'
+  if (times.eidUlFitr && !TIME_RE.test(times.eidUlFitr)) errs.eidUlFitr = 'Enter a valid time (HH:MM)'
+  if (times.eidUlAdha && !TIME_RE.test(times.eidUlAdha)) errs.eidUlAdha = 'Enter a valid time (HH:MM)'
+  return errs
+}
 
 const PRAYER_ICONS = {
   fajr: 'wb_twilight',
@@ -30,6 +46,26 @@ function getInitialTimes() {
   }
 }
 
+function Toggle({ on, onChange, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-150 ${
+        on ? 'bg-primary-700' : 'bg-gray-300'
+      }`}
+      aria-pressed={on}
+      aria-label={label}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-150 ${
+          on ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  )
+}
+
 function localTodayISO() {
   return new Date().toLocaleDateString('sv-SE')
 }
@@ -40,9 +76,11 @@ export default function PrayerTimes() {
 
   const [selectedDate, setSelectedDate] = useState(localTodayISO)
   const [times, setTimes] = useState(getInitialTimes)
+  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [eidEnabled, setEidEnabled] = useState(false)
+  const [eidFitrEnabled, setEidFitrEnabled] = useState(false)
+  const [eidAdhaEnabled, setEidAdhaEnabled] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
 
   
@@ -84,7 +122,8 @@ export default function PrayerTimes() {
             eidUlFitr: today.eidUlFitr || '',
             eidUlAdha: today.eidUlAdha || '',
           }))
-          if (today.eidUlFitr || today.eidUlAdha) setEidEnabled(true)
+          if (today.eidUlFitr) setEidFitrEnabled(true)
+          if (today.eidUlAdha) setEidAdhaEnabled(true)
           if (today.updatedAt) setLastUpdated(new Date(today.updatedAt))
         }
       } catch (err) {
@@ -111,14 +150,23 @@ export default function PrayerTimes() {
 
   const updateTime = (field, value) => {
     setTimes((prev) => ({ ...prev, [field]: value }))
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: null }))
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    const v = validatePrayerTimes(times)
+    if (Object.keys(v).length > 0) {
+      setErrors(v)
+      const firstField = Object.keys(v)[0]
+      const el = document.querySelector(`[name="${firstField}"]`)
+      if (el && el.focus) el.focus()
+      showToast('Please fix the highlighted times', 'error')
+      return
+    }
+    setErrors({})
     setSaving(true)
     try {
-      
-      
       const payload = {
         date: selectedDate,
         fajr: times.fajr,
@@ -129,8 +177,8 @@ export default function PrayerTimes() {
         jummah: times.jummah,
         sunrise: times.sunrise,
       }
-      if (times.eidUlFitr) payload.eidUlFitr = times.eidUlFitr
-      if (times.eidUlAdha) payload.eidUlAdha = times.eidUlAdha
+      payload.eidUlFitr = eidFitrEnabled ? (times.eidUlFitr || '') : ''
+      payload.eidUlAdha = eidAdhaEnabled ? (times.eidUlAdha || '') : ''
       const res = await api.updatePrayerTimes(payload)
       setLastUpdated(new Date(res.data?.updatedAt || Date.now()))
       showToast(`Prayer times for ${selectedDate} updated successfully!`, 'success')
@@ -143,7 +191,9 @@ export default function PrayerTimes() {
 
   const resetForm = () => {
     setTimes(getInitialTimes())
-    setEidEnabled(false)
+    setEidFitrEnabled(false)
+    setEidAdhaEnabled(false)
+    setErrors({})
     showToast('Form has been reset to defaults.', 'info')
   }
 
@@ -295,7 +345,7 @@ export default function PrayerTimes() {
           </label>
         </div>
 
-        <form onSubmit={handleSubmit} className="divide-y divide-gray-100">
+        <form onSubmit={handleSubmit} noValidate className="divide-y divide-gray-100">
           <div className="space-y-4 py-6 first:pt-0">
             <div>
               <h3 className="text-base font-semibold text-gray-900">Daily Prayer Times</h3>
@@ -308,20 +358,21 @@ export default function PrayerTimes() {
               {currentTimes
                 .filter((item) => item.key !== 'jummah' && item.key !== 'sunrise')
                 .map((prayer) => (
-                  <label key={prayer.key} className="space-y-2">
-                    <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <i className="material-icons-round text-base text-primary-700">{PRAYER_ICONS[prayer.key]}</i>
-                      {prayer.name}
-                      <span className="text-error">*</span>
-                    </span>
-                    <input
-                      type="time"
-                      value={times[prayer.key]}
-                      onChange={(event) => updateTime(prayer.key, event.target.value)}
-                      required
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
-                    />
-                  </label>
+                  <FormField
+                    key={prayer.key}
+                    name={prayer.key}
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <i className="material-icons-round text-base text-primary-700">{PRAYER_ICONS[prayer.key]}</i>
+                        {prayer.name}
+                      </span>
+                    }
+                    type="time"
+                    required
+                    value={times[prayer.key]}
+                    onChange={(event) => updateTime(prayer.key, event.target.value)}
+                    error={errors[prayer.key]}
+                  />
                 ))}
             </div>
           </div>
@@ -334,18 +385,22 @@ export default function PrayerTimes() {
               </p>
             </div>
 
-            <label className="block max-w-xs space-y-2">
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-                <i className="material-icons-round text-base text-amber-600">wb_sunny</i>
-                Sunrise Time
-              </span>
-              <input
+            <div className="max-w-xs">
+              <FormField
+                name="sunrise"
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    <i className="material-icons-round text-base text-amber-600">wb_sunny</i>
+                    Sunrise Time
+                  </span>
+                }
                 type="time"
+                optional
                 value={times.sunrise}
                 onChange={(event) => updateTime('sunrise', event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                error={errors.sunrise}
               />
-            </label>
+            </div>
           </div>
 
           <div className="space-y-4 py-6">
@@ -354,76 +409,89 @@ export default function PrayerTimes() {
               <p className="mt-1 text-sm text-gray-500">{'Set the Jumu\'ah congregational prayer time. The public page shows this on Fridays in place of Dhuhr.'}</p>
             </div>
 
-            <label className="block max-w-xs space-y-2">
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-                <i className="material-icons-round text-base text-primary-700">mosque</i>
-                {'Jumu\'ah Prayer'}
-                <span className="text-error">*</span>
-              </span>
-              <input
+            <div className="max-w-xs">
+              <FormField
+                name="jummah"
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    <i className="material-icons-round text-base text-primary-700">mosque</i>
+                    {'Jumu\'ah Prayer'}
+                  </span>
+                }
                 type="time"
+                required
                 value={times.jummah}
                 onChange={(event) => updateTime('jummah', event.target.value)}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                error={errors.jummah}
               />
-            </label>
+            </div>
           </div>
 
           <div className="space-y-4 py-6">
-            <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Eid Prayer Timings</h3>
-                <p className="mt-1 text-sm text-gray-500">Enable to set Eid ul-Fitr and Eid ul-Adha prayer times.</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setEidEnabled((prev) => !prev)}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-150 ${
-                  eidEnabled ? 'bg-primary-700' : 'bg-gray-300'
-                }`}
-                aria-pressed={eidEnabled}
-                aria-label="Toggle Eid prayer timings"
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-150 ${
-                    eidEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+            <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Eid ul-Fitr Prayer</h3>
+                  <p className="mt-1 text-sm text-gray-500">Enable to set the Eid ul-Fitr prayer time for this date.</p>
+                </div>
+                <Toggle
+                  on={eidFitrEnabled}
+                  onChange={() => setEidFitrEnabled((prev) => !prev)}
+                  label="Toggle Eid ul-Fitr prayer"
                 />
-              </button>
-            </div>
-
-            {eidEnabled && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <i className="material-icons-round text-base text-primary-700">celebration</i>
-                    Eid-ul-Fitr Prayer Time
-                  </span>
-                  <input
+              </div>
+              {eidFitrEnabled && (
+                <div className="max-w-xs">
+                  <FormField
+                    name="eidUlFitr"
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <i className="material-icons-round text-base text-emerald-700">celebration</i>
+                        Eid-ul-Fitr Prayer Time
+                      </span>
+                    }
                     type="time"
+                    optional
                     value={times.eidUlFitr}
                     onChange={(event) => updateTime('eidUlFitr', event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    error={errors.eidUlFitr}
                   />
-                </label>
+                </div>
+              )}
+            </div>
+          </div>
 
-                <label className="space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <i className="material-icons-round text-base text-primary-700">celebration</i>
-                    Eid-ul-Adha Prayer Time
-                  </span>
-                  <input
+          <div className="space-y-4 py-6">
+            <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Eid ul-Adha Prayer</h3>
+                  <p className="mt-1 text-sm text-gray-500">Enable to set the Eid ul-Adha prayer time for this date.</p>
+                </div>
+                <Toggle
+                  on={eidAdhaEnabled}
+                  onChange={() => setEidAdhaEnabled((prev) => !prev)}
+                  label="Toggle Eid ul-Adha prayer"
+                />
+              </div>
+              {eidAdhaEnabled && (
+                <div className="max-w-xs">
+                  <FormField
+                    name="eidUlAdha"
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <i className="material-icons-round text-base text-emerald-700">celebration</i>
+                        Eid-ul-Adha Prayer Time
+                      </span>
+                    }
                     type="time"
+                    optional
                     value={times.eidUlAdha}
                     onChange={(event) => updateTime('eidUlAdha', event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    error={errors.eidUlAdha}
                   />
-                </label>
-              </div>
-            )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -458,7 +526,7 @@ export default function PrayerTimes() {
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-blue-800">
               <li>Update timings regularly as sunrise and sunset shift across the year.</li>
               <li>Maghrib should reflect local sunset and can vary by location.</li>
-              <li>Enable Eid timings to display Eid ul-Fitr and Eid ul-Adha prayer times.</li>
+              <li>Toggle Eid ul-Fitr or Eid ul-Adha independently — only enable the Eid prayer you want to set for this date.</li>
               <li>Changes apply immediately to the public prayer times page.</li>
               <li><strong>Future dates:</strong> pick a future date (e.g. next Ramadan) and pre-set its schedule. The public weekly table shows today + the next 7 days; future-only dates are admin-only.</li>
               <li><strong>Past dates:</strong> you can also update yesterday or older dates to fix any typos.</li>

@@ -38,7 +38,7 @@ async function slotTaken({ mosqueId, date, time, excludeId }) {
     status: 'accepted',
     _id: excludeId ? { $ne: excludeId } : { $exists: true },
     $or: [
-      { preferredDate: { $gte: start, $lt: end }, preferredTime: time },
+      { ceremonyDate: { $gte: start, $lt: end }, ceremonyTime: time },
       { confirmedDate: { $gte: start, $lt: end }, confirmedTime: time },
     ],
   });
@@ -48,26 +48,28 @@ async function slotTaken({ mosqueId, date, time, excludeId }) {
 async function createBooking(input, user) {
   if (!user.mosqueId) throw httpError(400, 'No mosque assigned to user');
 
-  const preferredDayStart = new Date(input.preferredDate);
-  preferredDayStart.setHours(0, 0, 0, 0);
-  if (preferredDayStart < todayMidnight()) {
-    throw httpError(400, 'Preferred date cannot be in the past');
+  const ceremonyDayStart = new Date(input.ceremonyDate);
+  ceremonyDayStart.setHours(0, 0, 0, 0);
+  if (ceremonyDayStart < todayMidnight()) {
+    throw httpError(400, 'Ceremony date cannot be in the past');
   }
 
-  if (await slotTaken({ mosqueId: user.mosqueId, date: input.preferredDate, time: input.preferredTime })) {
+  if (await slotTaken({ mosqueId: user.mosqueId, date: input.ceremonyDate, time: input.ceremonyTime })) {
     throw httpError(409, 'Selected Nikah slot is already taken');
   }
 
   return NikahBooking.create({
-    ...input,
     groomName: sanitizeString(input.groomName),
     brideName: sanitizeString(input.brideName),
-    contact: sanitizeString(input.contact),
-    preferredTime: sanitizeString(input.preferredTime),
+    phone: sanitizeString(input.phone),
+    email: sanitizeString(input.email).toLowerCase(),
+    address: sanitizeString(input.address),
+    ceremonyDate: new Date(input.ceremonyDate),
+    ceremonyTime: sanitizeString(input.ceremonyTime),
+    notes: input.notes ? sanitizeString(input.notes) : undefined,
     rejectionReason: undefined,
     userId: user._id,
     mosqueId: user.mosqueId,
-    preferredDate: new Date(input.preferredDate),
     status: 'pending',
   });
 }
@@ -91,13 +93,13 @@ async function reviewBooking(id, input, user) {
   const update = { status: input.status };
 
   if (input.status === 'accepted') {
-    const selectedDate = new Date(input.confirmedDate || booking.preferredDate);
+    const selectedDate = new Date(input.confirmedDate || booking.ceremonyDate);
     const selectedDayStart = new Date(selectedDate);
     selectedDayStart.setHours(0, 0, 0, 0);
     if (selectedDayStart < todayMidnight()) {
       throw httpError(400, 'Confirmed date cannot be in the past');
     }
-    const selectedTime = sanitizeString(input.confirmedTime || booking.preferredTime);
+    const selectedTime = sanitizeString(input.confirmedTime || booking.ceremonyTime);
     if (await slotTaken({
       mosqueId: booking.mosqueId,
       date: selectedDate,
@@ -180,14 +182,14 @@ async function availability({ user, from, to }) {
     status: 'accepted',
     $or: [
       { confirmedDate: { $gte: start, $lte: end } },
-      { confirmedDate: { $exists: false }, preferredDate: { $gte: start, $lte: end } },
+      { confirmedDate: { $exists: false }, ceremonyDate: { $gte: start, $lte: end } },
     ],
   }).populate('scholarId', 'name');
 
   const map = {};
   for (const booking of bookings) {
-    const date = booking.confirmedDate || booking.preferredDate;
-    const time = booking.confirmedTime || booking.preferredTime;
+    const date = booking.confirmedDate || booking.ceremonyDate;
+    const time = booking.confirmedTime || booking.ceremonyTime;
     if (!date || !time) continue;
     const dayKey = new Date(date).toISOString().slice(0, 10);
     if (!map[dayKey]) map[dayKey] = [];

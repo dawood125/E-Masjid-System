@@ -40,6 +40,21 @@ async function registerUser({ name, email, password, phone = '', address = '', c
   return { user, token: tokenForUser(user) };
 }
 
+async function setUserMosque(userId, mosqueId) {
+  const mosque = await Mosque.findById(mosqueId).select('_id isActive name city address phone email').lean();
+  if (!mosque) throw httpError(404, 'Mosque not found');
+  if (!mosque.isActive) throw httpError(400, 'Selected mosque is not currently active');
+
+  const user = await User.findById(userId);
+  if (!user) throw httpError(404, 'User not found');
+
+  user.mosqueId = mosque._id;
+  await user.save();
+
+  const fresh = await User.findById(userId).select('-password').lean();
+  return { user: fresh, mosque };
+}
+
 async function loginUser({ email, password }) {
   const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
   if (!user) throw httpError(401, 'Invalid credentials');
@@ -117,6 +132,7 @@ module.exports = {
   findActiveMosqueForRegistration,
   registerUser,
   loginUser,
+  setUserMosque,
   requestPasswordReset,
   consumePasswordReset,
 };
