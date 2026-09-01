@@ -4,6 +4,8 @@ import api from '../../utils/api.js'
 import { ROUTES } from '../../utils/constants.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
+const DEFAULT_IMAGE = '/assets/images/gallery/gallery-courtyard.jpg'
+
 function formatPKR(n) {
   return 'PKR ' + Number(n || 0).toLocaleString('en-PK')
 }
@@ -37,11 +39,20 @@ export default function FeaturedCampaign() {
       />
 
       <div className="container relative">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white">
             <span className="h-2 w-2 rounded-full bg-[#d4af37] animate-pulse" />
             Featured Campaign
           </span>
+        </div>
+
+        <div className="mb-10 rounded-2xl overflow-hidden border border-white/15 bg-white/5">
+          <img
+            src={campaign.image || DEFAULT_IMAGE}
+            alt={campaign.title}
+            className="w-full h-56 md:h-72 object-cover"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_IMAGE }}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
@@ -103,22 +114,15 @@ export default function FeaturedCampaign() {
               <span>Goal: {formatPKR(campaign.targetAmount)}</span>
             </div>
 
-            <div className="mt-7 grid grid-cols-3 gap-3 text-center">
-              {[
-                { amount: 'PKR 500',  label: 'Bronze'  },
-                { amount: 'PKR 2,000', label: 'Silver'  },
-                { amount: 'PKR 10,000', label: 'Gold'    },
-              ].map((tier) => (
-                <button
-                  key={tier.label}
-                  type="button"
-                  className="rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 py-3 px-2 transition-colors group"
-                >
-                  <p className="text-[#d4af37] font-bold">{tier.amount}</p>
-                  <p className="text-xs text-white/70 uppercase tracking-wider mt-0.5">{tier.label}</p>
-                </button>
-              ))}
-            </div>
+            <blockquote className="mt-6 pt-6 border-t border-white/15 text-center">
+              <p className="text-white/85 italic text-sm leading-relaxed">
+                &ldquo;The example of those who spend their wealth in the way of Allah is like a seed [of grain]
+                which grows seven spikes; in each spike is a hundred grains.&rdquo;
+              </p>
+              <footer className="mt-2 text-xs tracking-widest uppercase text-[#d4af37] font-semibold">
+                Qur&rsquo;an 2:261
+              </footer>
+            </blockquote>
           </div>
         </div>
       </div>

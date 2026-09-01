@@ -45,11 +45,13 @@ import ScholarLayout from './components/Scholar/Layouts/ScholarLayout'
 import ManagerLayout from './components/Manager/Layouts/ManagerLayout'
 import CommitteeLayout from './components/Committee/Layouts/CommitteeLayout'
 import Toast from './components/Common/Toast'
+import ScrollToTop from './components/Common/ScrollToTop.jsx'
 import { MosqueProvider } from './context/MosqueContext.jsx'
 
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <UIProvider>
           <MosqueProvider>

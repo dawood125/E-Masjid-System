@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../../utils/constants.js'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
@@ -8,11 +8,13 @@ import api from '../../../utils/api.js'
 import FormField from '../../Common/FormField.jsx'
 
 const CATEGORIES = ['Medical', 'Education', 'Housing', 'Food', 'Clothing', 'Debt', 'Other']
+const DRAFT_KEY = 'fundRequestDraft'
 
 export default function FundRequest() {
   const { isAuthenticated } = useAuth()
   const { showToast } = useUI()
   const { activeMosqueId } = useMosque()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,8 +29,20 @@ export default function FundRequest() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      if (draft && typeof draft === 'object') {
+        setFormData((prev) => ({ ...prev, ...draft, agreeTerms: !!draft.agreeTerms }))
+      }
+    } catch (e) {}
+    sessionStorage.removeItem(DRAFT_KEY)
+  }, [])
+
+  useEffect(() => {
     if (!isAuthenticated) {
-      showToast('Please login first to submit a fund request', 'warning')
+      showToast('Please sign in to submit a fund request', 'info')
     }
   }, [isAuthenticated, showToast])
 
@@ -63,7 +77,11 @@ export default function FundRequest() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!isAuthenticated) {
-      showToast('Please login first to submit a fund request', 'warning')
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formData))
+      } catch (e) {}
+      showToast('Please sign in to submit a fund request', 'info')
+      navigate(`${ROUTES.LOGIN}?returnUrl=${encodeURIComponent('/fund-request')}`)
       return
     }
 

@@ -3,8 +3,6 @@ import api from '../../utils/api.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
 const IMPACT_CONFIG = [
-  { key: 'prayersTracked',   label: 'Prayers Tracked',         suffix: '+' },
-  { key: 'studentsTaught',    label: 'Students Taught',         suffix: '+' },
   { key: 'nikahHosted',       label: 'Nikah Ceremonies Hosted', suffix: '' },
   { key: 'familiesSupported', label: 'Families Supported',      suffix: '+' },
 ]
@@ -88,7 +86,7 @@ export default function ImpactCounters() {
             Every prayer, every student, every family — a small contribution to a larger story.
           </p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 max-w-3xl mx-auto">
           {IMPACT_CONFIG.map((item, i) => (
             <ImpactCard key={item.key} {...item} value={data?.[item.key] ?? 0} started={started} index={i} />
           ))}
