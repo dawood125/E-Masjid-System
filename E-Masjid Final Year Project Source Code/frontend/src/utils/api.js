@@ -136,6 +136,13 @@ class ApiService {
   getPrayerTimes(params = '') { return this.request('GET', `/api/prayer-times${params ? '?' + params : ''}`) }
   updatePrayerTimes(data) { return this.request('PUT', '/api/prayer-times', data) }
 
+  getPublicSpecialPrayers(params = '') { return this.request('GET', `/api/special-prayers${params ? '?' + params : ''}`) }
+  getAdminSpecialPrayers(params = '') { return this.request('GET', `/api/special-prayers/admin${params ? '?' + params : ''}`) }
+  createSpecialPrayer(data) { return this.request('POST', '/api/special-prayers', data) }
+  updateSpecialPrayer(id, data) { return this.request('PUT', `/api/special-prayers/${id}`, data) }
+  toggleSpecialPrayer(id) { return this.request('PATCH', `/api/special-prayers/${id}/toggle`) }
+  deleteSpecialPrayer(id) { return this.request('DELETE', `/api/special-prayers/${id}`) }
+
   getMarketingStats(mosqueId) {
     const p = mosqueId ? `?mosqueId=${encodeURIComponent(mosqueId)}` : ''
     return this.request('GET', `/api/marketing/stats${p}`)
@@ -180,7 +187,6 @@ class ApiService {
   }
   createNikahBooking(data) { return this.request('POST', '/api/nikah-bookings', data) }
   updateNikahBooking(id, data) { return this.request('PUT', `/api/nikah-bookings/${id}`, data) }
-  assignNikahBooking(id, scholarId) { return this.request('PUT', `/api/nikah-bookings/${id}/assign`, { scholarId }) }
   cancelNikahBooking(id) { return this.request('PUT', `/api/nikah-bookings/${id}/cancel`) }
 
   getScholars() { return this.request('GET', '/api/scholars') }

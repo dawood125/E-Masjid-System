@@ -6,6 +6,7 @@ import api from '../../../utils/api.js'
 import { formatTime } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
 import FormField from '../../Common/FormField.jsx'
+import SpecialPrayersManager from '../Components/SpecialPrayersManager.jsx'
 
 const REQUIRED_DAILY = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha', 'jummah']
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -17,8 +18,6 @@ function validatePrayerTimes(times) {
     else if (!TIME_RE.test(times[key])) errs[key] = 'Enter a valid time (HH:MM)'
   })
   if (times.sunrise && !TIME_RE.test(times.sunrise)) errs.sunrise = 'Enter a valid time (HH:MM)'
-  if (times.eidUlFitr && !TIME_RE.test(times.eidUlFitr)) errs.eidUlFitr = 'Enter a valid time (HH:MM)'
-  if (times.eidUlAdha && !TIME_RE.test(times.eidUlAdha)) errs.eidUlAdha = 'Enter a valid time (HH:MM)'
   return errs
 }
 
@@ -41,29 +40,7 @@ function getInitialTimes() {
     isha: '19:45',
     jummah: '13:00',
     sunrise: '06:45',
-    eidUlFitr: '',
-    eidUlAdha: '',
   }
-}
-
-function Toggle({ on, onChange, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onChange}
-      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-150 ${
-        on ? 'bg-primary-700' : 'bg-gray-300'
-      }`}
-      aria-pressed={on}
-      aria-label={label}
-    >
-      <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-150 ${
-          on ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  )
 }
 
 function localTodayISO() {
@@ -79,14 +56,8 @@ export default function PrayerTimes() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [eidFitrEnabled, setEidFitrEnabled] = useState(false)
-  const [eidAdhaEnabled, setEidAdhaEnabled] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
 
-  
-  
-  
-  
   const adminMosqueId = user?.mosqueId || null
   const navbarMosqueId = getActiveMosqueId()
   const mosqueMismatch =
@@ -94,12 +65,9 @@ export default function PrayerTimes() {
     navbarMosqueId &&
     adminMosqueId !== navbarMosqueId
 
-  
-  
-  
   useEffect(() => {
     let mounted = true
-    
+
     const params = new URLSearchParams()
     if (adminMosqueId) params.set('mosqueId', adminMosqueId)
     if (selectedDate) params.set('date', selectedDate)
@@ -119,11 +87,7 @@ export default function PrayerTimes() {
             isha: today.isha || prev.isha,
             jummah: today.jummah || prev.jummah,
             sunrise: today.sunrise || prev.sunrise,
-            eidUlFitr: today.eidUlFitr || '',
-            eidUlAdha: today.eidUlAdha || '',
           }))
-          if (today.eidUlFitr) setEidFitrEnabled(true)
-          if (today.eidUlAdha) setEidAdhaEnabled(true)
           if (today.updatedAt) setLastUpdated(new Date(today.updatedAt))
         }
       } catch (err) {
@@ -177,8 +141,6 @@ export default function PrayerTimes() {
         jummah: times.jummah,
         sunrise: times.sunrise,
       }
-      payload.eidUlFitr = eidFitrEnabled ? (times.eidUlFitr || '') : ''
-      payload.eidUlAdha = eidAdhaEnabled ? (times.eidUlAdha || '') : ''
       const res = await api.updatePrayerTimes(payload)
       setLastUpdated(new Date(res.data?.updatedAt || Date.now()))
       showToast(`Prayer times for ${selectedDate} updated successfully!`, 'success')
@@ -191,8 +153,6 @@ export default function PrayerTimes() {
 
   const resetForm = () => {
     setTimes(getInitialTimes())
-    setEidFitrEnabled(false)
-    setEidAdhaEnabled(false)
     setErrors({})
     showToast('Form has been reset to defaults.', 'info')
   }
@@ -427,74 +387,6 @@ export default function PrayerTimes() {
             </div>
           </div>
 
-          <div className="space-y-4 py-6">
-            <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900">Eid ul-Fitr Prayer</h3>
-                  <p className="mt-1 text-sm text-gray-500">Enable to set the Eid ul-Fitr prayer time for this date.</p>
-                </div>
-                <Toggle
-                  on={eidFitrEnabled}
-                  onChange={() => setEidFitrEnabled((prev) => !prev)}
-                  label="Toggle Eid ul-Fitr prayer"
-                />
-              </div>
-              {eidFitrEnabled && (
-                <div className="max-w-xs">
-                  <FormField
-                    name="eidUlFitr"
-                    label={
-                      <span className="inline-flex items-center gap-2">
-                        <i className="material-icons-round text-base text-emerald-700">celebration</i>
-                        Eid-ul-Fitr Prayer Time
-                      </span>
-                    }
-                    type="time"
-                    optional
-                    value={times.eidUlFitr}
-                    onChange={(event) => updateTime('eidUlFitr', event.target.value)}
-                    error={errors.eidUlFitr}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-4 py-6">
-            <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900">Eid ul-Adha Prayer</h3>
-                  <p className="mt-1 text-sm text-gray-500">Enable to set the Eid ul-Adha prayer time for this date.</p>
-                </div>
-                <Toggle
-                  on={eidAdhaEnabled}
-                  onChange={() => setEidAdhaEnabled((prev) => !prev)}
-                  label="Toggle Eid ul-Adha prayer"
-                />
-              </div>
-              {eidAdhaEnabled && (
-                <div className="max-w-xs">
-                  <FormField
-                    name="eidUlAdha"
-                    label={
-                      <span className="inline-flex items-center gap-2">
-                        <i className="material-icons-round text-base text-emerald-700">celebration</i>
-                        Eid-ul-Adha Prayer Time
-                      </span>
-                    }
-                    type="time"
-                    optional
-                    value={times.eidUlAdha}
-                    onChange={(event) => updateTime('eidUlAdha', event.target.value)}
-                    error={errors.eidUlAdha}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className="flex flex-wrap items-center gap-3 py-6 pb-0">
             <button
               type="button"
@@ -516,6 +408,8 @@ export default function PrayerTimes() {
         </form>
       </section>
 
+      <SpecialPrayersManager />
+
       <section className="rounded-xl border border-blue-200 bg-blue-50 p-5">
         <div className="flex items-start gap-3">
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
@@ -526,8 +420,8 @@ export default function PrayerTimes() {
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-blue-800">
               <li>Update timings regularly as sunrise and sunset shift across the year.</li>
               <li>Maghrib should reflect local sunset and can vary by location.</li>
-              <li>Toggle Eid ul-Fitr or Eid ul-Adha independently — only enable the Eid prayer you want to set for this date.</li>
               <li>Changes apply immediately to the public prayer times page.</li>
+              <li><strong>Special prayers:</strong> for Eid, Tarawih, Shab-e-Meraj, Janazah or any one-off prayer, use the Special Prayers section above. They show up on the public page immediately.</li>
               <li><strong>Future dates:</strong> pick a future date (e.g. next Ramadan) and pre-set its schedule. The public weekly table shows today + the next 7 days; future-only dates are admin-only.</li>
               <li><strong>Past dates:</strong> you can also update yesterday or older dates to fix any typos.</li>
             </ul>

@@ -64,8 +64,8 @@ export default function ScholarDashboard() {
       const target = bookings.find((booking) => booking.id === id)
       const res = await api.updateNikahBooking(id, {
         status: 'accepted',
-        confirmedDate: target?.preferredDate,
-        confirmedTime: target?.preferredTime,
+        confirmedDate: target?.ceremonyDate,
+        confirmedTime: target?.ceremonyTime,
       })
       setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, ...res.data, id } : booking)))
       showToast(`Booking ${String(id).slice(-6)} accepted.`, 'success')
@@ -206,8 +206,8 @@ export default function ScholarDashboard() {
                     <p className="text-xs text-gray-500">Groom: {booking.groomName} & Bride: {booking.brideName}</p>
                   </td>
                   <td className="px-4 py-3 text-gray-700">{booking.contact}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{formatDate(booking.preferredDate)}</td>
-                  <td className="px-4 py-3 text-gray-700">{formatTime(booking.preferredTime)}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800">{formatDate(booking.ceremonyDate)}</td>
+                  <td className="px-4 py-3 text-gray-700">{formatTime(booking.ceremonyTime)}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                       <i className="material-icons-round text-sm">hourglass_empty</i>
@@ -265,7 +265,7 @@ export default function ScholarDashboard() {
                 <p><strong>Applicant:</strong> {booking.groomName}</p>
                 <p><strong>Couple:</strong> {booking.groomName} & {booking.brideName}</p>
                 <p><strong>Contact:</strong> {booking.contact}</p>
-                <p><strong>Date & Time:</strong> {formatDate(booking.preferredDate)} - {formatTime(booking.preferredTime)}</p>
+                <p><strong>Date & Time:</strong> {formatDate(booking.ceremonyDate)} - {formatTime(booking.ceremonyTime)}</p>
               </div>
 
               <div className="mt-4 flex gap-2">
@@ -315,14 +315,14 @@ export default function ScholarDashboard() {
 
               <div className="flex-1">
                 <h4 className="text-base font-bold text-gray-900">Nikah: {booking.groomName} & {booking.brideName}</h4>
-                <p className="mt-1 text-sm text-gray-600">Time: {formatTime(booking.confirmedTime || booking.preferredTime)}</p>
+                <p className="mt-1 text-sm text-gray-600">Time: {formatTime(booking.confirmedTime || booking.ceremonyTime)}</p>
                 <p className="text-sm text-gray-600">Contact: {booking.contact}</p>
                 {booking.rejectionReason && (
                   <p className="mt-1 text-sm text-red-700">Note: {booking.rejectionReason}</p>
                 )}
               </div>
 
-              <div className="text-sm font-semibold text-emerald-700">In {getDaysLeft(booking.confirmedDate || booking.preferredDate)} days</div>
+              <div className="text-sm font-semibold text-emerald-700">In {getDaysLeft(booking.confirmedDate || booking.ceremonyDate)} days</div>
             </article>
           ))}
 
@@ -353,8 +353,8 @@ export default function ScholarDashboard() {
               <div><span className="font-semibold text-gray-500">Groom:</span> {selectedBooking.groomName}</div>
               <div><span className="font-semibold text-gray-500">Bride:</span> {selectedBooking.brideName}</div>
               <div><span className="font-semibold text-gray-500">Contact:</span> {selectedBooking.contact}</div>
-              <div><span className="font-semibold text-gray-500">Requested Date:</span> {formatDate(selectedBooking.preferredDate)}</div>
-              <div><span className="font-semibold text-gray-500">Preferred Time:</span> {formatTime(selectedBooking.preferredTime)}</div>
+              <div><span className="font-semibold text-gray-500">Requested Date:</span> {formatDate(selectedBooking.ceremonyDate)}</div>
+              <div><span className="font-semibold text-gray-500">Preferred Time:</span> {formatTime(selectedBooking.ceremonyTime)}</div>
             </div>
 
             <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">

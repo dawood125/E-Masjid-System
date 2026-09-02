@@ -32,7 +32,7 @@ function statusMeta(status) {
 export default function MyBookings() {
   const { showToast } = useUI()
   const { user } = useAuth()
-  const { activeMosque } = useMosque()
+  const { activeMosque, activeMosqueId } = useMosque()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [cancellingId, setCancellingId] = useState(null)
@@ -57,7 +57,7 @@ export default function MyBookings() {
       }
     })()
     return () => { mounted = false }
-  }, [showToast])
+  }, [showToast, activeMosqueId])
 
   const stats = useMemo(() => {
     const pending = bookings.filter((b) => b.status === 'pending').length
@@ -172,11 +172,11 @@ export default function MyBookings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 p-5">
                     <div>
                       <p className="text-xs uppercase text-gray-500">Ceremony Date</p>
-                      <p className="mt-1 font-semibold text-gray-900">{formatDate(booking.preferredDate)}</p>
+                      <p className="mt-1 font-semibold text-gray-900">{formatDate(booking.ceremonyDate)}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase text-gray-500">Time Slot</p>
-                      <p className="mt-1 font-semibold text-gray-900">{booking.preferredTime}</p>
+                      <p className="mt-1 font-semibold text-gray-900">{booking.ceremonyTime}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase text-gray-500">Religious Scholar</p>
@@ -201,7 +201,7 @@ export default function MyBookings() {
                   )}
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4">
-                    <span className="text-sm text-gray-600">Submitted on <strong>{formatDate(booking.preferredDate)}</strong></span>
+                    <span className="text-sm text-gray-600">Submitted on <strong>{formatDate(booking.ceremonyDate)}</strong></span>
                     {booking.status === 'pending' && (
                       <button
                         type="button"

@@ -12,6 +12,27 @@ const prayersConfig = [
   { key: 'isha', name: 'Isha', icon: 'bedtime' },
 ]
 
+const SPECIAL_PRAYER_META = {
+  'eid-fitr': { label: 'Eid ul-Fitr', icon: 'celebration' },
+  'eid-adha': { label: 'Eid ul-Adha', icon: 'celebration' },
+  'shab-meraj': { label: 'Shab-e-Meraj', icon: 'auto_awesome' },
+  'shab-barat': { label: 'Shab-e-Barat', icon: 'nightlight' },
+  tarawih: { label: 'Tarawih', icon: 'menu_book' },
+  'milad-un-nabi': { label: 'Milad-un-Nabi', icon: 'volunteer_activism' },
+  janazah: { label: 'Janazah (Funeral)', icon: 'groups' },
+  other: { label: 'Special Prayer', icon: 'auto_awesome' },
+}
+
+function formatSpecialDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    })
+  } catch {
+    return iso
+  }
+}
+
 function islamicDateLabel() {
   try {
     return new Intl.DateTimeFormat('en-TN-u-ca-islamic', {
@@ -28,8 +49,6 @@ function nextPrayerCountdown(todaySchedule) {
   const now = new Date()
   const isFriday = now.getDay() === 5
 
-  
-  
   const baseList = prayersConfig.map((prayer) => {
     const value = todaySchedule[prayer.key]
     return { ...prayer, value }
@@ -141,10 +160,28 @@ export default function PrayerTimes() {
     year: 'numeric',
   })
 
-  
-  
   const sunriseTime = todayTimes.sunrise
   const hasSunrise = Boolean(sunriseTime)
+
+  const [specialPrayers, setSpecialPrayers] = useState([])
+
+  useEffect(() => {
+    let mounted = true
+    const params = activeMosqueId
+      ? `mosqueId=${activeMosqueId}&upcoming=true&limit=12`
+      : 'upcoming=true&limit=12'
+    ;(async () => {
+      try {
+        const res = await api.getPublicSpecialPrayers(params)
+        if (!mounted) return
+        const list = Array.isArray(res.data) ? res.data : []
+        setSpecialPrayers(list)
+      } catch {
+        if (mounted) setSpecialPrayers([])
+      }
+    })()
+    return () => { mounted = false }
+  }, [activeMosqueId])
 
   return (
     <div className="bg-white">
@@ -285,32 +322,46 @@ export default function PrayerTimes() {
         </div>
       </section>
 
-      {(todayTimes.eidUlFitr || todayTimes.eidUlAdha) && (
+      {specialPrayers.length > 0 && (
         <section className="pb-14">
           <div className="container">
             <div className="mb-6 inline-flex items-center gap-2 text-[#064e3b]">
               <i className="material-icons-round text-2xl">celebration</i>
-              <h2 className="font-primary text-2xl font-bold">Special Prayer Timings</h2>
+              <h2 className="font-primary text-2xl font-bold">Special Prayer Announcements</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl">
-              {todayTimes.eidUlFitr && (
-                <div className="rounded-2xl border-2 border-[#d4af37] bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
-                  <div className="flex flex-col items-center text-center">
-                    <i className="material-icons-round text-4xl mb-2 text-[#d4af37]">celebration</i>
-                    <span className="font-semibold text-lg text-gray-700">Eid ul-Fitr</span>
-                    <div className="mt-3 font-primary text-3xl font-bold text-[#064e3b]">{formatTime(todayTimes.eidUlFitr)}</div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {specialPrayers.map((prayer) => {
+                const meta = SPECIAL_PRAYER_META[prayer.type] || SPECIAL_PRAYER_META.other
+                return (
+                  <div
+                    key={prayer._id}
+                    className="rounded-2xl border-2 border-[#d4af37] bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#d4af37]/20 text-[#064e3b]">
+                        <i className="material-icons-round text-2xl">{meta.icon}</i>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-primary text-lg font-bold text-[#064e3b]">{prayer.name}</h3>
+                        <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-[#d4af37]">{meta.label}</p>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-700">
+                          <span className="inline-flex items-center gap-1">
+                            <i className="material-icons-round text-base text-[#047857]">event</i>
+                            {formatSpecialDate(prayer.date)}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <i className="material-icons-round text-base text-[#047857]">schedule</i>
+                            <strong className="font-primary text-base text-[#064e3b]">{prayer.time}</strong>
+                          </span>
+                        </div>
+                        {prayer.description && (
+                          <p className="mt-3 text-sm text-gray-600 leading-relaxed">{prayer.description}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-              {todayTimes.eidUlAdha && (
-                <div className="rounded-2xl border-2 border-[#d4af37] bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
-                  <div className="flex flex-col items-center text-center">
-                    <i className="material-icons-round text-4xl mb-2 text-[#d4af37]">celebration</i>
-                    <span className="font-semibold text-lg text-gray-700">Eid ul-Adha</span>
-                    <div className="mt-3 font-primary text-3xl font-bold text-[#064e3b]">{formatTime(todayTimes.eidUlAdha)}</div>
-                  </div>
-                </div>
-              )}
+                )
+              })}
             </div>
           </div>
         </section>
@@ -344,7 +395,6 @@ export default function PrayerTimes() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {(weekTimes.length > 0 ? weekTimes : []).map((day) => {
-
                     const isToday = isSameLocalDay(day.date)
                     const hasJummah = Boolean(day.jummah)
                     const isFriday = new Date(day.date).getDay() === 5

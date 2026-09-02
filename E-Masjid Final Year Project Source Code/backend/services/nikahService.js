@@ -129,43 +129,6 @@ async function reviewBooking(id, input, user) {
   return updated;
 }
 
-async function assignScholar(id, scholarId, user) {
-  if (!isValidObjectId(id)) throw httpError(400, 'Invalid booking id');
-  if (!isValidObjectId(scholarId)) throw httpError(400, 'Invalid scholarId');
-
-  const booking = await NikahBooking.findById(id);
-  if (!booking) throw httpError(404, 'Booking not found');
-
-  if (String(booking.mosqueId) !== String(user.mosqueId)) {
-    throw httpError(403, 'Not authorized for this mosque booking');
-  }
-  if (booking.status !== 'pending') {
-    throw httpError(409, `Booking is already ${booking.status}`);
-  }
-
-  const scholar = await require('../models/User').findById(scholarId);
-  if (!scholar) throw httpError(404, 'Scholar not found');
-  if (scholar.role !== 'scholar') throw httpError(400, 'Assigned user is not a scholar');
-  if (String(scholar.mosqueId) !== String(user.mosqueId)) {
-    throw httpError(400, 'Scholar belongs to another mosque');
-  }
-  if (scholar.isActive === false) throw httpError(400, 'Cannot assign a deactivated scholar');
-
-  const updated = await NikahBooking.findOneAndUpdate(
-    { _id: id, status: 'pending', scholarId: { $exists: false } },
-    { scholarId },
-    { new: true }
-  ).populate('scholarId', 'name email');
-  if (!updated) {
-    const current = await NikahBooking.findById(id);
-    if (current && current.scholarId && String(current.scholarId) !== String(scholarId)) {
-      throw httpError(409, 'Booking already assigned to another scholar');
-    }
-    throw httpError(409, `Booking is already ${current ? current.status : 'handled by another assignment'}`);
-  }
-  return updated;
-}
-
 async function availability({ user, from, to }) {
   if (!user.mosqueId) throw httpError(400, 'No mosque assigned to user');
 
@@ -231,4 +194,4 @@ async function cancelByApplicant(id, user) {
   return updated;
 }
 
-module.exports = { listForCaller, createBooking, reviewBooking, assignScholar, cancelByApplicant, availability };
+module.exports = { listForCaller, createBooking, reviewBooking, cancelByApplicant, availability };

@@ -29,11 +29,6 @@ router.put('/:id', protect, authorize('scholar', 'admin'), [
   handleValidation,
 ], ctrl.reviewBooking);
 
-router.put('/:id/assign', protect, authorize('admin'), [
-  body('scholarId').isMongoId().withMessage('Valid scholarId is required'),
-  handleValidation,
-], ctrl.assignBooking);
-
 router.put('/:id/cancel', protect, authorize('community'), ctrl.cancelBooking);
 
 module.exports = router;

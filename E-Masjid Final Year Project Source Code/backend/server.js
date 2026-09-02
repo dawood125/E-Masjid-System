@@ -57,6 +57,7 @@ app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/prayer-times', require('./routes/prayerTimes'));
+app.use('/api/special-prayers', require('./routes/specialPrayers'));
 app.use('/api/nikah-bookings', require('./routes/nikahBookings'));
 app.use('/api/scholars', require('./routes/scholars'));
 app.use('/api/mosques', require('./routes/mosques'));

@@ -443,28 +443,6 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
       });
     });
 
-    test('Al-Noor admin cannot assign to Al-Rahman booking (403)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userBToken}`)
-        .send({
-          groomName: 'Xavier',
-          brideName: 'Yusra',
-          ceremonyDate: tomorrowISO(15),
-          ceremonyTime: '15:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      const evil = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${adminAToken}`)
-        .send({ scholarId: String(scholarAUser._id) });
-      expect(evil.status).toBe(403);
-    });
-
     test('Al-Rahman admin sees only Al-Rahman bookings', async () => {
       const res = await request(app)
         .get('/api/nikah-bookings')
@@ -474,124 +452,6 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
       list.forEach((b) => {
         expect(String(b.mosqueId?._id || b.mosqueId)).toBe(String(mosqueB._id));
       });
-    });
-  });
-
-  describe('Admin assign endpoint', () => {
-    test('admin assigns scholar to pending booking (200)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({
-          groomName: 'Assign',
-          brideName: 'Test',
-          ceremonyDate: tomorrowISO(16),
-          ceremonyTime: '14:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      const assign = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${adminAToken}`)
-        .send({ scholarId: String(scholarAUser._id) });
-      expect(assign.status).toBe(200);
-      expect(String(assign.body.data.scholarId?._id || assign.body.data.scholarId)).toBe(String(scholarAUser._id));
-    });
-
-    test('admin cannot assign scholar from another mosque (400)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({
-          groomName: 'Cross',
-          brideName: 'Assign',
-          ceremonyDate: tomorrowISO(17),
-          ceremonyTime: '15:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      const evil = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${adminAToken}`)
-        .send({ scholarId: String(scholarBUser._id) });
-      expect(evil.status).toBe(400);
-    });
-
-    test('scholar cannot call assign (admin-only, 403)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({
-          groomName: 'SAssign',
-          brideName: 'Deny',
-          ceremonyDate: tomorrowISO(18),
-          ceremonyTime: '16:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      const evil = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${scholarAToken}`)
-        .send({ scholarId: String(scholarAUser._id) });
-      expect(evil.status).toBe(403);
-    });
-
-    test('admin cannot assign to non-scholar user (400)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({
-          groomName: 'NS',
-          brideName: 'Role',
-          ceremonyDate: tomorrowISO(19),
-          ceremonyTime: '17:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      const evil = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${adminAToken}`)
-        .send({ scholarId: String(userAUser._id) });
-      expect(evil.status).toBe(400);
-    });
-
-    test('cannot assign to deactivated scholar (400)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({
-          groomName: 'Deact',
-          brideName: 'Assign',
-          ceremonyDate: tomorrowISO(20),
-          ceremonyTime: '20:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      await User.updateOne({ _id: scholarAUser._id }, { isActive: false });
-
-      const evil = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${adminAToken}`)
-        .send({ scholarId: String(scholarAUser._id) });
-      expect(evil.status).toBe(400);
-      expect(evil.body.message).toMatch(/deactivated/i);
-
-      await User.updateOne({ _id: scholarAUser._id }, { isActive: true });
     });
   });
 
@@ -627,28 +487,6 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
           address: 'House 1, Sheikhupura',
         });
       expect(res.status).toBe(403);
-    });
-
-    test('community cannot call assign (403)', async () => {
-      const created = await request(app)
-        .post('/api/nikah-bookings')
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({
-          groomName: 'CAssign',
-          brideName: 'Deny',
-          ceremonyDate: tomorrowISO(23),
-          ceremonyTime: '12:00',
-          phone: '03001112233',
-          email: 'test@example.com',
-          address: 'House 1, Sheikhupura',
-        });
-      const id = created.body.data._id;
-
-      const evil = await request(app)
-        .put(`/api/nikah-bookings/${id}/assign`)
-        .set('Authorization', `Bearer ${userAToken}`)
-        .send({ scholarId: String(scholarAUser._id) });
-      expect(evil.status).toBe(403);
     });
   });
 
@@ -766,28 +604,6 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
 
       const after = await NikahBooking.findById(id);
       expect(['accepted', 'rejected']).toContain(after.status);
-    });
-
-    test('two simultaneous admin assigns to same booking — only one wins', async () => {
-      const { id } = await seedPendingBooking({ ceremonyTime: '14:00' });
-
-      const [first, second] = await Promise.all([
-        request(app)
-          .put(`/api/nikah-bookings/${id}/assign`)
-          .set('Authorization', `Bearer ${adminAToken}`)
-          .send({ scholarId: String(scholarAUser._id) }),
-        request(app)
-          .put(`/api/nikah-bookings/${id}/assign`)
-          .set('Authorization', `Bearer ${adminAToken}`)
-          .send({ scholarId: String(scholarA2User._id) }),
-      ]);
-
-      const statuses = [first.status, second.status].sort();
-      expect(statuses).toEqual([200, 409]);
-
-      const after = await NikahBooking.findById(id);
-      expect(after.scholarId).toBeTruthy();
-      expect(String(after.scholarId)).toMatch(/^6[0-9a-f]{23}$/);
     });
 
     test('community cancel racing scholar accept — only one transition lands', async () => {

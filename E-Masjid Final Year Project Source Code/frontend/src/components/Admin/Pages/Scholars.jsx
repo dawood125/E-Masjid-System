@@ -50,7 +50,6 @@ export default function Scholars() {
   const { showToast } = useUI()
 
   const [scholars, setScholars] = useState([])
-  const [assignments, setAssignments] = useState([])
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
@@ -72,7 +71,6 @@ export default function Scholars() {
   const [resetErrors, setResetErrors] = useState({})
   const [resetForm, setResetForm] = useState({ password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(true)
-  const [assigningId, setAssigningId] = useState(null)
   const [confirmToggle, setConfirmToggle] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
 
@@ -82,22 +80,13 @@ export default function Scholars() {
     return list.map((item) => ({ ...item, id: item._id || item.id, isActive: item.isActive }))
   }
 
-  const loadAssignments = async () => {
-    const res = await api.getNikahBookings()
-    const list = Array.isArray(res.data) ? res.data : []
-    return list
-      .filter((b) => b.status === 'pending' && !b.scholarId)
-      .map((item) => ({ ...item, id: item._id || item.id }))
-  }
-
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
-        const [scholarList, assignmentList] = await Promise.all([loadScholars(), loadAssignments()])
+        const scholarList = await loadScholars()
         if (!mounted) return
         setScholars(scholarList)
-        setAssignments(assignmentList)
       } catch (err) {
         showToast(err.message || 'Failed to load scholars.', 'error')
       } finally {
@@ -247,27 +236,6 @@ export default function Scholars() {
       showToast(`Password reset for ${selectedScholar.name}. Share the new password with them.`, 'success')
     } catch (err) {
       showToast(err.message || 'Failed to reset password.', 'error')
-    }
-  }
-
-  const assignScholar = async (bookingId, scholarId) => {
-    if (!scholarId || assigningId === bookingId) return
-
-    const scholar = scholars.find((item) => item.id === scholarId)
-    if (!scholar || !scholar.isActive) {
-      showToast('Scholar must be active before assigning.', 'warning')
-      return
-    }
-
-    setAssigningId(bookingId)
-    try {
-      await api.assignNikahBooking(bookingId, scholarId)
-      setAssignments((prev) => prev.filter((item) => item.id !== bookingId))
-      showToast(`Booking NKH-${String(bookingId).slice(-6).toUpperCase()} assigned to ${scholar.name}.`, 'success')
-    } catch (err) {
-      showToast(err.message || 'Failed to assign scholar.', 'error')
-    } finally {
-      setAssigningId(null)
     }
   }
 
@@ -454,63 +422,6 @@ export default function Scholars() {
             <h4 className="text-base font-bold text-gray-900">Add New Scholar</h4>
             <p className="mt-1 text-sm text-gray-600">Register a new scholar to handle Nikah ceremonies.</p>
           </button>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
-            <i className="material-icons-round text-primary-700">assignment</i>
-            Pending Nikah Assignments
-          </h2>
-          <span className="rounded-full bg-warning-light px-2.5 py-1 text-xs font-semibold text-warning">
-            {assignments.length} Unassigned
-          </span>
-        </div>
-
-        <p className="mb-4 text-sm text-gray-600">These requests need scholar assignment.</p>
-
-        <div className="space-y-3">
-          {assignments.map((assignment) => (
-            <article
-              key={assignment.id}
-              className="flex flex-col gap-3 rounded-lg border border-gray-200 p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100 text-rose-700">
-                  <i className="material-icons-round">favorite</i>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">
-                    Booking NKH-{String(assignment.id).slice(-6).toUpperCase()}
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    {assignment.groomName} & {assignment.brideName} - {formatDate(assignment.preferredDate)} at {assignment.preferredTime}
-                  </p>
-                </div>
-              </div>
-
-              <select
-                defaultValue=""
-                disabled={assigningId === assignment.id}
-                onChange={(event) => assignScholar(assignment.id, event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none disabled:opacity-60"
-              >
-                <option value="">{assigningId === assignment.id ? 'Assigning...' : 'Assign Scholar'}</option>
-                {scholars.map((scholar) => (
-                  <option key={scholar.id} value={scholar.id} disabled={!scholar.isActive}>
-                    {scholar.name}{scholar.isActive ? '' : ' (inactive)'}
-                  </option>
-                ))}
-              </select>
-            </article>
-          ))}
-
-          {!assignments.length && (
-            <div className="rounded-lg bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
-              All pending bookings are assigned.
-            </div>
-          )}
         </div>
       </section>
 

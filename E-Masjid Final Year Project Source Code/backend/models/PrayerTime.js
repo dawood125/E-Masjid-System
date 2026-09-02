@@ -8,11 +8,6 @@ const prayerTimeSchema = new mongoose.Schema({
   maghrib: { type: String, required: true },
   isha: { type: String, required: true },
   jummah: { type: String },
-  eidUlFitr: { type: String },
-  eidUlAdha: { type: String },
-  
-  
-  
   sunrise: { type: String },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
 }, { timestamps: true });

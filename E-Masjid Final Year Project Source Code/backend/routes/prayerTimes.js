@@ -16,8 +16,6 @@ router.put('/', protect, authorize('admin'), [
   body('isha').isString().trim().isLength({ min: 3, max: 10 }).withMessage('Valid isha time is required'),
   body('jummah').optional().isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid jummah time'),
   body('sunrise').optional({ checkFalsy: true }).isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid sunrise time'),
-  body('eidUlFitr').optional({ checkFalsy: true }).isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid Eid ul-Fitr time'),
-  body('eidUlAdha').optional({ checkFalsy: true }).isString().trim().isLength({ min: 3, max: 10 }).withMessage('Invalid Eid ul-Adha time'),
   handleValidation,
 ], ctrl.upsert);
 

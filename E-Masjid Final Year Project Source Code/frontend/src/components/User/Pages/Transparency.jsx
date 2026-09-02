@@ -172,8 +172,10 @@ export default function Transparency() {
         expenses,
         topDonors,
         summary,
+        donationTrend,
+        expenseTrend,
       })
-      showToast(`Report downloaded (${result.filename})`, 'success')
+      showToast(`Report downloaded (${result.filename}, ${result.pageCount} pages)`, 'success')
     } catch (err) {
       showToast(err.message || 'Failed to generate report', 'error')
     }

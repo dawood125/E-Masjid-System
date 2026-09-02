@@ -10,8 +10,6 @@ const DEFAULT_PRAYER = {
   isha: '19:45',
   jummah: '13:00',
   sunrise: '06:45',
-  eidUlFitr: '',
-  eidUlAdha: '',
 };
 
 function parseLocalDate(str) {
@@ -72,8 +70,6 @@ async function upsertForAdmin(input, user) {
       isha: input.isha,
       jummah: input.jummah,
       sunrise: input.sunrise,
-      eidUlFitr: input.eidUlFitr,
-      eidUlAdha: input.eidUlAdha,
       mosqueId: user.mosqueId,
     },
     { new: true, upsert: true, runValidators: true }

@@ -108,6 +108,7 @@ export default function FundRequest() {
         mosqueId,
       })
       setSubmitted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       showToast('Request submitted successfully', 'success')
     } catch (e2) {
       if (e2.errors && Array.isArray(e2.errors)) {
