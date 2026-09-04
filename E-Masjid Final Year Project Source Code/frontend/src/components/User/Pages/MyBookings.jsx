@@ -5,7 +5,7 @@ import { useAuth } from '../../../context/AuthContext.jsx'
 import { useMosque } from '../../../hooks/useMosque.js'
 import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
-import { formatDate } from '../../../utils/formatters.js'
+import { formatDate, formatTime } from '../../../utils/formatters.js'
 
 function statusMeta(status) {
   if (status === 'accepted') {
@@ -176,7 +176,7 @@ export default function MyBookings() {
                     </div>
                     <div>
                       <p className="text-xs uppercase text-gray-500">Time Slot</p>
-                      <p className="mt-1 font-semibold text-gray-900">{booking.ceremonyTime}</p>
+                      <p className="mt-1 font-semibold text-gray-900">{formatTime(booking.ceremonyTime)}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase text-gray-500">Religious Scholar</p>
@@ -190,7 +190,7 @@ export default function MyBookings() {
 
                   {booking.status === 'accepted' && (
                     <div className="mx-5 mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-                      Booking confirmed for {formatDate(booking.confirmedDate)} at {booking.confirmedTime}.
+                      Booking confirmed for {formatDate(booking.confirmedDate)} at {formatTime(booking.confirmedTime)}.
                     </div>
                   )}
 
@@ -201,7 +201,7 @@ export default function MyBookings() {
                   )}
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4">
-                    <span className="text-sm text-gray-600">Submitted on <strong>{formatDate(booking.ceremonyDate)}</strong></span>
+                    <span className="text-sm text-gray-600">Submitted on <strong>{formatDate(booking.createdAt)}</strong></span>
                     {booking.status === 'pending' && (
                       <button
                         type="button"

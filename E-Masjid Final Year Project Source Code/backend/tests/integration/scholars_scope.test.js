@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const app = require('../../server');
 const User = require('../../models/User');
 const Mosque = require('../../models/Mosque');
+const NikahBooking = require('../../models/NikahBooking');
 
 jest.setTimeout(30000);
 
@@ -475,6 +476,109 @@ describe('Scholars module scope + behavior (Phase 11)', () => {
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${liveScholarToken}`);
       expect(me.status).toBe(200);
+    });
+  });
+
+  describe('GET /api/scholars - nikah counts per scholar (BUG-11 fix)', () => {
+    let metricsScholarId;
+    let metricsOtherScholarId;
+
+    beforeAll(async () => {
+      await NikahBooking.deleteMany({});
+
+      const saRes = await request(app)
+        .post('/api/scholars')
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({ name: 'Metrics Scholar', email: 'metricsa@test.com', specialization: 'Nikah', password: 'metricsa1' });
+      metricsScholarId = saRes.body.data.id;
+
+      const sbRes = await request(app)
+        .post('/api/scholars')
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({ name: 'Metrics Other', email: 'metricsb@test.com', specialization: 'Nikah', password: 'metricsb1' });
+      metricsOtherScholarId = sbRes.body.data.id;
+
+      const community = await User.create({
+        name: 'Community Submitter',
+        email: 'community-ms@test.com',
+        password: 'community1',
+        role: 'community',
+        mosqueId: mosqueA._id,
+      });
+
+      await NikahBooking.create([
+        { groomName: 'A1', brideName: 'B1', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '14:00', phone: '03001111111', email: 'a1@t.com', address: 'a1', userId: community._id, mosqueId: mosqueA._id, scholarId: metricsScholarId, status: 'accepted' },
+        { groomName: 'A2', brideName: 'B2', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '15:00', phone: '03001111112', email: 'a2@t.com', address: 'a2', userId: community._id, mosqueId: mosqueA._id, scholarId: metricsScholarId, status: 'accepted' },
+        { groomName: 'A3', brideName: 'B3', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '16:00', phone: '03001111113', email: 'a3@t.com', address: 'a3', userId: community._id, mosqueId: mosqueA._id, scholarId: metricsScholarId, status: 'accepted' },
+        { groomName: 'A4', brideName: 'B4', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '17:00', phone: '03001111114', email: 'a4@t.com', address: 'a4', userId: community._id, mosqueId: mosqueA._id, scholarId: metricsScholarId, status: 'pending' },
+        { groomName: 'A5', brideName: 'B5', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '18:00', phone: '03001111115', email: 'a5@t.com', address: 'a5', userId: community._id, mosqueId: mosqueA._id, scholarId: metricsOtherScholarId, status: 'pending' },
+        { groomName: 'A6', brideName: 'B6', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '19:00', phone: '03001111116', email: 'a6@t.com', address: 'a6', userId: community._id, mosqueId: mosqueA._id, status: 'pending' },
+        { groomName: 'A7', brideName: 'B7', ceremonyDate: new Date('2099-09-05'), ceremonyTime: '20:00', phone: '03001111117', email: 'a7@t.com', address: 'a7', userId: community._id, mosqueId: mosqueB._id, scholarId: scholarBUser._id, status: 'accepted' },
+      ]);
+    });
+
+    test('each scholar carries real nikahPerformed + pendingRequests numbers', async () => {
+      const res = await request(app)
+        .get('/api/scholars')
+        .set('Authorization', `Bearer ${adminAToken}`);
+      expect(res.status).toBe(200);
+      const list = res.body.data || [];
+
+      const metricsScholar = list.find((s) => String(s._id) === metricsScholarId);
+      const metricsOther = list.find((s) => String(s._id) === metricsOtherScholarId);
+      const seededScholarA = list.find((s) => String(s._id) === String(scholarAUser._id));
+
+      expect(metricsScholar).toBeDefined();
+      expect(metricsScholar.nikahPerformed).toBe(3);
+      expect(metricsScholar.pendingRequests).toBe(3);
+
+      expect(metricsOther).toBeDefined();
+      expect(metricsOther.nikahPerformed).toBe(0);
+      expect(metricsOther.pendingRequests).toBe(3);
+
+      expect(seededScholarA).toBeDefined();
+      expect(seededScholarA.nikahPerformed).toBe(0);
+      expect(seededScholarA.pendingRequests).toBe(3);
+    });
+
+    test('counts respect mosque scope (admin B never sees mosque A bookings)', async () => {
+      const res = await request(app)
+        .get('/api/scholars')
+        .set('Authorization', `Bearer ${adminBToken}`);
+      expect(res.status).toBe(200);
+      const list = res.body.data || [];
+
+      const metricsLeak = list.find((s) => String(s._id) === metricsScholarId);
+      expect(metricsLeak).toBeUndefined();
+
+      const scholarB = list.find((s) => String(s._id) === String(scholarBUser._id));
+      expect(scholarB).toBeDefined();
+      expect(scholarB.nikahPerformed).toBe(1);
+      expect(scholarB.pendingRequests).toBe(0);
+    });
+
+    test('counts are numeric, not the previous hardcoded 8/15/22 pattern', async () => {
+      const res = await request(app)
+        .get('/api/scholars')
+        .set('Authorization', `Bearer ${adminAToken}`);
+      const list = res.body.data || [];
+      list.forEach((s) => {
+        expect(typeof s.nikahPerformed).toBe('number');
+        expect(typeof s.pendingRequests).toBe('number');
+        expect(s.nikahPerformed % 1).toBe(0);
+      });
+      const pattern = list.map((s) => s.nikahPerformed);
+      expect(pattern).not.toEqual([8, 15, 22]);
+    });
+
+    test('newly created scholar (POST response) returns nikahPerformed: 0, pendingRequests: 0', async () => {
+      const res = await request(app)
+        .post('/api/scholars')
+        .set('Authorization', `Bearer ${adminAToken}`)
+        .send({ name: 'Fresh Scholar', email: 'freshmetrics@t.com', specialization: 'Nikah', password: 'freshpw1' });
+      expect(res.status).toBe(201);
+      expect(res.body.data.nikahPerformed).toBe(0);
+      expect(res.body.data.pendingRequests).toBe(0);
     });
   });
 });

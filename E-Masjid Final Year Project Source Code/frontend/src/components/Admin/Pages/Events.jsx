@@ -80,7 +80,7 @@ export default function Events() {
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('this-month')
+  const [dateFilter, setDateFilter] = useState('all')
   const [page, setPage] = useState(1)
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)

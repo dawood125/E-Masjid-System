@@ -173,6 +173,30 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
       });
     });
 
+    test('community list scopes to current user.mosqueId (masjid switch hides other-masjid bookings)', async () => {
+      const before = await request(app)
+        .get('/api/nikah-bookings')
+        .set('Authorization', `Bearer ${userAToken}`);
+      expect(before.status).toBe(200);
+      expect((before.body.data || []).length).toBeGreaterThan(0);
+
+      await User.updateOne({ _id: userAUser._id }, { mosqueId: mosqueB._id });
+
+      const afterSwitch = await request(app)
+        .get('/api/nikah-bookings')
+        .set('Authorization', `Bearer ${userAToken}`);
+      expect(afterSwitch.status).toBe(200);
+      expect(afterSwitch.body.data || []).toEqual([]);
+
+      await User.updateOne({ _id: userAUser._id }, { mosqueId: mosqueA._id });
+
+      const afterRestore = await request(app)
+        .get('/api/nikah-bookings')
+        .set('Authorization', `Bearer ${userAToken}`);
+      expect(afterRestore.status).toBe(200);
+      expect((afterRestore.body.data || []).length).toBeGreaterThan(0);
+    });
+
     test('community cancel sets status to rejected with cancellation reason', async () => {
       const created = await request(app)
         .post('/api/nikah-bookings')
@@ -624,6 +648,114 @@ describe('Nikah bookings module scope + behavior (Phase 12)', () => {
 
       const after = await NikahBooking.findById(id);
       expect(['accepted', 'rejected']).toContain(after.status);
+    });
+  });
+
+  describe('Auto-reject on accept', () => {
+    test('accepting one pending booking auto-rejects other pending bookings on the same slot', async () => {
+      const day = new Date();
+      day.setHours(0, 0, 0, 0);
+      day.setDate(day.getDate() + 11);
+
+      const winner = await NikahBooking.create({
+        groomName: 'Winner', brideName: 'Pick',
+        phone: '03001112233', email: 'winner@example.com',
+        address: 'House 1', ceremonyDate: day, ceremonyTime: '20:00',
+        userId: userAUser._id, mosqueId: mosqueA._id, status: 'pending',
+      });
+
+      const siblingA = await NikahBooking.create({
+        groomName: 'Sibling',
+        brideName: 'A',
+        phone: '03001112233',
+        email: 'sa@example.com',
+        address: 'House 1',
+        ceremonyDate: day,
+        ceremonyTime: '20:00',
+        userId: userAUser._id,
+        mosqueId: mosqueA._id,
+        status: 'pending',
+      });
+      const siblingB = await NikahBooking.create({
+        groomName: 'Sibling',
+        brideName: 'B',
+        phone: '03001112233',
+        email: 'sb@example.com',
+        address: 'House 1',
+        ceremonyDate: day,
+        ceremonyTime: '20:00',
+        userId: userAUser._id,
+        mosqueId: mosqueA._id,
+        status: 'pending',
+      });
+
+      const differentSlot = await NikahBooking.create({
+        groomName: 'DifferentSlot',
+        brideName: 'X',
+        phone: '03001112233',
+        email: 'dx@example.com',
+        address: 'House 1',
+        ceremonyDate: day,
+        ceremonyTime: '21:00',
+        userId: userAUser._id,
+        mosqueId: mosqueA._id,
+        status: 'pending',
+      });
+
+      const accept = await request(app)
+        .put(`/api/nikah-bookings/${winner._id}`)
+        .set('Authorization', `Bearer ${scholarAToken}`)
+        .send({ status: 'accepted', confirmedDate: day, confirmedTime: '20:00' });
+      expect(accept.status).toBe(200);
+
+      const winnerAfter = await NikahBooking.findById(winner._id);
+      expect(winnerAfter.status).toBe('accepted');
+
+      const aAfter = await NikahBooking.findById(siblingA._id);
+      expect(aAfter.status).toBe('rejected');
+      expect(aAfter.rejectionReason).toMatch(/slot was taken/i);
+
+      const bAfter = await NikahBooking.findById(siblingB._id);
+      expect(bAfter.status).toBe('rejected');
+      expect(bAfter.rejectionReason).toMatch(/slot was taken/i);
+
+      const differentAfter = await NikahBooking.findById(differentSlot._id);
+      expect(differentAfter.status).toBe('pending');
+    });
+
+    test('rejecting a booking does NOT auto-reject other pending bookings on the same slot', async () => {
+      const day = new Date();
+      day.setHours(0, 0, 0, 0);
+      day.setDate(day.getDate() + 12);
+
+      const target = await NikahBooking.create({
+        groomName: 'Reject', brideName: 'Me',
+        phone: '03001112233', email: 'reject@example.com',
+        address: 'House 1', ceremonyDate: day, ceremonyTime: '22:00',
+        userId: userAUser._id, mosqueId: mosqueA._id, status: 'pending',
+      });
+
+      const sibling = await NikahBooking.create({
+        groomName: 'Sib',
+        brideName: 'Reject',
+        phone: '03001112233',
+        email: 'sr@example.com',
+        address: 'House 1',
+        ceremonyDate: day,
+        ceremonyTime: '22:00',
+        userId: userAUser._id,
+        mosqueId: mosqueA._id,
+        status: 'pending',
+      });
+
+      const reject = await request(app)
+        .put(`/api/nikah-bookings/${target._id}`)
+        .set('Authorization', `Bearer ${scholarAToken}`)
+        .send({ status: 'rejected', rejectionReason: 'Not available' });
+      expect(reject.status).toBe(200);
+
+      const siblingAfter = await NikahBooking.findById(sibling._id);
+      expect(siblingAfter.status).toBe('pending');
     });
   });
 });

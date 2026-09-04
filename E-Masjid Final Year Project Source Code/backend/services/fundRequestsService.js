@@ -119,7 +119,10 @@ async function listForCaller(user, query) {
   const limit = clampLimit(query?.limit);
   const page = clampPage(query?.page);
   const match = {};
-  if (user.role === 'community') match.userId = user._id;
+  if (user.role === 'community') {
+    match.userId = user._id;
+    if (user.mosqueId) match.mosqueId = user.mosqueId;
+  }
   if (user.role === 'committee' || user.role === 'admin' || user.role === 'scholar') {
     match.mosqueId = user.mosqueId;
   }

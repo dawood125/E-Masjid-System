@@ -18,7 +18,10 @@ function dayBounds(date) {
 
 async function listForCaller(user) {
   let query = {};
-  if (user.role === 'community') query.userId = user._id;
+  if (user.role === 'community') {
+    query.userId = user._id;
+    if (user.mosqueId) query.mosqueId = user.mosqueId;
+  }
   if (user.role === 'scholar') {
     query = {
       mosqueId: user.mosqueId,
@@ -108,6 +111,26 @@ async function reviewBooking(id, input, user) {
     })) {
       throw httpError(409, 'Selected Nikah slot is already taken');
     }
+
+    const { start, end } = dayBounds(selectedDate);
+    await NikahBooking.updateMany(
+      {
+        mosqueId: booking.mosqueId,
+        _id: { $ne: booking._id },
+        status: 'pending',
+        $or: [
+          { ceremonyDate: { $gte: start, $lt: end }, ceremonyTime: selectedTime },
+          { confirmedDate: { $gte: start, $lt: end }, confirmedTime: selectedTime },
+        ],
+      },
+      {
+        $set: {
+          status: 'rejected',
+          rejectionReason: 'Slot was taken by another booking',
+        },
+      }
+    );
+
     update.scholarId = user._id;
     update.confirmedDate = selectedDate;
     update.confirmedTime = selectedTime;
@@ -126,6 +149,7 @@ async function reviewBooking(id, input, user) {
     const current = await NikahBooking.findById(id);
     throw httpError(409, `Booking is already ${current ? current.status : 'handled by another scholar'}`);
   }
+
   return updated;
 }
 

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const NikahBooking = require('../models/NikahBooking');
 const { sanitizeString, isValidObjectId } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
 
@@ -8,8 +9,40 @@ function generateTempPassword() {
   return Math.random().toString(36).slice(-8);
 }
 
+async function attachNikahCounts(scholars, mosqueId) {
+  if (scholars.length === 0) return scholars;
+
+  const ids = scholars.map((s) => s._id);
+
+  const [acceptedAgg, pendingCount] = await Promise.all([
+    NikahBooking.aggregate([
+      { $match: { mosqueId, status: 'accepted', scholarId: { $in: ids } } },
+      { $group: { _id: '$scholarId', count: { $sum: 1 } } },
+    ]),
+    NikahBooking.countDocuments({ mosqueId, status: 'pending' }),
+  ]);
+
+  const acceptedMap = new Map(acceptedAgg.map((r) => [String(r._id), r.count]));
+
+  return scholars.map((scholar) => {
+    const sid = String(scholar._id);
+    return {
+      ...scholar,
+      id: scholar._id,
+      nikahPerformed: acceptedMap.get(sid) || 0,
+      pendingRequests: pendingCount,
+    };
+  });
+}
+
 async function listForAdmin(user) {
-  return User.find({ role: 'scholar', mosqueId: user.mosqueId }).select('-password');
+  const oid = user.mosqueId;
+  if (!oid) return [];
+
+  const scholars = await User.find({ role: 'scholar', mosqueId: oid })
+    .select('-password')
+    .lean();
+  return attachNikahCounts(scholars, oid);
 }
 
 async function create(input, user) {
@@ -75,4 +108,4 @@ async function resetPassword(id, newPassword, user) {
   return { password: newPassword };
 }
 
-module.exports = { listForAdmin, create, update, resetPassword };
+module.exports = { listForAdmin, create, update, resetPassword, attachNikahCounts };

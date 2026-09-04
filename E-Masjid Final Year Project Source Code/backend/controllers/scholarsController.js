@@ -24,6 +24,8 @@ const createScholar = tryOrNext(async (req, res) => {
       specialization: scholar.specialization,
       mosqueId: scholar.mosqueId,
       isActive: scholar.isActive,
+      nikahPerformed: 0,
+      pendingRequests: 0,
     },
     tempPassword: result.password,
     message: 'Scholar account created',

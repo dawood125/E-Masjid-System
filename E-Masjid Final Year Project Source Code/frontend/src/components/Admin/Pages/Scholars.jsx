@@ -27,10 +27,6 @@ function validatePassword(form) {
   return errs
 }
 
-function randomCompletedCount(seedIndex) {
-  return 8 + seedIndex * 7
-}
-
 function copyToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(text)
@@ -98,7 +94,7 @@ export default function Scholars() {
 
   const activeCount = scholars.filter((scholar) => scholar.isActive).length
 
-  const totalCompletedNikah = scholars.reduce((sum, _, index) => sum + randomCompletedCount(index), 0)
+  const totalCompletedNikah = scholars.reduce((sum, scholar) => sum + (scholar.nikahPerformed || 0), 0)
 
   const openEditScholar = (scholar) => {
     setSelectedScholar(scholar)
@@ -324,7 +320,7 @@ export default function Scholars() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {!loading && scholars.map((scholar, index) => (
+          {!loading && scholars.map((scholar) => (
             <article key={scholar.id} className="flex h-full flex-col rounded-xl border border-gray-200 p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
               <div className="mb-4 flex items-center justify-between">
                 <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary-100 text-primary-700">
@@ -360,11 +356,11 @@ export default function Scholars() {
 
                 <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-3 text-center">
                   <div>
-                    <p className="text-lg font-bold text-gray-900">{randomCompletedCount(index)}</p>
+                    <p className="text-lg font-bold text-gray-900">{scholar.nikahPerformed ?? 0}</p>
                     <p className="text-xs text-gray-500">Nikah Performed</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900">{index % 3}</p>
+                    <p className="text-lg font-bold text-gray-900">{scholar.pendingRequests ?? 0}</p>
                     <p className="text-xs text-gray-500">Pending Requests</p>
                   </div>
                 </div>
