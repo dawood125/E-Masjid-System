@@ -40,12 +40,6 @@ export default function FundRequest() {
     sessionStorage.removeItem(DRAFT_KEY)
   }, [])
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      showToast('Please sign in to submit a fund request', 'info')
-    }
-  }, [isAuthenticated, showToast])
-
   const validate = () => {
     const errs = {}
     if (!formData.name.trim()) errs.name = 'Full name is required'

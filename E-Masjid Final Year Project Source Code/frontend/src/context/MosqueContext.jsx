@@ -47,18 +47,15 @@ export function MosqueProvider({ children }) {
   }, [])
 
   const setActiveMosque = useCallback(async (mosqueId) => {
-    const previousId = getActiveMosqueId() || ''
-
     if (!mosqueId) {
       clearActiveMosqueId()
       setActiveMosqueIdState('')
       return { ok: true, mosqueId: '' }
     }
 
-    setActiveMosqueId(mosqueId)
-    setActiveMosqueIdState(mosqueId)
-
     if (!user || !user._id) {
+      setActiveMosqueId(mosqueId)
+      setActiveMosqueIdState(mosqueId)
       return { ok: true, mosqueId }
     }
 
@@ -66,6 +63,8 @@ export function MosqueProvider({ children }) {
     try {
       const res = await api.updateMyMosque(mosqueId)
       if (res?.success && res?.user) {
+        setActiveMosqueId(mosqueId)
+        setActiveMosqueIdState(mosqueId)
         if (updateUser) {
           updateUser({ mosqueId: res.user.mosqueId || mosqueId })
         }
@@ -73,9 +72,6 @@ export function MosqueProvider({ children }) {
       }
       return { ok: false, mosqueId, error: 'Server did not confirm mosque update' }
     } catch (err) {
-      setActiveMosqueIdState(previousId)
-      if (previousId) setActiveMosqueId(previousId)
-      else { clearActiveMosqueId() }
       return { ok: false, mosqueId, error: err?.message || 'Failed to switch masjid' }
     } finally {
       setSwitching(false)
