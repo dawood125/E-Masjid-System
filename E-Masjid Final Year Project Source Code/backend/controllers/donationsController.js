@@ -44,6 +44,11 @@ const createOnline = tryOrNext(async (req, res) => {
   res.status(200).json({ success: true, url: result.url });
 });
 
+const status = tryOrNext(async (req, res) => {
+  const result = svc.onlineAvailable();
+  res.json({ success: true, data: result });
+});
+
 const update = tryOrNext(async (req, res) => {
   const donation = await svc.update(req.params.id, req.body, req.user);
   res.json({ success: true, data: donation });
@@ -54,4 +59,4 @@ const remove = tryOrNext(async (req, res) => {
   res.json({ success: true, message: 'Donation deleted' });
 });
 
-module.exports = { listPublic, topDonors, summary, getBySession, listAdmin, createCash, createOnline, update, remove };
+module.exports = { listPublic, topDonors, summary, getBySession, listAdmin, createCash, createOnline, status, update, remove };

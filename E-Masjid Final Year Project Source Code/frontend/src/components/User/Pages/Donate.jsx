@@ -44,6 +44,7 @@ export default function Donate() {
   const [confirmedAmount, setConfirmedAmount] = useState(0)
   const [confirmError, setConfirmError] = useState('')
   const [nameError, setNameError] = useState('')
+  const [onlineAvailable, setOnlineAvailable] = useState(null)
 
   useEffect(() => {
     try {
@@ -56,6 +57,18 @@ export default function Donate() {
         sessionStorage.removeItem(DRAFT_KEY)
       }
     } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    api.getDonationsStatus()
+      .then((res) => {
+        if (mounted) setOnlineAvailable(res?.data?.onlineAvailable === true)
+      })
+      .catch(() => {
+        if (mounted) setOnlineAvailable(false)
+      })
+    return () => { mounted = false }
   }, [])
 
   useEffect(() => {
@@ -156,6 +169,11 @@ export default function Donate() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    if (onlineAvailable === false) {
+      showToast('Online donations are temporarily unavailable. Please contact the masjid office.', 'error')
+      return
+    }
+
     if (effectiveAmount < 100) {
       showToast('Minimum donation amount is PKR 100', 'warning')
       return
@@ -218,7 +236,12 @@ export default function Donate() {
       setShowSuccess(true)
       showToast('Donation processed successfully. JazakAllah Khair!', 'success')
     } catch (e2) {
-      showToast(e2.message || 'Failed to process donation', 'error')
+      if (e2.status === 503) {
+        setOnlineAvailable(false)
+        showToast(e2.message || 'Online donations are temporarily unavailable.', 'error')
+      } else {
+        showToast(e2.message || 'Failed to process donation', 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -276,6 +299,20 @@ export default function Donate() {
                 Secure Payment
               </span>
             </div>
+
+            {onlineAvailable === false && (
+              <div className="m-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <div className="flex items-start gap-3">
+                  <i className="material-icons-round text-amber-600 mt-0.5">warning</i>
+                  <div>
+                    <p className="font-semibold">Online donations are temporarily unavailable.</p>
+                    <p className="mt-1 text-amber-800">
+                      Please contact the masjid office directly to donate in person, or try again later.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6 p-6">
               <div>
@@ -405,9 +442,9 @@ export default function Donate() {
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 bg-[#047857] hover:bg-[#064e3b]">
+              <button type="submit" disabled={loading || onlineAvailable === false} className="btn btn-primary w-full py-3 bg-[#047857] hover:bg-[#064e3b] disabled:opacity-50 disabled:cursor-not-allowed">
                 <i className="material-icons-round">volunteer_activism</i>
-                {loading ? 'Redirecting to Stripe...' : `Donate ${effectiveAmount >= 100 ? 'PKR ' + effectiveAmount.toLocaleString() : 'Now'}`}
+                {loading ? 'Redirecting to Stripe...' : onlineAvailable === false ? 'Online Donations Unavailable' : `Donate ${effectiveAmount >= 100 ? 'PKR ' + effectiveAmount.toLocaleString() : 'Now'}`}
               </button>
 
               <div className="space-y-2 text-center text-xs text-gray-500">

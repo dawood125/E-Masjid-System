@@ -4,10 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   CUSTOM GLOBAL STYLES
-   ============================================ */
-
 * {
   margin: 0;
   padding: 0;
@@ -16,10 +12,6 @@
 
 html {
   scroll-behavior: smooth;
-  /* Prevent the page from being wider than the viewport on mobile. Some
-     decorative elements (e.g. absolute circles at -right-6) push the body
-     past 100vw. The header (position: fixed; left:0; right:0;) would then
-     match the body's scroll width and overflow on the right. */
   overflow-x: hidden;
 }
 
@@ -29,16 +21,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
   color: #1f2937;
-  /* Prevent decorative elements (e.g. the gold circles in Home.jsx that use
-     `absolute -right-6` for visual interest) from causing horizontal scroll
-     on narrow mobile viewports. Phase 3 visual test caught this. */
   overflow-x: hidden;
 }
 
-/* Cinematic slow-zoom animation for the static hero image fallback.
-   Used when the hero video fails to load or on browsers that block autoplay.
-   Animates from scale 1 + center to scale 1.08 + slight pan over 20s,
-   then loops. Pauses on hover so users can read the text without distraction. */
 @keyframes kenBurns {
   0%   { transform: scale(1)    translate(0,   0); }
   50%  { transform: scale(1.08) translate(-1%, -1%); }
@@ -69,7 +54,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -88,13 +72,11 @@ body {
   background: #065f46;
 }
 
-/* Selection Styling */
 ::selection {
   background-color: #047857;
   color: white;
 }
 
-/* Utility Classes */
 .container {
   @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }
@@ -170,7 +152,6 @@ body {
   border-radius: 12px;
 }
 
-/* Form Styles */
 .form-group {
   @apply mb-4;
 }
@@ -195,7 +176,6 @@ body {
   @apply text-error text-sm mt-1;
 }
 
-/* Toast/Alert Styles */
 .toast {
   @apply fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg text-white animate-fade-in z-50;
 }
@@ -216,7 +196,6 @@ body {
   @apply bg-info;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -274,4 +253,3 @@ body {
 .animate-slide-in-right {
   animation: slideInRight 0.6s ease;
 }
-

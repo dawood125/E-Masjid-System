@@ -1,3 +1,5 @@
+const multer = require('multer');
+
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Server Error';
@@ -25,6 +27,22 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'TokenExpiredError') {
     statusCode = 401;
     message = 'Token expired';
+  }
+
+  if (err instanceof multer.MulterError) {
+    statusCode = 400;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = 'File too large. Maximum upload size is 5 MB.';
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      message = `Unexpected file field '${err.field}'.`;
+    } else {
+      message = err.message || 'File upload error';
+    }
+  }
+
+  if (statusCode === 500 && err.message && /Only JPG, PNG, and WEBP/i.test(err.message)) {
+    statusCode = 400;
+    message = err.message;
   }
 
   res.status(statusCode).json({

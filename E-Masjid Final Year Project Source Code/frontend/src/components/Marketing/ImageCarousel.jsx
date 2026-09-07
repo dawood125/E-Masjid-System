@@ -36,7 +36,6 @@ export default function ImageCarousel() {
           _id: s._id,
           image: s.image,
           caption: s.caption || '',
-          link: s.link || '',
         })))
       })
       .catch(() => {
@@ -78,47 +77,24 @@ export default function ImageCarousel() {
 
         <div className="relative overflow-hidden rounded-3xl shadow-2xl group">
           <div className="relative h-[420px] md:h-[520px] bg-black">
-            {slides.map((s, i) => {
-              const imgEl = (
+            {slides.map((s, i) => (
+              <div
+                key={s._id || s.image}
+                className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0'}`}
+              >
                 <img
                   src={s.image}
                   alt={s.caption || ''}
                   loading="lazy"
                   className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${i === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
                 />
-              )
-              return (
-                <div
-                  key={s._id || s.image}
-                  className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  {s.link ? (
-                    <a
-                      href={s.link}
-                      target={/^https?:\/\//i.test(s.link) ? '_blank' : undefined}
-                      rel={/^https?:\/\//i.test(s.link) ? 'noopener noreferrer' : undefined}
-                      className="block h-full w-full"
-                      aria-label={s.caption || 'Open link'}
-                    >
-                      {imgEl}
-                    </a>
-                  ) : (
-                    imgEl
-                  )}
-                </div>
-              )
-            })}
+              </div>
+            ))}
             <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/85 via-black/50 to-transparent pointer-events-none" />
             <div className="absolute bottom-0 inset-x-0 p-6 md:p-8 text-white pointer-events-none">
               <p className="font-primary text-xl md:text-2xl font-semibold drop-shadow-lg max-w-3xl">
                 {slides[index].caption}
               </p>
-              {slides[index].link && (
-                <p className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#d4af37]">
-                  <i className="material-icons-round text-base">open_in_new</i>
-                  Click to learn more
-                </p>
-              )}
             </div>
           </div>
 

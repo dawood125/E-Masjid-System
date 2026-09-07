@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
 import FormField from '../../Common/FormField.jsx'
+import { formatTime } from '../../../utils/formatters.js'
 
 const TYPE_OPTIONS = [
   { value: 'eid-fitr', label: 'Eid ul-Fitr', icon: 'celebration' },
@@ -231,7 +232,7 @@ export default function SpecialPrayersManager() {
               )}
             </div>
             <p className="mt-1 text-sm text-gray-700">
-              <strong>{formatDateLabel(item.date)}</strong> at <strong>{item.time}</strong>
+              <strong>{formatDateLabel(item.date)}</strong> at <strong>{formatTime(item.time)}</strong>
             </p>
             {item.description && (
               <p className="mt-1 text-sm text-gray-500">{item.description}</p>

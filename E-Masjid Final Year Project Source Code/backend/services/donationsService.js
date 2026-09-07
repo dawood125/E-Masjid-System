@@ -5,6 +5,28 @@ const Donation = require('../models/Donation');
 const { sanitizeString, isValidObjectId } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
 
+const ALLOWED_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
+
+function parseStatusFilter(raw, defaultValue = 'completed') {
+  if (raw === undefined || raw === null || raw === '') return defaultValue;
+  const v = String(raw).toLowerCase();
+  if (!ALLOWED_STATUSES.includes(v)) {
+    throw httpError(400, `Invalid status. Allowed: ${ALLOWED_STATUSES.join(', ')}`);
+  }
+  return v;
+}
+
+function hasRealStripeKey() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return false;
+  if (key.includes('your_test_key_here')) return false;
+  return true;
+}
+
+function onlineAvailable() {
+  return { onlineAvailable: hasRealStripeKey() };
+}
+
 function toObjectId(id) {
   return mongoose.Types.ObjectId.createFromHexString(id);
 }
@@ -29,7 +51,7 @@ function monthIndex(month) {
 }
 
 async function listAdmin(query, user) {
-  const { type, month, page = 1, limit = 10, mosqueId, isAnonymous } = query;
+  const { type, month, page = 1, limit = 10, mosqueId, isAnonymous, status } = query;
   const filter = {};
   if (user.role === 'manager') {
     const Mosque = require('../models/Mosque');
@@ -51,6 +73,7 @@ async function listAdmin(query, user) {
     }
     filter.mosqueId = user.mosqueId;
   }
+  filter.status = parseStatusFilter(status, 'completed');
   if (type && type !== 'all') filter.type = new RegExp(type, 'i');
   if (month && month !== 'all') {
     filter.$expr = { $eq: [{ $month: '$createdAt' }, monthIndex(month)] };
@@ -70,12 +93,13 @@ async function listAdmin(query, user) {
   };
 }
 
-async function listPublic({ type, month, page = 1, limit = 10, mosqueId }) {
+async function listPublic({ type, month, page = 1, limit = 10, mosqueId, status }) {
   const query = {};
   if (mosqueId) {
     if (!isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
     query.mosqueId = mosqueId;
   }
+  query.status = parseStatusFilter(status, 'completed');
   if (type && type !== 'all') query.type = new RegExp(type, 'i');
   if (month && month !== 'all') {
     query.$expr = { $eq: [{ $month: '$createdAt' }, monthIndex(month)] };
@@ -99,6 +123,7 @@ async function aggregateTopDonors({ mosqueId }) {
   if (mosqueId && !isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
   const match = {
     isAnonymous: false,
+    status: 'completed',
     ...(mosqueId ? { mosqueId: toObjectId(mosqueId) } : {}),
   };
   const rows = await Donation.aggregate([
@@ -113,7 +138,7 @@ async function aggregateTopDonors({ mosqueId }) {
 
 async function aggregateSummary({ mosqueId }) {
   if (mosqueId && !isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
-  const match = { status: { $ne: 'refunded' }, ...(mosqueId ? { mosqueId: toObjectId(mosqueId) } : {}) };
+  const match = { status: 'completed', ...(mosqueId ? { mosqueId: toObjectId(mosqueId) } : {}) };
   const totals = await Donation.aggregate([
     { $match: match },
     { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -144,11 +169,6 @@ async function aggregateSummary({ mosqueId }) {
     thisMonth: monthlyMap[thisMonthKey] || 0,
     lastMonth: monthlyMap[lastMonthKey] || 0,
   };
-}
-
-function generateTransactionId(donationId) {
-  const suffix = String(donationId).slice(-5).toUpperCase();
-  return `TXN-${new Date().getFullYear()}-${suffix}`;
 }
 
 async function findByStripeSession(sessionId) {
@@ -211,39 +231,10 @@ async function createCash(input, user) {
   });
 }
 
-async function createLegacyOnline(input) {
-  const donation = await Donation.create({
-    donorName: sanitizeString(input.donorName || 'Online Donor'),
-    email: sanitizeString(input.email || ''),
-    phone: sanitizeString(input.phone || ''),
-    amount: Number(input.amount),
-    type: input.type || 'Masjid Fund',
-    paymentMethod: 'Online',
-    isAnonymous: input.isAnonymous || false,
-    mosqueId: input.mosqueId,
-  });
-  return {
-    donation,
-    transactionId: generateTransactionId(donation._id),
-  };
-}
-
 async function createStripeCheckout(input) {
   const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
   const idempotencyKey = `donation_${crypto.randomBytes(12).toString('hex')}`;
-  const pendingDonation = await Donation.create({
-    donorName: sanitizeString(input.donorName || 'Online Donor'),
-    email: sanitizeString(input.email || ''),
-    phone: sanitizeString(input.phone || ''),
-    amount: Number(input.amount),
-    type: input.type || 'Masjid Fund',
-    paymentMethod: 'Online',
-    isAnonymous: !!input.isAnonymous,
-    status: 'pending',
-    stripeSessionId: idempotencyKey,
-    mosqueId: input.mosqueId || undefined,
-    note: input.note || undefined,
-  });
+
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
@@ -265,7 +256,6 @@ async function createStripeCheckout(input) {
     success_url: `${process.env.CLIENT_URL}/donate?success=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.CLIENT_URL}/donate?canceled=1`,
     metadata: {
-      donationId: String(pendingDonation._id),
       idempotencyKey,
       donorName: sanitizeString(input.donorName || 'Online Donor'),
       email: sanitizeString(input.email || ''),
@@ -277,10 +267,19 @@ async function createStripeCheckout(input) {
     },
   }, { idempotencyKey });
 
-  await Donation.updateOne(
-    { _id: pendingDonation._id },
-    { $set: { stripeSessionId: session.id } }
-  );
+  const pendingDonation = await Donation.create({
+    donorName: sanitizeString(input.donorName || 'Online Donor'),
+    email: sanitizeString(input.email || ''),
+    phone: sanitizeString(input.phone || ''),
+    amount: Number(input.amount),
+    type: input.type || 'Masjid Fund',
+    paymentMethod: 'Online',
+    isAnonymous: !!input.isAnonymous,
+    status: 'pending',
+    stripeSessionId: session.id,
+    mosqueId: input.mosqueId || undefined,
+    note: input.note || undefined,
+  });
 
   return { url: session.url, donationId: pendingDonation._id };
 }
@@ -289,10 +288,8 @@ async function createOnlineDonation(input) {
   if (!input.amount || input.amount < 100) {
     throw httpError(400, 'Minimum donation amount is PKR 100');
   }
-  const noRealStripe = !process.env.STRIPE_SECRET_KEY ||
-    process.env.STRIPE_SECRET_KEY.includes('your_test_key_here');
-  if (noRealStripe) {
-    return createLegacyOnline(input);
+  if (!hasRealStripeKey()) {
+    throw httpError(503, 'Online donations are temporarily unavailable. Please contact the masjid office to donate.');
   }
   return createStripeCheckout(input);
 }
@@ -321,6 +318,7 @@ module.exports = {
   findByStripeSession,
   createCash,
   createOnlineDonation,
+  onlineAvailable,
   update,
   remove,
 };

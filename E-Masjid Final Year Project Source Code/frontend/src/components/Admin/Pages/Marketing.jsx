@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import api from '../../../utils/api.js'
 import { useUI } from '../../../hooks/useUI.js'
 import FormField from '../../Common/FormField.jsx'
@@ -46,6 +46,91 @@ function Field({ label, name, type = 'text', value, onChange, placeholder, requi
   )
 }
 
+function ImageField({
+  label,
+  name,
+  value,
+  onChange,
+  onFileChange,
+  previewFile,
+  required,
+  placeholder,
+  error,
+  hint,
+  accept = 'image/jpeg,image/jpg,image/png,image/webp',
+  round = 'square',
+}) {
+  const inputRef = useRef(null)
+  const previewSrc = previewFile
+    ? URL.createObjectURL(previewFile)
+    : (value || '')
+
+  useEffect(() => {
+    return () => {
+      if (previewFile) URL.revokeObjectURL(previewSrc)
+    }
+  }, [previewFile, previewSrc])
+
+  return (
+    <div>
+      <FormField
+        name={name}
+        label={label}
+        required={required}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        error={error}
+        hint={hint}
+      />
+      <div className="mt-2 flex items-center gap-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          onChange={(e) => {
+            const f = e.target.files && e.target.files[0]
+            if (f) onFileChange(f)
+          }}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current && inputRef.current.click()}
+          className="btn btn-secondary btn-sm"
+        >
+          <i className="material-icons-round text-base">upload</i>
+          {previewFile ? 'Replace file' : 'Upload from computer'}
+        </button>
+        {previewFile && (
+          <button
+            type="button"
+            onClick={() => onFileChange(null)}
+            className="btn btn-sm bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+          >
+            <i className="material-icons-round text-base">close</i>
+            Remove
+          </button>
+        )}
+        {previewFile && (
+          <span className="text-xs text-gray-500 truncate">
+            {previewFile.name} ({Math.round(previewFile.size / 1024)} KB)
+          </span>
+        )}
+      </div>
+      {previewSrc && (
+        <div className="mt-3">
+          <img
+            src={previewSrc}
+            alt="preview"
+            className={`${round === 'circle' ? 'h-20 w-20 rounded-full' : 'h-32 w-full rounded-lg'} object-cover border border-gray-200 bg-gray-50`}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function validateCampaign(form) {
   const errs = {}
   if (!form.title.trim()) errs.title = 'Title is required'
@@ -73,8 +158,8 @@ function validateTestimonial(form) {
 
 function validateHeroSlide(form) {
   const errs = {}
-  if (!form.image.trim()) errs.image = 'Image URL is required'
-  else if (!/^https?:\/\/|\/assets\//.test(form.image.trim())) errs.image = 'Use an absolute http(s) URL or a /assets/ path'
+  if (!form.image.trim() && !form._hasImageFile) errs.image = 'Image is required (upload a file or provide a URL)'
+  else if (form.image.trim() && !/^https?:\/\/|\/assets\/|\/uploads\//.test(form.image.trim())) errs.image = 'Use an absolute http(s) URL, /assets/ path, or /uploads/ path'
   return errs
 }
 
@@ -114,6 +199,7 @@ function CampaignsTab({ showToast }) {
   const [confirmDel, setConfirmDel] = useState(null)
   const [form, setForm] = useState(blankCampaign)
   const [formErrors, setFormErrors] = useState({})
+  const [imageFile, setImageFile] = useState(null)
 
   function blankCampaign() {
     return { title: '', subtitle: '', targetAmount: '', raisedAmount: '', daysLeft: '30', image: '', isActive: true, isFeatured: false, order: '0' }
@@ -127,7 +213,7 @@ function CampaignsTab({ showToast }) {
   }, [showToast])
   useEffect(() => { load() }, [load])
 
-  const openNew = () => { setForm(blankCampaign()); setFormErrors({}); setEditing(null); setIsOpen(true) }
+  const openNew = () => { setForm(blankCampaign()); setFormErrors({}); setEditing(null); setIsOpen(true); setImageFile(null) }
   const openEdit = (c) => {
     setForm({
       title: c.title || '',
@@ -143,8 +229,9 @@ function CampaignsTab({ showToast }) {
     setFormErrors({})
     setEditing(c)
     setIsOpen(true)
+    setImageFile(null)
   }
-  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}) }
+  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}); setImageFile(null) }
 
   const save = async () => {
     const v = validateCampaign(form)
@@ -157,19 +244,34 @@ function CampaignsTab({ showToast }) {
     }
     setFormErrors({})
     try {
-      const payload = {
+      const numeric = {
         ...form,
         targetAmount: Number(form.targetAmount) || 0,
         raisedAmount: Number(form.raisedAmount) || 0,
         daysLeft: Number(form.daysLeft) || 0,
         order: Number(form.order) || 0,
       }
-      if (editing) {
-        await api.adminUpdateCampaign(editing._id, payload)
-        showToast('Campaign updated', 'success')
+      if (imageFile) {
+        const fd = new FormData()
+        Object.entries(numeric).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) fd.append(k, String(v))
+        })
+        fd.append('image', imageFile)
+        if (editing) {
+          await api.adminUpdateCampaignWithImage(editing._id, fd)
+          showToast('Campaign updated', 'success')
+        } else {
+          await api.adminCreateCampaignWithImage(fd)
+          showToast('Campaign created', 'success')
+        }
       } else {
-        await api.adminCreateCampaign(payload)
-        showToast('Campaign created', 'success')
+        if (editing) {
+          await api.adminUpdateCampaign(editing._id, numeric)
+          showToast('Campaign updated', 'success')
+        } else {
+          await api.adminCreateCampaign(numeric)
+          showToast('Campaign created', 'success')
+        }
       }
       close()
       load()
@@ -233,8 +335,18 @@ function CampaignsTab({ showToast }) {
             <Field label="Raised Amount (PKR)" name="raisedAmount" type="number" value={form.raisedAmount} onChange={(v) => setForm({ ...form, raisedAmount: v })} placeholder="320000" error={formErrors.raisedAmount} onClearError={() => formErrors.raisedAmount && setFormErrors((p) => ({ ...p, raisedAmount: null }))} />
             <Field label="Days Left" name="daysLeft" type="number" value={form.daysLeft} onChange={(v) => setForm({ ...form, daysLeft: v })} placeholder="30" error={formErrors.daysLeft} onClearError={() => formErrors.daysLeft && setFormErrors((p) => ({ ...p, daysLeft: null }))} />
             <Field label="Order" name="order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
-            <Field label="Image URL (optional)" name="image" value={form.image} onChange={(v) => setForm({ ...form, image: v })} placeholder="https://..." />
           </div>
+          <ImageField
+            label="Image"
+            name="image"
+            value={form.image}
+            onChange={(v) => setForm({ ...form, image: v })}
+            onFileChange={(f) => setImageFile(f)}
+            previewFile={imageFile}
+            optional
+            placeholder="https://... or leave empty and upload below"
+            hint="JPG/PNG/WEBP up to 5 MB"
+          />
           <div className="flex items-center gap-6 pt-2">
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 rounded" />
@@ -265,6 +377,7 @@ function TestimonialsTab({ showToast }) {
   const [confirmDel, setConfirmDel] = useState(null)
   const [form, setForm] = useState({ name: '', role: '', quote: '', photo: '/assets/images/testimonials/testimonial-1.jpg', order: '0', isActive: true })
   const [formErrors, setFormErrors] = useState({})
+  const [photoFile, setPhotoFile] = useState(null)
 
   const load = useCallback(() => {
     api.adminListTestimonials()
@@ -274,7 +387,7 @@ function TestimonialsTab({ showToast }) {
   }, [showToast])
   useEffect(() => { load() }, [load])
 
-  const openNew = () => { setForm({ name: '', role: '', quote: '', photo: '/assets/images/testimonials/testimonial-1.jpg', order: '0', isActive: true }); setFormErrors({}); setEditing(null); setIsOpen(true) }
+  const openNew = () => { setForm({ name: '', role: '', quote: '', photo: '/assets/images/testimonials/testimonial-1.jpg', order: '0', isActive: true }); setFormErrors({}); setEditing(null); setIsOpen(true); setPhotoFile(null) }
   const openEdit = (t) => {
     setForm({
       name: t.name || '',
@@ -287,8 +400,9 @@ function TestimonialsTab({ showToast }) {
     setFormErrors({})
     setEditing(t)
     setIsOpen(true)
+    setPhotoFile(null)
   }
-  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}) }
+  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}); setPhotoFile(null) }
 
   const save = async () => {
     const v = validateTestimonial(form)
@@ -301,13 +415,28 @@ function TestimonialsTab({ showToast }) {
     }
     setFormErrors({})
     try {
-      const payload = { ...form, order: Number(form.order) || 0 }
-      if (editing) {
-        await api.adminUpdateTestimonial(editing._id, payload)
-        showToast('Testimonial updated', 'success')
+      const numeric = { ...form, order: Number(form.order) || 0 }
+      if (photoFile) {
+        const fd = new FormData()
+        Object.entries(numeric).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) fd.append(k, String(v))
+        })
+        fd.append('photo', photoFile)
+        if (editing) {
+          await api.adminUpdateTestimonialWithImage(editing._id, fd)
+          showToast('Testimonial updated', 'success')
+        } else {
+          await api.adminCreateTestimonialWithImage(fd)
+          showToast('Testimonial created', 'success')
+        }
       } else {
-        await api.adminCreateTestimonial(payload)
-        showToast('Testimonial created', 'success')
+        if (editing) {
+          await api.adminUpdateTestimonial(editing._id, numeric)
+          showToast('Testimonial updated', 'success')
+        } else {
+          await api.adminCreateTestimonial(numeric)
+          showToast('Testimonial created', 'success')
+        }
       }
       close()
       load()
@@ -366,7 +495,18 @@ function TestimonialsTab({ showToast }) {
           <Field label="Name" name="name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required error={formErrors.name} onClearError={() => formErrors.name && setFormErrors((p) => ({ ...p, name: null }))} />
           <Field label="Role / Title" name="role" value={form.role} onChange={(v) => setForm({ ...form, role: v })} required placeholder="Community Member, Mother of two" error={formErrors.role} onClearError={() => formErrors.role && setFormErrors((p) => ({ ...p, role: null }))} />
           <Field label="Quote" name="quote" value={form.quote} onChange={(v) => setForm({ ...form, quote: v })} required rows={4} placeholder="Our mosque changed my family's life..." error={formErrors.quote} onClearError={() => formErrors.quote && setFormErrors((p) => ({ ...p, quote: null }))} />
-          <Field label="Photo URL" name="photo" optional value={form.photo} onChange={(v) => setForm({ ...form, photo: v })} placeholder="/assets/images/testimonials/testimonial-1.jpg" />
+          <ImageField
+            label="Photo"
+            name="photo"
+            value={form.photo}
+            onChange={(v) => setForm({ ...form, photo: v })}
+            onFileChange={(f) => setPhotoFile(f)}
+            previewFile={photoFile}
+            optional
+            placeholder="/assets/images/testimonials/testimonial-1.jpg"
+            hint="JPG/PNG/WEBP up to 5 MB"
+            round="circle"
+          />
           <Field label="Display Order" name="order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
           <label className="inline-flex items-center gap-2 cursor-pointer pt-1">
             <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 rounded" />
@@ -390,8 +530,10 @@ function HeroSlidesTab({ showToast }) {
   const [editing, setEditing] = useState(null)
   const [isOpen, setIsOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
-  const [form, setForm] = useState({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', link: '', order: '0', isActive: true })
+  const [form, setForm] = useState({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', order: '0', isActive: true })
   const [formErrors, setFormErrors] = useState({})
+  const [imageFile, setImageFile] = useState(null)
+  const [mobileImageFile, setMobileImageFile] = useState(null)
 
   const load = useCallback(() => {
     api.adminListHeroSlides()
@@ -401,40 +543,57 @@ function HeroSlidesTab({ showToast }) {
   }, [showToast])
   useEffect(() => { load() }, [load])
 
-  const openNew = () => { setForm({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', link: '', order: '0', isActive: true }); setFormErrors({}); setEditing(null); setIsOpen(true) }
+  const openNew = () => { setForm({ image: '/assets/images/gallery/gallery-fajr.jpg', mobileImage: '', caption: '', order: '0', isActive: true }); setFormErrors({}); setEditing(null); setIsOpen(true); setImageFile(null); setMobileImageFile(null) }
   const openEdit = (s) => {
     setForm({
       image: s.image || '',
       mobileImage: s.mobileImage || '',
       caption: s.caption || '',
-      link: s.link || '',
       order: s.order ?? '0',
       isActive: s.isActive !== false,
     })
     setFormErrors({})
     setEditing(s)
     setIsOpen(true)
+    setImageFile(null)
+    setMobileImageFile(null)
   }
-  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}) }
+  const close = () => { setIsOpen(false); setEditing(null); setFormErrors({}); setImageFile(null); setMobileImageFile(null) }
 
   const save = async () => {
-    const v = validateHeroSlide(form)
-    if (Object.keys(v).length > 0) {
-      setFormErrors(v)
-      const firstField = Object.keys(v)[0]
+    const errs = {}
+    if (!form.image.trim() && !imageFile) errs.image = 'Image is required (upload a file or provide a URL)'
+    setFormErrors(errs)
+    if (Object.keys(errs).length > 0) {
+      const firstField = Object.keys(errs)[0]
       const el = document.querySelector(`[name="${firstField}"]`)
       if (el && el.focus) el.focus()
       return
     }
-    setFormErrors({})
     try {
-      const payload = { ...form, order: Number(form.order) || 0 }
-      if (editing) {
-        await api.adminUpdateHeroSlide(editing._id, payload)
-        showToast('Hero slide updated', 'success')
+      const numeric = { ...form, order: Number(form.order) || 0 }
+      if (imageFile || mobileImageFile) {
+        const fd = new FormData()
+        Object.entries(numeric).forEach(([k, v]) => {
+          if (v !== null && v !== undefined && v !== '') fd.append(k, String(v))
+        })
+        if (imageFile) fd.append('image', imageFile)
+        if (mobileImageFile) fd.append('mobileImage', mobileImageFile)
+        if (editing) {
+          await api.adminUpdateHeroSlideWithImage(editing._id, fd)
+          showToast('Hero slide updated', 'success')
+        } else {
+          await api.adminCreateHeroSlideWithImage(fd)
+          showToast('Hero slide created', 'success')
+        }
       } else {
-        await api.adminCreateHeroSlide(payload)
-        showToast('Hero slide created', 'success')
+        if (editing) {
+          await api.adminUpdateHeroSlide(editing._id, numeric)
+          showToast('Hero slide updated', 'success')
+        } else {
+          await api.adminCreateHeroSlide(numeric)
+          showToast('Hero slide created', 'success')
+        }
       }
       close()
       load()
@@ -487,10 +646,30 @@ function HeroSlidesTab({ showToast }) {
 
       <Modal open={isOpen} onClose={close} title={editing ? 'Edit Hero Slide' : 'New Hero Slide'}>
         <form onSubmit={(e) => { e.preventDefault(); save() }} noValidate className="space-y-4">
-          <Field label="Image URL" name="image" value={form.image} onChange={(v) => setForm({ ...form, image: v })} required placeholder="/assets/images/gallery/gallery-fajr.jpg" error={formErrors.image} onClearError={() => formErrors.image && setFormErrors((p) => ({ ...p, image: null }))} />
-          <Field label="Mobile Image URL (optional, 9:16 crop)" name="mobileImage" optional value={form.mobileImage} onChange={(v) => setForm({ ...form, mobileImage: v })} placeholder="/assets/images/hero/hero-mobile.jpg" />
+          <ImageField
+            label="Image"
+            name="image"
+            value={form.image}
+            onChange={(v) => setForm({ ...form, image: v })}
+            onFileChange={(f) => setImageFile(f)}
+            previewFile={imageFile}
+            required
+            placeholder="/assets/images/gallery/gallery-fajr.jpg"
+            error={formErrors.image}
+            hint="JPG/PNG/WEBP up to 5 MB"
+          />
+          <ImageField
+            label="Mobile Image (optional, 9:16 crop)"
+            name="mobileImage"
+            value={form.mobileImage}
+            onChange={(v) => setForm({ ...form, mobileImage: v })}
+            onFileChange={(f) => setMobileImageFile(f)}
+            previewFile={mobileImageFile}
+            optional
+            placeholder="/assets/images/hero/hero-mobile.jpg"
+            hint="JPG/PNG/WEBP up to 5 MB"
+          />
           <Field label="Caption" name="caption" optional value={form.caption} onChange={(v) => setForm({ ...form, caption: v })} placeholder="Fajr prayer at dawn" />
-          <Field label="Link URL (optional)" name="link" optional value={form.link} onChange={(v) => setForm({ ...form, link: v })} placeholder="/events" />
           <Field label="Display Order" name="order" type="number" value={form.order} onChange={(v) => setForm({ ...form, order: v })} placeholder="0" />
           <label className="inline-flex items-center gap-2 cursor-pointer pt-1">
             <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4 rounded" />

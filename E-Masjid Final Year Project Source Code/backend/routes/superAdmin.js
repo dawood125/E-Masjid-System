@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Mosque = require('../models/Mosque');
 const { protect, authorize } = require('../middleware/auth');
 const { body } = require('express-validator');
-const { handleValidation, sanitizeString } = require('../middleware/validate');
+const { handleValidation, sanitizeString, isValidObjectId } = require('../middleware/validate');
 const { findManagedMosqueOrThrow, getManagedMosqueIds } = require('../services/scopeService');
 const httpError = require('../middleware/httpError');
 
@@ -20,6 +20,7 @@ function userView(u, mosqueName) {
     phone: u.phone,
     role: u.role,
     mosqueId: u.mosqueId,
+    isActive: u.isActive,
   };
   if (u.specialization) view.specialization = u.specialization;
   return view;
@@ -140,6 +141,37 @@ router.get('/users', protect, authorize('manager'), async (req, res, next) => {
       .populate('mosqueId', 'name city')
       .select('-password');
     res.json({ success: true, data: users, managedMosques: [] });
+  } catch (e) { next(e); }
+});
+
+router.put('/admins/:adminId', protect, authorize('manager'), [
+  body('isActive').optional().isBoolean().withMessage('isActive must be true or false'),
+  handleValidation,
+], async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.adminId)) throw httpError(400, 'Invalid admin id');
+
+    const managedIds = await getManagedMosqueIds(req.user._id);
+    if (managedIds.length === 0) throw httpError(404, 'Admin not found in your managed mosques');
+
+    const admin = await User.findOne({
+      _id: req.params.adminId,
+      role: 'admin',
+      mosqueId: { $in: managedIds },
+    });
+    if (!admin) throw httpError(404, 'Admin not found in your managed mosques');
+
+    if (typeof req.body.isActive === 'boolean') {
+      admin.isActive = req.body.isActive;
+    }
+
+    await admin.save();
+
+    res.json({
+      success: true,
+      data: userView(admin),
+      message: admin.isActive ? 'Admin activated' : 'Admin deactivated',
+    });
   } catch (e) { next(e); }
 });
 

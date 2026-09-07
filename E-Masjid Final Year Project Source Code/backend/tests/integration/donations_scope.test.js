@@ -368,18 +368,48 @@ describe('Donations scope isolation (Phase 8)', () => {
   });
 
   describe('online donations', () => {
-    test('POST /api/donations/online with mosqueId A scopes correctly (legacy path)', async () => {
-      const res = await request(app)
-        .post('/api/donations/online')
-        .send({
-          donorName: 'Online A',
-          amount: 300,
-          type: 'Sadaqah',
-          mosqueId: String(mosqueA._id),
-        });
-      expect([200, 201]).toContain(res.status);
-      if (res.body.data) {
-        expect(String(res.body.data.mosqueId)).toBe(String(mosqueA._id));
+    test('POST /api/donations/online with mosqueId A scopes correctly', async () => {
+      const savedKey = process.env.STRIPE_SECRET_KEY;
+      process.env.STRIPE_SECRET_KEY = 'sk_test_real_looking_key_for_scope_test';
+      mockStripeSessionCreate.mockReset();
+      mockStripeSessionCreate.mockResolvedValue({
+        id: 'cs_test_scope_a',
+        url: 'https://checkout.stripe.com/scope-a',
+      });
+      try {
+        const res = await request(app)
+          .post('/api/donations/online')
+          .send({
+            donorName: 'Online A',
+            amount: 300,
+            type: 'Sadaqah',
+            mosqueId: String(mosqueA._id),
+          });
+        expect([200, 201]).toContain(res.status);
+        if (res.body.data) {
+          expect(String(res.body.data.mosqueId)).toBe(String(mosqueA._id));
+        }
+      } finally {
+        process.env.STRIPE_SECRET_KEY = savedKey;
+        mockStripeSessionCreate.mockReset();
+      }
+    });
+
+    test('POST /api/donations/online without Stripe key returns 503 (replaces legacy fallback)', async () => {
+      const savedKey = process.env.STRIPE_SECRET_KEY;
+      delete process.env.STRIPE_SECRET_KEY;
+      try {
+        const res = await request(app)
+          .post('/api/donations/online')
+          .send({
+            donorName: 'No Stripe Online',
+            amount: 500,
+            type: 'Sadaqah',
+            mosqueId: String(mosqueA._id),
+          });
+        expect(res.status).toBe(503);
+      } finally {
+        process.env.STRIPE_SECRET_KEY = savedKey;
       }
     });
 
@@ -480,10 +510,11 @@ describe('Donations scope isolation (Phase 8)', () => {
       expect(lineItem.price_data.unit_amount).toBe(25000);
     });
 
-    test('POST /api/donations/online with no Stripe still goes to legacy path (no Stripe key)', async () => {
+    test('POST /api/donations/online with no Stripe key returns 503 (no fake donation created)', async () => {
       const savedKey = process.env.STRIPE_SECRET_KEY;
       delete process.env.STRIPE_SECRET_KEY;
       try {
+        const before = await Donation.countDocuments({ donorName: 'Legacy Donor' });
         const res = await request(app)
           .post('/api/donations/online')
           .send({
@@ -492,11 +523,12 @@ describe('Donations scope isolation (Phase 8)', () => {
             type: 'Sadaqah',
             mosqueId: String(mosqueA._id),
           });
-        expect([200, 201]).toContain(res.status);
+        expect(res.status).toBe(503);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toMatch(/temporarily unavailable/i);
         expect(mockStripeSessionCreate).not.toHaveBeenCalled();
-        if (res.body.data) {
-          expect(String(res.body.data.mosqueId)).toBe(String(mosqueA._id));
-        }
+        const after = await Donation.countDocuments({ donorName: 'Legacy Donor' });
+        expect(after).toBe(before);
       } finally {
         process.env.STRIPE_SECRET_KEY = savedKey;
       }

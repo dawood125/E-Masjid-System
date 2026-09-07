@@ -70,6 +70,7 @@ class ApiService {
   getTopDonors(params = '') { return this.request('GET', `/api/donations/top-donors${params ? '?' + params : ''}`) }
   getDonationSummary(params = '') { return this.request('GET', `/api/donations/summary${params ? '?' + params : ''}`) }
   getDonationBySession(sessionId) { return this.request('GET', `/api/donations/by-session/${sessionId}`) }
+  getDonationsStatus() { return this.request('GET', '/api/donations/status') }
   createDonation(data) { return this.request('POST', '/api/donations', data) }
   updateDonation(id, data) { return this.request('PUT', `/api/donations/${id}`, data) }
   deleteDonation(id) { return this.request('DELETE', `/api/donations/${id}`) }
@@ -170,15 +171,21 @@ class ApiService {
 
   adminListCampaigns() { return this.request('GET', '/api/admin/marketing/campaigns') }
   adminCreateCampaign(data) { return this.request('POST', '/api/admin/marketing/campaigns', data) }
+  adminCreateCampaignWithImage(formData) { return this.uploadRequest('POST', '/api/admin/marketing/campaigns', formData) }
   adminUpdateCampaign(id, data) { return this.request('PUT', `/api/admin/marketing/campaigns/${id}`, data) }
+  adminUpdateCampaignWithImage(id, formData) { return this.uploadRequest('PUT', `/api/admin/marketing/campaigns/${id}`, formData) }
   adminDeleteCampaign(id) { return this.request('DELETE', `/api/admin/marketing/campaigns/${id}`) }
   adminListTestimonials() { return this.request('GET', '/api/admin/marketing/testimonials') }
   adminCreateTestimonial(data) { return this.request('POST', '/api/admin/marketing/testimonials', data) }
+  adminCreateTestimonialWithImage(formData) { return this.uploadRequest('POST', '/api/admin/marketing/testimonials', formData) }
   adminUpdateTestimonial(id, data) { return this.request('PUT', `/api/admin/marketing/testimonials/${id}`, data) }
+  adminUpdateTestimonialWithImage(id, formData) { return this.uploadRequest('PUT', `/api/admin/marketing/testimonials/${id}`, formData) }
   adminDeleteTestimonial(id) { return this.request('DELETE', `/api/admin/marketing/testimonials/${id}`) }
   adminListHeroSlides() { return this.request('GET', '/api/admin/marketing/hero-slides') }
   adminCreateHeroSlide(data) { return this.request('POST', '/api/admin/marketing/hero-slides', data) }
+  adminCreateHeroSlideWithImage(formData) { return this.uploadRequest('POST', '/api/admin/marketing/hero-slides', formData) }
   adminUpdateHeroSlide(id, data) { return this.request('PUT', `/api/admin/marketing/hero-slides/${id}`, data) }
+  adminUpdateHeroSlideWithImage(id, formData) { return this.uploadRequest('PUT', `/api/admin/marketing/hero-slides/${id}`, formData) }
   adminDeleteHeroSlide(id) { return this.request('DELETE', `/api/admin/marketing/hero-slides/${id}`) }
 
   getNikahBookings() { return this.request('GET', '/api/nikah-bookings') }
@@ -208,6 +215,9 @@ class ApiService {
   }
   createSuperAdminAdmin(mosqueId, data) {
     return this.request('POST', `/api/super-admin/mosques/${mosqueId}/admin`, data)
+  }
+  updateSuperAdminAdmin(id, data) {
+    return this.request('PUT', `/api/super-admin/admins/${id}`, data)
   }
   createSuperAdminUser(data) {
     return this.request('POST', '/api/super-admin/users', data)

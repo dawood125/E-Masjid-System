@@ -351,7 +351,7 @@ export default function PrayerTimes() {
                           </span>
                           <span className="inline-flex items-center gap-1">
                             <i className="material-icons-round text-base text-[#047857]">schedule</i>
-                            <strong className="font-primary text-base text-[#064e3b]">{prayer.time}</strong>
+                            <strong className="font-primary text-base text-[#064e3b]">{formatTime(prayer.time)}</strong>
                           </span>
                         </div>
                         {prayer.description && (

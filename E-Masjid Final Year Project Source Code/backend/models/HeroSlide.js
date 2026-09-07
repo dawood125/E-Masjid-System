@@ -5,13 +5,12 @@ const heroSlideSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Image URL/path is required'],
   },
-  mobileImage: { type: String }, 
+  mobileImage: { type: String },
   caption: {
     type: String,
     trim: true,
     maxlength: [140, 'Caption must be 140 characters or fewer'],
   },
-  link: { type: String, trim: true }, 
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   mosqueId: {

@@ -254,7 +254,7 @@ export default function Events() {
                 </div>
                 <div className="min-h-[320px]">
                   <img
-                    src={featuredEvent.image}
+                    src={resolveEventImage(featuredEvent)}
                     alt={featuredEvent.title}
                     onError={handleImageError}
                     className="h-full w-full object-cover"
@@ -278,7 +278,7 @@ export default function Events() {
                 <article key={event.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
                   <div className="relative h-52">
                     <img
-                      src={event.image}
+                      src={resolveEventImage(event)}
                       alt={event.title}
                       onError={handleImageError}
                       className="h-full w-full object-cover"

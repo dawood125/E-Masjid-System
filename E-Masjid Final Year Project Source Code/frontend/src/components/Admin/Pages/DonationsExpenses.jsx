@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
@@ -41,6 +41,21 @@ const EXPENSE_CATEGORY_COLORS = {
   default: 'bg-gray-100 text-gray-700',
 }
 
+const DONATION_TYPES = ['all', 'Sadaqah', 'Zakat', 'Masjid Fund']
+
+const EXPENSE_CATEGORIES = [
+  'all',
+  'Utilities',
+  'Salary',
+  'Renovation',
+  'Charity',
+  'Maintenance',
+  'Events',
+  'Education',
+  'Equipment',
+  'Other',
+]
+
 const PAGE_SIZE = 20
 
 function formatRecordTime(dateString) {
@@ -71,6 +86,7 @@ export default function DonationsExpenses() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const scrollBeforeModalRef = useRef(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingDonation, setEditingDonation] = useState(null)
   const [recordForm, setRecordForm] = useState({
@@ -137,13 +153,8 @@ export default function DonationsExpenses() {
   
   }, [donationSafePage, expenseSafePage, typeFilter, categoryFilter, anonFilter, showToast])
 
-  const donationTypes = useMemo(() => {
-    return ['all', ...new Set(donations.map((donation) => donation.type.toLowerCase()))]
-  }, [donations])
-
-  const expenseCategories = useMemo(() => {
-    return ['all', ...new Set(expenses.map((expense) => expense.category.toLowerCase()))]
-  }, [expenses])
+  const donationTypes = DONATION_TYPES
+  const expenseCategories = EXPENSE_CATEGORIES
 
   const totalDonations = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0)
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
@@ -157,7 +168,26 @@ export default function DonationsExpenses() {
     setAnonFilter('all')
   }
 
+  const captureScrollBeforeModal = () => {
+    scrollBeforeModalRef.current = typeof window !== 'undefined' ? window.scrollY || 0 : 0
+  }
+
+  const restoreScrollAfterModal = () => {
+    if (typeof window === 'undefined') return
+    const y = scrollBeforeModalRef.current || 0
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: y, left: 0, behavior: 'auto' })
+    })
+  }
+
+  const closeCreateModal = () => {
+    setIsCreateOpen(false)
+    setEditingDonation(null)
+    restoreScrollAfterModal()
+  }
+
   const onAddRecord = () => {
+    captureScrollBeforeModal()
     setEditingDonation(null)
     setRecordForm({
       donorName: '',
@@ -174,6 +204,7 @@ export default function DonationsExpenses() {
   }
 
   const onEditDonation = (donation) => {
+    captureScrollBeforeModal()
     setEditingDonation(donation)
     setRecordForm({
       donorName: donation.donorName || '',
@@ -224,8 +255,8 @@ export default function DonationsExpenses() {
           showToast('Donation updated successfully.', 'success')
         } else {
           const res = await api.createDonation(payload)
+          setDonations((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
           showToast('Donation added successfully.', 'success')
-          setDonationPage(1)
         }
       } else {
         const payload = {
@@ -241,12 +272,11 @@ export default function DonationsExpenses() {
           showToast('Expense updated successfully.', 'success')
         } else {
           const res = await api.createExpense(payload)
+          setExpenses((prev) => [{ ...res.data, id: res.data._id || res.data.id, date: res.data.createdAt || res.data.date }, ...prev])
           showToast('Expense added successfully.', 'success')
-          setExpensePage(1)
         }
       }
-      setIsCreateOpen(false)
-      setEditingDonation(null)
+      closeCreateModal()
       setRecordForm({
         donorName: '',
         amount: '',
@@ -559,6 +589,7 @@ export default function DonationsExpenses() {
                           <button
                             type="button"
                             onClick={() => {
+                              captureScrollBeforeModal()
                               setRecordForm({
                                 donorName: '',
                                 amount: String(expense.amount),
@@ -640,7 +671,7 @@ export default function DonationsExpenses() {
               <h3 className="text-lg font-bold text-gray-900">
                 {activeTab === 'donations' ? (editingDonation ? 'Edit Donation' : 'Add Donation') : (recordForm._editExpenseId ? 'Edit Expense' : 'Add Expense')}
               </h3>
-              <button type="button" onClick={() => { if (!submitting) { setIsCreateOpen(false); setEditingDonation(null) } }} disabled={submitting} className="text-gray-500 hover:text-gray-700 disabled:opacity-40">
+              <button type="button" onClick={() => { if (!submitting) { closeCreateModal() } }} disabled={submitting} className="text-gray-500 hover:text-gray-700 disabled:opacity-40">
                 <i className="material-icons-round">close</i>
               </button>
             </div>
@@ -760,7 +791,7 @@ export default function DonationsExpenses() {
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
                 <button
                   type="button"
-                  onClick={() => { setIsCreateOpen(false); setEditingDonation(null); setRecordErrors({}) }}
+                  onClick={() => { closeCreateModal(); setRecordErrors({}) }}
                   disabled={submitting}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                 >

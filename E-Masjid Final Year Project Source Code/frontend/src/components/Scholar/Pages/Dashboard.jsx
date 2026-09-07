@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import { useAuth } from '../../../context/AuthContext.jsx'
 import api from '../../../utils/api.js'
@@ -22,22 +22,35 @@ export default function ScholarDashboard() {
   const [rejectError, setRejectError] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const loadBookings = useCallback(async (options = {}) => {
+    const { silent = false } = options
+    try {
+      const res = await api.getNikahBookings()
+      const list = Array.isArray(res.data) ? res.data : []
+      setBookings(list.map((item) => ({ ...item, id: item._id || item.id })))
+    } catch (err) {
+      if (!silent) {
+        showToast(err.message || 'Failed to load Nikah requests.', 'error')
+      }
+    }
+  }, [showToast])
+
   useEffect(() => {
     let mounted = true
     ;(async () => {
-      try {
-        const res = await api.getNikahBookings()
-        if (!mounted) return
-        const list = Array.isArray(res.data) ? res.data : []
-        setBookings(list.map((item) => ({ ...item, id: item._id || item.id })))
-      } catch (err) {
-        showToast(err.message || 'Failed to load Nikah requests.', 'error')
-      } finally {
-        if (mounted) setLoading(false)
-      }
+      await loadBookings()
+      if (mounted) setLoading(false)
     })()
     return () => { mounted = false }
-  }, [showToast])
+  }, [loadBookings])
+
+  useEffect(() => {
+    const onFocus = () => {
+      loadBookings({ silent: true })
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [loadBookings])
 
   const todayLabel = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -62,12 +75,12 @@ export default function ScholarDashboard() {
   const acceptRequest = async (id) => {
     try {
       const target = bookings.find((booking) => booking.id === id)
-      const res = await api.updateNikahBooking(id, {
+      await api.updateNikahBooking(id, {
         status: 'accepted',
         confirmedDate: target?.ceremonyDate,
         confirmedTime: target?.ceremonyTime,
       })
-      setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, ...res.data, id } : booking)))
+      await loadBookings()
       showToast(`Booking ${String(id).slice(-6)} accepted.`, 'success')
       setSelectedBookingId(null)
     } catch (err) {
@@ -96,11 +109,11 @@ export default function ScholarDashboard() {
     }
     setRejectError(null)
     try {
-      const res = await api.updateNikahBooking(rejectModalBooking.id, {
+      await api.updateNikahBooking(rejectModalBooking.id, {
         status: 'rejected',
         rejectionReason: trimmed,
       })
-      setBookings((prev) => prev.map((booking) => (booking.id === rejectModalBooking.id ? { ...booking, ...res.data, id: rejectModalBooking.id } : booking)))
+      await loadBookings()
       showToast(`Booking ${String(rejectModalBooking.id).slice(-6)} rejected.`, 'warning')
       setRejectModalBookingId(null)
       setRejectReason('')

@@ -9,6 +9,7 @@ router.get('/', ctrl.listPublic);
 router.get('/top-donors', ctrl.topDonors);
 router.get('/summary', ctrl.summary);
 router.get('/by-session/:sessionId', ctrl.getBySession);
+router.get('/status', ctrl.status);
 
 router.get('/admin', protect, authorize('admin', 'manager'), ctrl.listAdmin);
 

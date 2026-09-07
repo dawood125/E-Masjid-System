@@ -91,7 +91,6 @@ function sanitizeHeroSlide(body) {
   if (data.image) data.image = sanitizeString(data.image);
   if (data.mobileImage) data.mobileImage = sanitizeString(data.mobileImage);
   if (data.caption) data.caption = sanitizeString(data.caption);
-  if (data.link) data.link = sanitizeString(data.link);
   return data;
 }
 
