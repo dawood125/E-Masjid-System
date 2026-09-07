@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
+import { resolveImageUrl } from '../../utils/imageUrl.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
 function ChevronLeft(props) {
@@ -83,7 +84,7 @@ export default function ImageCarousel() {
                 className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0'}`}
               >
                 <img
-                  src={s.image}
+                  src={resolveImageUrl(s.image)}
                   alt={s.caption || ''}
                   loading="lazy"
                   className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${i === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}

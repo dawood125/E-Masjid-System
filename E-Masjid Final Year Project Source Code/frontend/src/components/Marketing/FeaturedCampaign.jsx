@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../utils/api.js'
 import { ROUTES } from '../../utils/constants.js'
+import { resolveImageUrl } from '../../utils/imageUrl.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
 const DEFAULT_IMAGE = '/assets/images/gallery/gallery-courtyard.jpg'
@@ -48,7 +49,7 @@ export default function FeaturedCampaign() {
 
         <div className="mb-10 rounded-2xl overflow-hidden border border-white/15 bg-white/5">
           <img
-            src={campaign.image || DEFAULT_IMAGE}
+            src={resolveImageUrl(campaign.image) || DEFAULT_IMAGE}
             alt={campaign.title}
             className="w-full h-56 md:h-72 object-cover"
             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_IMAGE }}

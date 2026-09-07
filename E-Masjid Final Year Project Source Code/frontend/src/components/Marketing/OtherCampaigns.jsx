@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../utils/api.js'
 import { ROUTES } from '../../utils/constants.js'
+import { resolveImageUrl } from '../../utils/imageUrl.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
 function formatPKR(n) {
@@ -55,7 +56,7 @@ export default function OtherCampaigns() {
               >
                 {c.image && (
                   <img
-                    src={c.image}
+                    src={resolveImageUrl(c.image)}
                     alt={c.title}
                     className="-mx-7 -mt-7 mb-5 h-40 w-[calc(100%+3.5rem)] object-cover"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}

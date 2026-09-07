@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useUI } from '../../../hooks/useUI.js'
 import { useAuth } from '../../../hooks/useAuth.js'
 import api from '../../../utils/api.js'
-import { API_BASE_URL } from '../../../utils/constants.js'
+import { resolveImageUrl } from '../../../utils/imageUrl.js'
 import { formatDate, formatTime } from '../../../utils/formatters.js'
 import { getActiveMosqueId } from '../../../utils/mosque.js'
 import FormField from '../../Common/FormField.jsx'
@@ -26,11 +26,6 @@ const STATUS_STYLES = {
 }
 
 const EVENT_ICON_BY_INDEX = ['mosque', 'school', 'volunteer_activism', 'menu_book', 'event_busy']
-
-function resolveImageUrl(path) {
-  if (!path) return null
-  return path.startsWith('http') ? path : `${API_BASE_URL}${path}`
-}
 
 function inferStatus(dateString) {
   const today = new Date()

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import api from '../../utils/api.js'
+import { resolveImageUrl } from '../../utils/imageUrl.js'
 import { useMosque } from '../../hooks/useMosque.js'
 
 const PLACEHOLDER_TESTIMONIALS = [
@@ -124,7 +125,7 @@ export default function Testimonials() {
 
                 <figcaption className="mt-6 flex items-center gap-3 pt-5 border-t border-gray-100">
                   <img
-                    src={t.photo}
+                    src={resolveImageUrl(t.photo)}
                     alt={t.name}
                     className="h-14 w-14 rounded-full object-cover ring-2 ring-[#047857]/20"
                     loading="lazy"

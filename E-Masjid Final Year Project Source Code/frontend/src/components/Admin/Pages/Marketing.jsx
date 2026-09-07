@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import api from '../../../utils/api.js'
+import { resolveImageUrl } from '../../../utils/imageUrl.js'
 import { useUI } from '../../../hooks/useUI.js'
 import FormField from '../../Common/FormField.jsx'
 
@@ -63,7 +64,7 @@ function ImageField({
   const inputRef = useRef(null)
   const previewSrc = previewFile
     ? URL.createObjectURL(previewFile)
-    : (value || '')
+    : (value ? resolveImageUrl(value) : '')
 
   useEffect(() => {
     return () => {
@@ -472,7 +473,7 @@ function TestimonialsTab({ showToast }) {
         <div className="space-y-3">
           {items.map((t) => (
             <div key={t._id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white hover:shadow-md transition-shadow">
-              <img src={t.photo} alt={t.name} className="h-12 w-12 rounded-full object-cover shrink-0" onError={(e) => { e.currentTarget.src = '/assets/images/testimonials/testimonial-1.jpg' }} />
+              <img src={resolveImageUrl(t.photo)} alt={t.name} className="h-12 w-12 rounded-full object-cover shrink-0" onError={(e) => { e.currentTarget.src = '/assets/images/testimonials/testimonial-1.jpg' }} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="font-bold text-[#064e3b] truncate">{t.name}</h4>
@@ -629,7 +630,7 @@ function HeroSlidesTab({ showToast }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {items.map((s) => (
             <div key={s._id} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-white">
-              <img src={s.image} alt={s.caption || ''} className="w-full h-40 object-cover" />
+              <img src={resolveImageUrl(s.image)} alt={s.caption || ''} className="w-full h-40 object-cover" />
               <div className="p-3">
                 <p className="text-sm font-medium text-[#064e3b] truncate">{s.caption || '(no caption)'}</p>
                 <p className="text-xs text-gray-500 truncate">{s.image}</p>
