@@ -1,23 +1,18 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { stripeWebhook } = require('./routes/stripeWebhook');
 
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.SKIP_STARTUP !== '1') {
   connectDB();
 }
 
 const app = express();
-
-
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(mongoSanitize());
 
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -29,19 +24,7 @@ app.use(cors({
 }));
 
 
-app.use((req, _res, next) => {
-  const header = req.headers && req.headers.cookie;
-  req.cookies = {};
-  if (!header) return next();
-  for (const part of header.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx === -1) continue;
-    const name = part.slice(0, idx).trim();
-    const value = part.slice(idx + 1).trim();
-    if (name) req.cookies[name] = decodeURIComponent(value);
-  }
-  next();
-});
+app.use(cookieParser());
 
 
 app.post('/api/donations/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
@@ -76,12 +59,10 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 
-let server;
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.SKIP_STARTUP !== '1') {
   const PORT = process.env.PORT || 5000;
-  server = app.listen(PORT);
+  const server = app.listen(PORT);
 
-  
   process.on('unhandledRejection', (err) => {
     console.error(`Unhandled Rejection: ${err.message}`);
     if (server) {
