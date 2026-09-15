@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const { handleValidation, isValidObjectId } = require('../middleware/validate');
+const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/fundRequestsController');
 
 router.get('/', protect, ctrl.list);
 
-router.post('/', protect, authorize('community'), [
+router.post('/', protect, ...requireRole('community'), [
   body('requesterName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Requester name is required'),
   body('requesterEmail').isString().trim().isEmail().withMessage('Valid requester email is required'),
   body('requesterPhone').isString().trim().isLength({ min: 4, max: 20 }).withMessage('Valid requester phone is required'),
@@ -18,15 +19,15 @@ router.post('/', protect, authorize('community'), [
   handleValidation,
 ], ctrl.create);
 
-router.put('/:id', protect, authorize('committee', 'admin'), ctrl.review);
+router.put('/:id', protect, ...requireRole('committee', 'admin'), ctrl.review);
 
-router.post('/:id/vote', protect, authorize('committee'), [
+router.post('/:id/vote', protect, ...requireRole('committee'), [
   body('vote').isIn(['approve', 'reject']).withMessage('vote must be approve or reject'),
   body('note').optional().isString().isLength({ max: 1000 }),
   handleValidation,
 ], ctrl.vote);
 
-router.post('/:id/finalize', protect, authorize('admin'), [
+router.post('/:id/finalize', protect, ...requireRole('admin'), [
   body('overrideStatus').optional().isIn(['approved', 'rejected']).withMessage('overrideStatus must be approved or rejected'),
   body('finalNote').optional().isString().isLength({ max: 1000 }),
   handleValidation,

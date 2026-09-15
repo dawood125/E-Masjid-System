@@ -143,4 +143,4 @@ const remove = tryOrNext(async (req, res) => {
   res.json({ success: true, message: 'Deleted' });
 });
 
-module.exports = { listPublic, listForCaller, create, update, toggle, remove };
+module.exports = { listPublic, listForCaller, create, update, toggle, remove, ALLOWED_TYPES };

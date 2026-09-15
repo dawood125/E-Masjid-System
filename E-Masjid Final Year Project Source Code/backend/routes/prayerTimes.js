@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validate');
+const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/prayerTimesController');
 
 router.get('/', ctrl.get);
 
-router.put('/', protect, authorize('admin'), [
+router.put('/', ...requireRole('admin'), [
   body('date').isISO8601().withMessage('Valid date is required'),
   body('fajr').isString().trim().isLength({ min: 3, max: 10 }).withMessage('Valid fajr time is required'),
   body('zuhr').isString().trim().isLength({ min: 3, max: 10 }).withMessage('Valid zuhr time is required'),

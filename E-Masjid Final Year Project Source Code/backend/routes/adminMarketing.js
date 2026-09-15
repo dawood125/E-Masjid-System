@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validate');
 const upload = require('../middleware/upload');
+const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/adminMarketingController');
 
 const uploadCampaign = upload.createUploader('marketing/campaigns');
@@ -54,25 +54,25 @@ function requireHeroSlideImage(req, res, next) {
   next();
 }
 
-router.get('/campaigns', protect, authorize('admin'), ctrl.listCampaigns);
-router.post('/campaigns', protect, authorize('admin'), uploadCampaign.single('image'), validateCampaign, ctrl.createCampaign);
-router.put('/campaigns/:id', protect, authorize('admin'), uploadCampaign.single('image'), ctrl.updateCampaign);
-router.delete('/campaigns/:id', protect, authorize('admin'), ctrl.deleteCampaign);
+router.get('/campaigns', ...requireRole('admin'), ctrl.listCampaigns);
+router.post('/campaigns', ...requireRole('admin'), uploadCampaign.single('image'), validateCampaign, ctrl.createCampaign);
+router.put('/campaigns/:id', ...requireRole('admin'), uploadCampaign.single('image'), ctrl.updateCampaign);
+router.delete('/campaigns/:id', ...requireRole('admin'), ctrl.deleteCampaign);
 
-router.get('/testimonials', protect, authorize('admin'), ctrl.listTestimonials);
-router.post('/testimonials', protect, authorize('admin'), uploadTestimonial.single('photo'), validateTestimonial, ctrl.createTestimonial);
-router.put('/testimonials/:id', protect, authorize('admin'), uploadTestimonial.single('photo'), ctrl.updateTestimonial);
-router.delete('/testimonials/:id', protect, authorize('admin'), ctrl.deleteTestimonial);
+router.get('/testimonials', ...requireRole('admin'), ctrl.listTestimonials);
+router.post('/testimonials', ...requireRole('admin'), uploadTestimonial.single('photo'), validateTestimonial, ctrl.createTestimonial);
+router.put('/testimonials/:id', ...requireRole('admin'), uploadTestimonial.single('photo'), ctrl.updateTestimonial);
+router.delete('/testimonials/:id', ...requireRole('admin'), ctrl.deleteTestimonial);
 
-router.get('/hero-slides', protect, authorize('admin'), ctrl.listHeroSlides);
-router.post('/hero-slides', protect, authorize('admin'), uploadHeroSlide.fields([
+router.get('/hero-slides', ...requireRole('admin'), ctrl.listHeroSlides);
+router.post('/hero-slides', ...requireRole('admin'), uploadHeroSlide.fields([
   { name: 'image', maxCount: 1 },
   { name: 'mobileImage', maxCount: 1 },
 ]), validateHeroSlide, requireHeroSlideImage, ctrl.createHeroSlide);
-router.put('/hero-slides/:id', protect, authorize('admin'), uploadHeroSlide.fields([
+router.put('/hero-slides/:id', ...requireRole('admin'), uploadHeroSlide.fields([
   { name: 'image', maxCount: 1 },
   { name: 'mobileImage', maxCount: 1 },
 ]), ctrl.updateHeroSlide);
-router.delete('/hero-slides/:id', protect, authorize('admin'), ctrl.deleteHeroSlide);
+router.delete('/hero-slides/:id', ...requireRole('admin'), ctrl.deleteHeroSlide);
 
 module.exports = router;

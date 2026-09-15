@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validate');
+const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/nikahBookingsController');
 
 router.get('/', protect, ctrl.listBookings);
 
 router.get('/availability', protect, ctrl.getAvailability);
 
-router.post('/', protect, authorize('community'), [
+router.post('/', protect, ...requireRole('community'), [
   body('groomName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Groom name must be 2 to 100 characters'),
   body('brideName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Bride name must be 2 to 100 characters'),
   body('ceremonyDate').isISO8601().withMessage('Valid ceremony date is required'),
@@ -21,7 +22,7 @@ router.post('/', protect, authorize('community'), [
   handleValidation,
 ], ctrl.createBooking);
 
-router.put('/:id', protect, authorize('scholar', 'admin'), [
+router.put('/:id', protect, ...requireRole('scholar', 'admin'), [
   body('status').isIn(['accepted', 'rejected']).withMessage('Status must be accepted or rejected'),
   body('confirmedDate').optional().isISO8601().withMessage('confirmedDate must be valid date'),
   body('confirmedTime').optional().isString().trim().isLength({ min: 3, max: 20 }).withMessage('Invalid confirmedTime'),
@@ -29,6 +30,6 @@ router.put('/:id', protect, authorize('scholar', 'admin'), [
   handleValidation,
 ], ctrl.reviewBooking);
 
-router.put('/:id/cancel', protect, authorize('community'), ctrl.cancelBooking);
+router.put('/:id/cancel', protect, ...requireRole('community'), ctrl.cancelBooking);
 
 module.exports = router;

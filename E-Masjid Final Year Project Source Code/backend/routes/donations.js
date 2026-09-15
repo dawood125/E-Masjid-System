@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
 const { handleValidation, isValidObjectId } = require('../middleware/validate');
+const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/donationsController');
 
 router.get('/', ctrl.listPublic);
@@ -11,9 +11,9 @@ router.get('/summary', ctrl.summary);
 router.get('/by-session/:sessionId', ctrl.getBySession);
 router.get('/status', ctrl.status);
 
-router.get('/admin', protect, authorize('admin', 'manager'), ctrl.listAdmin);
+router.get('/admin', ...requireRole('admin', 'manager'), ctrl.listAdmin);
 
-router.post('/', protect, authorize('admin'), [
+router.post('/', ...requireRole('admin'), [
   body('donorName').isString().trim().isLength({ min: 1, max: 100 }).withMessage('Donor name is required'),
   body('amount').isFloat({ gt: 0 }).withMessage('Amount must be a positive number'),
   body('type').isIn(['Sadaqah', 'Zakat', 'Masjid Fund']).withMessage('Invalid donation type'),
@@ -31,7 +31,7 @@ router.post('/online', [
   handleValidation,
 ], ctrl.createOnline);
 
-router.put('/:id', protect, authorize('admin'), ctrl.update);
-router.delete('/:id', protect, authorize('admin'), ctrl.remove);
+router.put('/:id', ...requireRole('admin'), ctrl.update);
+router.delete('/:id', ...requireRole('admin'), ctrl.remove);
 
 module.exports = router;

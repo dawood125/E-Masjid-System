@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
 const { handleValidation } = require('../middleware/validate');
+const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/announcementsController');
 
 router.get('/', ctrl.listPublic);
-router.get('/admin', protect, authorize('admin', 'manager', 'scholar', 'committee'), ctrl.listForCaller);
+router.get('/admin', ...requireRole('admin', 'manager', 'scholar', 'committee'), ctrl.listForCaller);
 
-router.post('/', protect, authorize('admin', 'manager'), [
+router.post('/', ...requireRole('admin', 'manager'), [
   body('title').isString().trim().isLength({ min: 3, max: 150 }).withMessage('Title is required'),
   body('content').isString().trim().isLength({ min: 5, max: 2000 }).withMessage('Content is required'),
   body('isUrgent').optional().isBoolean().withMessage('isUrgent must be boolean'),
@@ -18,7 +18,7 @@ router.post('/', protect, authorize('admin', 'manager'), [
   handleValidation,
 ], ctrl.create);
 
-router.put('/:id', protect, authorize('admin', 'manager'), ctrl.update);
-router.delete('/:id', protect, authorize('admin', 'manager'), ctrl.remove);
+router.put('/:id', ...requireRole('admin', 'manager'), ctrl.update);
+router.delete('/:id', ...requireRole('admin', 'manager'), ctrl.remove);
 
 module.exports = router;

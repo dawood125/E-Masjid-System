@@ -5,6 +5,7 @@ const { protect } = require('../middleware/auth');
 const { handleValidation, isValidObjectId } = require('../middleware/validate');
 const authController = require('../controllers/authController');
 const { PASSWORD_REGEX, findActiveMosqueForRegistration } = require('../services/authService');
+const { tryOrNext } = require('../utils/asyncRoute');
 
 const passwordRule = body('password')
   .isString()
@@ -17,17 +18,15 @@ router.post('/register', [
   passwordRule,
   body('phone').optional().isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be between 7 and 20 characters'),
   handleValidation,
-], async (req, res, next) => {
-  try {
-    if (req.body.mosqueId) {
-      if (!isValidObjectId(req.body.mosqueId)) {
-        return res.status(400).json({ success: false, message: 'Invalid mosque id' });
-      }
-      await findActiveMosqueForRegistration(req.body.mosqueId);
+], tryOrNext(async (req, res, next) => {
+  if (req.body.mosqueId) {
+    if (!isValidObjectId(req.body.mosqueId)) {
+      return res.status(400).json({ success: false, message: 'Invalid mosque id' });
     }
-    return authController.register(req, res, next);
-  } catch (e) { next(e); }
-});
+    await findActiveMosqueForRegistration(req.body.mosqueId);
+  }
+  return authController.register(req, res, next);
+}));
 
 router.post('/send-verification', [
   body('email').isString().trim().isEmail().withMessage('Valid email is required'),
@@ -69,14 +68,12 @@ router.put('/me/mosque', [
   protect,
   body('mosqueId').isString().notEmpty().withMessage('Mosque id is required'),
   handleValidation,
-], async (req, res, next) => {
-  try {
-    if (!isValidObjectId(req.body.mosqueId)) {
-      return res.status(400).json({ success: false, message: 'Invalid mosque id' });
-    }
-    return authController.updateMyMosque(req, res, next);
-  } catch (e) { next(e); }
-});
+], tryOrNext(async (req, res, next) => {
+  if (!isValidObjectId(req.body.mosqueId)) {
+    return res.status(400).json({ success: false, message: 'Invalid mosque id' });
+  }
+  return authController.updateMyMosque(req, res, next);
+}));
 
 router.post('/refresh-token', protect, authController.refreshToken);
 
