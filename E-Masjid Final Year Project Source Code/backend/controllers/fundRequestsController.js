@@ -1,10 +1,5 @@
 const svc = require('../services/fundRequestsService');
-
-function tryOrNext(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+const { tryOrNext } = require('../utils/asyncRoute');
 
 const create = tryOrNext(async (req, res) => {
   const item = await svc.create(req.body, req.user);

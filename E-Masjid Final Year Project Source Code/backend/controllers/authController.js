@@ -129,6 +129,23 @@ function refreshToken(req, res) {
   res.json({ success: true, token });
 }
 
+async function sendVerification(req, res, next) {
+  try {
+    const email = sanitizeString(req.body.email).toLowerCase();
+    const result = await authService.sendVerificationCode({ email });
+    res.json({ success: true, ...result });
+  } catch (e) { next(e); }
+}
+
+async function verifyEmail(req, res, next) {
+  try {
+    const email = sanitizeString(req.body.email).toLowerCase();
+    const code = sanitizeString(req.body.code);
+    const result = await authService.verifyEmailCode({ email, code });
+    res.json({ success: true, ...result });
+  } catch (e) { next(e); }
+}
+
 module.exports = {
   register,
   login,
@@ -138,6 +155,8 @@ module.exports = {
   getMe,
   updateMyMosque,
   refreshToken,
+  sendVerification,
+  verifyEmail,
   TOKEN_COOKIE_NAME,
   setAuthCookie,
   clearAuthCookie,

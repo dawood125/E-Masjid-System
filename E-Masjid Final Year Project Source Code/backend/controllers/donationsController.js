@@ -1,10 +1,5 @@
 const svc = require('../services/donationsService');
-
-function tryOrNext(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+const { tryOrNext } = require('../utils/asyncRoute');
 
 const listPublic = tryOrNext(async (req, res) => {
   const page = await svc.listPublic(req.query);

@@ -60,15 +60,8 @@ app.use(errorHandler);
 
 
 if (process.env.SKIP_STARTUP !== '1') {
-  const PORT = process.env.PORT || 5000;
-  const server = app.listen(PORT);
-
-  process.on('unhandledRejection', (err) => {
-    console.error(`Unhandled Rejection: ${err.message}`);
-    if (server) {
-      server.close(() => {});
-    }
-  });
+  app.listen(process.env.PORT || 5000);
+  process.on('unhandledRejection', (err) => console.error(err));
 }
 
 module.exports = app;

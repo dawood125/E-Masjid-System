@@ -29,6 +29,17 @@ router.post('/register', [
   } catch (e) { next(e); }
 });
 
+router.post('/send-verification', [
+  body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+  handleValidation,
+], authController.sendVerification);
+
+router.post('/verify-email', [
+  body('email').isString().trim().isEmail().withMessage('Valid email is required'),
+  body('code').isString().trim().matches(/^\d{6}$/).withMessage('Code must be 6 digits'),
+  handleValidation,
+], authController.verifyEmail);
+
 router.post('/login', [
   body('email').isString().trim().isEmail().withMessage('Valid email is required'),
   body('password').isString().isLength({ min: 1 }).withMessage('Password is required'),

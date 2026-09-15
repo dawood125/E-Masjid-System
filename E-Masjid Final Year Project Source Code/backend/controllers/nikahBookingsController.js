@@ -1,10 +1,5 @@
 const svc = require('../services/nikahService');
-
-function tryOrNext(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+const { tryOrNext } = require('../utils/asyncRoute');
 
 const listBookings = tryOrNext(async (req, res) => {
   const items = await svc.listForCaller(req.user);

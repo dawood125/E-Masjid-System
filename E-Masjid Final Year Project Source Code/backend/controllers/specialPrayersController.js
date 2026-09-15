@@ -1,43 +1,145 @@
-const svc = require('../services/specialPrayersService');
+const SpecialPrayer = require('../models/SpecialPrayer');
+const Mosque = require('../models/Mosque');
+const { resolveScope } = require('../services/scopeService');
+const { isValidObjectId, sanitizeString } = require('../middleware/validate');
+const httpError = require('../middleware/httpError');
+const { tryOrNext } = require('../utils/asyncRoute');
 
-function tryOrNext(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
+const ALLOWED_TYPES = ['eid-fitr', 'eid-adha', 'shab-meraj', 'shab-barat', 'tarawih', 'janazah', 'milad-un-nabi', 'other'];
+
+function parseLocalDate(str) {
+  if (!str) return null;
+  const dt = new Date(str);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt;
+}
+
+function clampLimit(raw, fallback = 20, max = 100) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(n, max);
 }
 
 const listPublic = tryOrNext(async (req, res) => {
-  const items = await svc.listPublic({
-    mosqueId: req.query.mosqueId,
-    upcoming: req.query.upcoming,
-    includeInactive: req.query.includeInactive,
-    limit: req.query.limit,
-  });
+  const mosqueId = req.query.mosqueId;
+  const upcoming = req.query.upcoming;
+  const includeInactive = req.query.includeInactive;
+  const limit = req.query.limit;
+  if (mosqueId && !isValidObjectId(mosqueId)) throw httpError(400, 'Invalid mosqueId');
+  if (!mosqueId) throw httpError(400, 'mosqueId is required');
+
+  const query = { mosqueId };
+  if (includeInactive !== 'true') query.isActive = true;
+  if (upcoming === 'true') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    query.date = { $gte: today };
+  }
+
+  const safeLimit = clampLimit(limit);
+  const items = await SpecialPrayer.find(query)
+    .sort({ date: 1, time: 1 })
+    .limit(safeLimit)
+    .lean();
   res.json({ success: true, data: items });
 });
 
 const listForCaller = tryOrNext(async (req, res) => {
-  const items = await svc.listForCaller(req);
+  const scope = await resolveScope(req, { allowManagerPick: true });
+  const includeInactive = req.query.includeInactive === 'true';
+
+  const query = { mosqueId: scope };
+  if (!includeInactive) query.isActive = true;
+
+  const items = await SpecialPrayer.find(query).sort({ date: 1 }).lean();
   res.json({ success: true, data: items });
 });
 
 const create = tryOrNext(async (req, res) => {
-  const item = await svc.create(req.body, req.user);
+  const input = req.body;
+  const user = req.user;
+  const date = parseLocalDate(input.date);
+  if (!date) throw httpError(400, 'Invalid date');
+
+  let targetMosqueId;
+  if (user.role === 'manager') {
+    targetMosqueId = input.mosqueId;
+    if (!targetMosqueId) throw httpError(400, 'Manager must specify a mosqueId in the request body');
+    const owns = await Mosque.exists({ _id: targetMosqueId, managerId: user._id });
+    if (!owns) throw httpError(403, 'You can only create special prayers for mosques you manage');
+  } else {
+    if (input.mosqueId && input.mosqueId !== String(user.mosqueId)) {
+      throw httpError(403, 'Cannot create special prayers for a different mosque');
+    }
+    if (!user.mosqueId) throw httpError(400, 'Your account is not assigned to a mosque. Contact your manager.');
+    targetMosqueId = user.mosqueId;
+  }
+
+  const type = input.type || 'other';
+  if (!ALLOWED_TYPES.includes(type)) throw httpError(400, 'Invalid type');
+
+  const item = await SpecialPrayer.create({
+    name: sanitizeString(input.name),
+    type,
+    date,
+    time: sanitizeString(input.time),
+    description: sanitizeString(input.description || ''),
+    isActive: input.isActive !== false,
+    mosqueId: targetMosqueId,
+    createdBy: user._id,
+  });
   res.status(201).json({ success: true, data: item });
 });
 
 const update = tryOrNext(async (req, res) => {
-  const item = await svc.update(req.params.id, req.body, req);
-  res.json({ success: true, data: item });
+  if (!isValidObjectId(req.params.id)) throw httpError(400, 'Invalid special prayer id');
+
+  const updateFields = {};
+  const body = req.body;
+  if (body.name) updateFields.name = sanitizeString(body.name);
+  if (body.type) {
+    if (!ALLOWED_TYPES.includes(body.type)) throw httpError(400, 'Invalid type');
+    updateFields.type = body.type;
+  }
+  if (body.date) {
+    const dt = parseLocalDate(body.date);
+    if (!dt) throw httpError(400, 'Invalid date');
+    updateFields.date = dt;
+  }
+  if (body.time) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(body.time)) throw httpError(400, 'Invalid time format');
+    updateFields.time = body.time;
+  }
+  if (body.description !== undefined) updateFields.description = sanitizeString(body.description || '');
+  if (typeof body.isActive === 'boolean') updateFields.isActive = body.isActive;
+
+  const scope = await resolveScope(req, { allowManagerPick: true });
+  const updated = await SpecialPrayer.findOneAndUpdate(
+    { _id: req.params.id, mosqueId: scope },
+    updateFields,
+    { new: true, runValidators: true }
+  );
+  if (!updated) throw httpError(404, 'Not found');
+  res.json({ success: true, data: updated });
 });
 
 const toggle = tryOrNext(async (req, res) => {
-  const item = await svc.toggle(req.params.id, req);
-  res.json({ success: true, data: item });
+  if (!isValidObjectId(req.params.id)) throw httpError(400, 'Invalid special prayer id');
+  const scope = await resolveScope(req, { allowManagerPick: true });
+
+  const existing = await SpecialPrayer.findOne({ _id: req.params.id, mosqueId: scope });
+  if (!existing) throw httpError(404, 'Not found');
+
+  existing.isActive = !existing.isActive;
+  await existing.save();
+  res.json({ success: true, data: existing });
 });
 
 const remove = tryOrNext(async (req, res) => {
-  await svc.remove(req.params.id, req);
+  if (!isValidObjectId(req.params.id)) throw httpError(400, 'Invalid special prayer id');
+  const scope = await resolveScope(req, { allowManagerPick: true });
+  const removed = await SpecialPrayer.findOneAndDelete({ _id: req.params.id, mosqueId: scope });
+  if (!removed) throw httpError(404, 'Not found');
   res.json({ success: true, message: 'Deleted' });
 });
 

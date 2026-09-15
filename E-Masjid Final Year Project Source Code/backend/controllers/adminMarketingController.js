@@ -1,10 +1,5 @@
 const svc = require('../services/adminMarketingService');
-
-function tryOrNext(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+const { tryOrNext } = require('../utils/asyncRoute');
 
 function pickUploadedFile(req, field, subdir) {
   if (!req.file || req.file.fieldname !== field) return undefined;

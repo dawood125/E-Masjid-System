@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
+import api from '../../../utils/api.js'
 import { ROUTES } from '../../../utils/constants.js'
 import MosqueSearchModal from '../../Auth/Pages/MosqueSearchModal.jsx'
 import FormField from '../../Common/FormField.jsx'
@@ -47,10 +48,20 @@ export default function Register() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [step, setStep] = useState(1)
   const [isMosqueModalOpen, setIsMosqueModalOpen] = useState(false)
+  const [verifyStatus, setVerifyStatus] = useState('idle')
+  const [codeDigits, setCodeDigits] = useState('')
+  const [verifyError, setVerifyError] = useState('')
+  const [cooldown, setCooldown] = useState(0)
   const { register } = useAuth()
   const { showToast } = useUI()
   const { activeMosque } = useMosque()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown((s) => Math.max(0, s - 1)), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
 
   const handleSelectMosque = (mosque) => {
     setFormData((prev) => ({
@@ -65,6 +76,71 @@ export default function Register() {
   const update = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (fieldErrors[field]) setFieldErrors((prev) => ({ ...prev, [field]: null }))
+    if (field === 'email') {
+      setVerifyStatus('idle')
+      setCodeDigits('')
+      setVerifyError('')
+      setCooldown(0)
+    }
+  }
+
+  const handleSendCode = async () => {
+    const email = formData.email.trim()
+    if (!EMAIL_RE.test(email)) {
+      setFieldErrors((p) => ({ ...p, email: 'Please enter a valid email address' }))
+      return
+    }
+    setVerifyStatus('sending')
+    setVerifyError('')
+    try {
+      const res = await api.sendVerification(email)
+      if (res.sent) {
+        setVerifyStatus('sent')
+        setCooldown(res.cooldownSeconds || 60)
+        showToast(`Verification code sent to ${email}`, 'success')
+      } else if (res.reason === 'already-registered') {
+        setVerifyStatus('idle')
+        setFieldErrors((p) => ({ ...p, email: 'An account already exists with this email. Please sign in instead.' }))
+      } else {
+        setVerifyStatus('sent')
+        setCooldown(res.cooldownSeconds || 60)
+      }
+    } catch (err) {
+      setVerifyStatus('idle')
+      const msg = err.message || 'Could not send verification code'
+      setVerifyError(msg)
+      showToast(msg, 'error')
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    const email = formData.email.trim()
+    if (!/^\d{6}$/.test(codeDigits)) {
+      setVerifyError('Please enter the 6-digit code')
+      return
+    }
+    setVerifyStatus('verifying')
+    setVerifyError('')
+    try {
+      const res = await api.verifyEmail(email, codeDigits)
+      if (res.verified) {
+        setVerifyStatus('verified')
+        showToast('Email verified', 'success')
+      }
+    } catch (err) {
+      setVerifyStatus('sent')
+      setCodeDigits('')
+      const msg = err.message || 'Verification failed'
+      setVerifyError(msg)
+    }
+  }
+
+  const handleChangeEmail = () => {
+    setVerifyStatus('idle')
+    setCodeDigits('')
+    setVerifyError('')
+    setCooldown(0)
+    setFieldErrors((p) => ({ ...p, email: null }))
   }
 
   const goToStep2 = (e) => {
@@ -82,8 +158,10 @@ export default function Register() {
   }
 
   const isStep1Valid = useMemo(() => {
-    return Object.keys(validateStep1(formData)).length === 0
-  }, [formData])
+    return Object.keys(validateStep1(formData)).length === 0 && verifyStatus === 'verified'
+  }, [formData, verifyStatus])
+
+  const emailIsValid = EMAIL_RE.test((formData.email || '').trim())
 
   const goBackToStep1 = () => setStep(1)
 
@@ -229,6 +307,116 @@ export default function Register() {
                       placeholder="Enter your email"
                       autoComplete="email"
                     />
+
+                    {emailIsValid && verifyStatus !== 'verified' && (
+                      <div className="rounded-xl border border-[#047857]/30 bg-[#f0fdf4] p-4">
+                        {verifyStatus === 'idle' && (
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-gray-700">
+                              We will send a 6-digit verification code to this email.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleSendCode}
+                              className="btn btn-primary shrink-0 bg-[#047857] hover:bg-[#064e3b]"
+                            >
+                              <i className="material-icons-round text-base">mark_email_read</i>
+                              Send Code
+                            </button>
+                          </div>
+                        )}
+
+                        {(verifyStatus === 'sending' || verifyStatus === 'verifying') && (
+                          <p className="flex items-center gap-2 text-sm text-gray-700">
+                            <i className="material-icons-round animate-spin text-[#047857]">progress_activity</i>
+                            {verifyStatus === 'sending' ? 'Sending verification code...' : 'Verifying code...'}
+                          </p>
+                        )}
+
+                        {(verifyStatus === 'sent' || verifyStatus === 'verifying') && (
+                          <div className="space-y-3">
+                            <p className="text-sm text-gray-700">
+                              We sent a 6-digit code to <span className="font-semibold">{formData.email.trim()}</span>.
+                              Enter it below to verify your email.
+                            </p>
+
+                            <div>
+                              <label htmlFor="verification-code" className="form-label flex items-center gap-2">
+                                Verification Code
+                              </label>
+                              <input
+                                id="verification-code"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                value={codeDigits}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+                                  setCodeDigits(digits)
+                                  if (verifyError) setVerifyError('')
+                                }}
+                                placeholder="000000"
+                                className="form-input tracking-[0.5em] text-center text-xl font-semibold"
+                                autoComplete="one-time-code"
+                              />
+                            </div>
+
+                            {verifyError && (
+                              <p className="text-sm text-red-600">{verifyError}</p>
+                            )}
+
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <button
+                                type="button"
+                                onClick={handleVerifyCode}
+                                disabled={verifyStatus === 'verifying' || codeDigits.length !== 6}
+                                className="btn btn-primary bg-[#047857] hover:bg-[#064e3b] disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <i className="material-icons-round text-base">verified</i>
+                                Verify Code
+                              </button>
+                              <div className="flex items-center gap-3 text-sm">
+                                {cooldown > 0 ? (
+                                  <span className="text-gray-500">Resend in {cooldown}s</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={handleSendCode}
+                                    className="font-medium text-[#047857] hover:text-[#064e3b] hover:underline"
+                                  >
+                                    Resend code
+                                  </button>
+                                )}
+                                <span className="text-gray-300">|</span>
+                                <button
+                                  type="button"
+                                  onClick={handleChangeEmail}
+                                  className="font-medium text-gray-600 hover:text-gray-900 hover:underline"
+                                >
+                                  Change email
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {verifyStatus === 'verified' && (
+                      <div className="flex items-center gap-2 rounded-xl border border-[#16a34a]/30 bg-[#f0fdf4] px-4 py-3 text-sm">
+                        <i className="material-icons-round text-[#16a34a]">check_circle</i>
+                        <span className="text-gray-800">
+                          Email verified <span className="text-gray-500">({formData.email.trim()})</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleChangeEmail}
+                          className="ml-auto text-xs font-medium text-gray-600 hover:text-gray-900 hover:underline"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
                     <FormField
                       name="phone"
                       label="Phone Number"
@@ -301,7 +489,9 @@ export default function Register() {
                     </button>
                     {!isStep1Valid && (
                       <p className="-mt-2 text-center text-xs text-gray-500">
-                        Fill all required fields above to continue
+                        {verifyStatus !== 'verified'
+                          ? 'Verify your email above to continue'
+                          : 'Fill all required fields above to continue'}
                       </p>
                     )}
                   </form>

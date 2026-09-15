@@ -58,6 +58,8 @@ class ApiService {
 
   login(email, password) { return this.request('POST', '/api/auth/login', { email, password }) }
   register(data) { return this.request('POST', '/api/auth/register', data) }
+  sendVerification(email) { return this.request('POST', '/api/auth/send-verification', { email }) }
+  verifyEmail(email, code) { return this.request('POST', '/api/auth/verify-email', { email, code }) }
   forgotPassword(email) { return this.request('POST', '/api/auth/forgot-password', { email }) }
   resetPassword(token, data) { return this.request('POST', `/api/auth/reset-password/${token}`, data) }
   getMe() { return this.request('GET', '/api/auth/me') }

@@ -1,10 +1,5 @@
 const svc = require('../services/marketingService');
-
-function tryOrNext(fn) {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+const { tryOrNext } = require('../utils/asyncRoute');
 
 const stats = tryOrNext(async (req, res) => {
   const mosqueId = await svc.resolveMosqueId(req.query.mosqueId);
