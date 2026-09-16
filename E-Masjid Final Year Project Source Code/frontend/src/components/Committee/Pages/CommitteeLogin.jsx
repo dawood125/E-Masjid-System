@@ -74,7 +74,7 @@ export default function CommitteeLogin() {
         <div className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl lg:grid-cols-2 animate-fade-in">
           <div className="relative hidden min-h-[420px] lg:block">
             <img
-              src="https://images.unsplash.com/photo-1519817914152-2a241f6fb6a1?w=1200"
+              src="/assets/images/heroes/committee-bg.jpg"
               alt="Committee meeting concept"
               className="absolute inset-0 h-full w-full object-cover"
             />

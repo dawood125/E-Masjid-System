@@ -74,7 +74,7 @@ export default function ManagerLogin() {
         <div className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl lg:grid-cols-2 animate-fade-in">
           <div className="relative hidden min-h-[420px] lg:block">
             <img
-              src="https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?w=1200"
+              src="/assets/images/heroes/admin-bg.jpg"
               alt="Mosque architecture"
               className="absolute inset-0 h-full w-full object-cover"
             />

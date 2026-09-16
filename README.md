@@ -1,143 +1,96 @@
 # E-Masjid System
 
-> **Final Year Project** — A multi-tenant web-based mosque management and community services platform built for Pakistani mosques.
+This is our Final Year Project for BS Information Technology at the University of the Punjab, Lahore. We built it at Govt Graduate College Civil Lines, Sheikhupura during the 2022-2025 session.
 
-[![Status](https://img.shields.io/badge/Status-Completed-success)](#)
-[![University](https://img.shields.io/badge/University-University%20of%20the%20Punjab-blue)](#)
-[![Session](https://img.shields.io/badge/Session-2022--2025-informational)](#)
-[![Stack](https://img.shields.io/badge/Stack-MERN-2ea44f)](#)
-[![License](https://img.shields.io/badge/License-Educational-yellow)](#)
+E-Masjid is a website that helps local mosques run their daily work. Right now it covers things like donations, prayer times, events, nikah bookings, announcements, and a workflow where community members can ask the mosque committee for financial help and the committee votes on it.
 
-## 🕌 About
+The application source code is inside the [E-Masjid Final Year Project Source Code/](./E-Masjid%20Final%20Year%20Project%20Source%20Code/) folder. All the academic paperwork (proposal, SRS, SDS, final submission, presentation slides) lives in the other folders.
 
-**E-Masjid System** digitizes the day-to-day operations of a local mosque and exposes them through a clean web interface for community members, scholars, committee members, and mosque administrators.
+## Team
 
-The platform supports **four masjids under a single super-admin (manager)**, with strict scope isolation so an admin of one masjid cannot read or write another masjid's data. The system covers the full lifecycle of a mosque's public operations — donations, prayer times, events, nikah bookings, announcements, and a committee-driven fund-request workflow.
-
-The application source code lives in [`E-Masjid Final Year Project Source Code/`](./E-Masjid%20Final%20Year%20Project%20Source%20Code/). For the full technical overview — architecture, role matrix, multi-tenant scope rules, local development setup, test accounts, and deployment guide — see the [project README](./E-Masjid%20Final%20Year%20Project%20Source%20Code/README.md).
-
-## 👥 Team
-
-| Member | Role | Roll No |
+| Name | Roll No | Worked On |
 | --- | --- | --- |
-| **Dawood Ahmed** | Backend Development | 2022-KS-158 |
-| **Haris Ehsan** | Frontend Development | 2022-KS-190 |
+| Dawood Ahmed | 2022-KS-158 | Backend |
+| Haris Ehsan | 2022-KS-190 | Frontend |
 
-**Supervisor:** Mr. Muhammad Kamran
+Supervisor: Mr. Muhammad Kamran
+College: Govt Graduate College Civil Lines, Sheikhupura
 
-**Project ID:** 22-KS-BSIT-15
+## What it does
 
-**College:** Govt Graduate College Civil Lines, Sheikhupura
+- One super-admin (manager) oversees two masjids. Each masjid has its own admin.
+- An admin of one masjid cannot see or change another masjid's data. This was important to us and we enforced it everywhere.
+- Community members can register, log in, donate, see prayer times, register for events, book nikah, and submit fund requests.
+- Admins manage their masjid's announcements, events, expenses, donations, nikah bookings, fund requests, and their committee members.
+- Committee members log in separately and vote on incoming fund requests. Voting and finalizing both send email notifications.
+- Managers create new masjids and new admins or committee accounts for those masjids.
+- Email verification is required when a community user registers (a 6 digit code is sent to their email).
+- Online donations use Stripe in test mode.
 
-## ✨ Features
+## Tech used
 
-- 🏛️ **Multi-tenant scope** — one super-admin (manager) overseeing 4 masjids with strict data isolation
-- 💰 **Donation management** — manual entries plus Stripe online donations with webhook idempotency
-- 📊 **Transparent reporting** — public monthly donation/expense trends with month-over-month deltas
-- 🕐 **Prayer times** — multi-mosque switching with per-masjid schedules
-- 📅 **Event management** — admin creates events, community registers, marketing surfaces upcoming items
-- 💍 **Online nikah booking** — community requests a slot, scholar is assigned, status tracked end to end
-- 📢 **Announcement system** — mosque-scoped announcements surfaced on public + admin views
-- 🗳️ **Fund-request workflow** — community submits, committee of 4 votes, admin finalizes, email notifications fire
-- 🔐 **Role-based access** — manager / admin / scholar / committee / community with route-level + endpoint-level enforcement
-- 📧 **Email notifications** — SMTP-based, supports Gmail direct or transactional relay (Brevo / Resend)
+- Frontend: React, Vite, Tailwind CSS, Axios
+- Backend: Node.js, Express
+- Database: MongoDB with Mongoose
+- Auth: JWT in an httpOnly cookie, bcrypt for passwords
+- Payments: Stripe (test mode)
+- Email: SMTP through Resend
+- Process manager on the server: pm2
+- Reverse proxy: Caddy
 
-## 🧰 Tech Stack
+## Running it locally
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React.js, Vite, Tailwind CSS, Axios |
-| Backend | Node.js, Express.js |
-| Database | MongoDB (Mongoose ODM) |
-| Auth | JWT (httpOnly cookie), bcrypt |
-| Payments | Stripe (test mode in dev) |
-| Email | SMTP via Gmail / Brevo |
-| Process | pm2 (production), nodemon (dev) |
-| Tests | Jest + Supertest (integration) |
+Open a terminal, go to the project folder, then:
 
-## 🗂️ Repository Structure
+```bash
+# backend
+cd backend
+npm install
+cp .env.example .env
+# fill in JWT_SECRET, MONGO_URI, STRIPE keys, RESEND_API_KEY in the .env file
+npm run seed
+npm run dev
+# backend will run on http://localhost:5000
+```
 
-This repository holds the complete FYP submission. The application source lives in the `E-Masjid Final Year Project Source Code/` subfolder; the remaining folders contain the academic deliverables required by the university.
+Open a second terminal for the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+# frontend will run on http://localhost:5173
+```
+
+The seed script creates the default two masjids (Masjid Al-Noor in Civil Lines and Masjid Al-Rahman in Model Town), one manager, both admins, one scholar per masjid, one committee per masjid, and one community user per masjid. Real email accounts used for testing the forgot password flow are also included.
+
+## Testing
+
+We tested the system manually, both on our local machines and on the production server, by going through every page and every role. We also did API testing using Postman.
+
+## Repository layout
 
 ```
 .
-├── E-Masjid Final Year Project Source Code/   # Application code (backend + frontend)
-│   ├── backend/                                # Node.js + Express API
-│   ├── frontend/                               # React + Vite SPA
-│   └── README.md                               # Full technical documentation
-├── Proposal/                                   # FYP proposal
-├── SRS/                                        # Software Requirements Specification
-├── SDS/                                        # Software Design Specification
-├── Comprehensive Documentation/                # Combined project documentation
-├── 8 semester final documentation/             # Final-semester submission archive
-└── Presenatation/                              # Defense presentation slides
+├── E-Masjid Final Year Project Source Code/   application code (backend + frontend)
+├── Proposal/                                   FYP proposal
+├── SRS/                                        Software Requirements Specification
+├── SDS/                                        Software Design Specification
+├── Comprehensive Documentation/                combined project documentation
+├── 8 semester final documentation/             final-semester submission archive
+└── Presenatation/                              defense presentation slides
 ```
 
-## 🚀 Quick Start (Development)
+## Other documents
 
-For full setup instructions including seed data, test accounts, and Gmail / Stripe configuration, see the [project README](./E-Masjid%20Final%20Year%20Project%20Source%20Code/README.md).
+- [Project README](./E-Masjid%20Final%20Year%20Project%20Source%20Code/README.md) - full technical documentation for the application
+- [Proposal](./Proposal/) - FYP proposal
+- [SRS](./SRS/) - Software Requirements Specification
+- [SDS](./SDS/) - Software Design Specification
+- [Comprehensive Documentation](./Comprehensive%20Documentation/) - combined project documentation
+- [Final semester documentation](./8%20semester%20final%20documentation/) - final-semester submission archive
+- [Defense presentation](./Presenatation/) - slides used in the FYP defense
 
-```bash
-cd "E-Masjid Final Year Project Source Code"
+## Note
 
-# Backend
-cd backend
-npm install
-cp .env.example .env       # fill in JWT_SECRET, EMAIL_PASS, STRIPE_* keys
-npm run seed               # load demo data (4 masjids + 4 committee Gmail accounts)
-npm run dev                # http://localhost:5000
-
-# Frontend (separate terminal)
-cd ../frontend
-npm install
-npm run dev                # http://localhost:5173
-```
-
-## 🧪 Test Coverage
-
-The backend ships with **6 integration test suites (160 tests)** covering:
-
-- Multi-tenant scope isolation across all admin endpoints
-- Committee voting race + re-vote atomicity
-- Stripe webhook signature + idempotency
-- Nikah booking lifecycle + slot assignment
-- Scholars account management + deactivation
-- Forgot-password / reset-password flow
-
-Run with:
-
-```bash
-cd backend && npm test
-```
-
-## 📚 Documentation
-
-| Document | Description |
-| --- | --- |
-| [Project README](./E-Masjid%20Final%20Year%20Project%20Source%20Code/README.md) | Technical overview, roles, architecture, local dev, deployment |
-| [Proposal](./Proposal/) | FYP proposal |
-| [SRS](./SRS/) | Software Requirements Specification |
-| [SDS](./SDS/) | Software Design Specification |
-| [Comprehensive Documentation](./Comprehensive%20Documentation/) | Combined project documentation |
-| [Final semester documentation](./8%20semester%20final%20documentation/) | Final-semester submission archive |
-| [Defense presentation](./Presenatation/) | Slides used in the FYP defense |
-
-## 🛡️ Multi-Tenant Scope Rules
-
-A core architectural invariant: **an admin of Masjid A cannot read or write Masjid B's data** — not via the UI, not via direct API calls, not via crafted request bodies. The invariant is enforced at three layers:
-
-1. **Route middleware** — every admin endpoint verifies the caller's `mosqueId` matches the resource's `mosqueId`
-2. **Service layer** — every query is scoped by `mosqueId` before reaching the database
-3. **UI layer** — admin pages fetch only their own masjid's records
-
-This is exercised by the cross-mosque denial tests in `backend/tests/integration/`.
-
-## 📄 License
-
-This is an educational project developed as a Final Year Project (BS Information Technology) at the **University of the Punjab**, Lahore. All rights reserved by the project authors.
-
-## 🙏 Acknowledgments
-
-- **Mr. Muhammad Kamran** — project supervisor, for guidance and review throughout the project
-- **Department of Computer Science**, University of the Punjab, Lahore
-- **Govt Graduate College Civil Lines, Sheikhupura**
+This is an educational project for our final year. All rights belong to the project authors.

@@ -19,7 +19,7 @@ const categoryLabel = {
 }
 
 const DEFAULT_EVENT_IMAGE =
-  'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=900'
+  '/assets/images/heroes/event-default.jpg'
 
 const FALLBACK_EVENT_IMAGE =
   'data:image/svg+xml;utf8,' +

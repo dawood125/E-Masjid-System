@@ -259,7 +259,7 @@ export default function Register() {
 
             <div className="mt-8 overflow-hidden rounded-2xl border border-white/20 bg-black/10">
               <img
-                src="https://images.unsplash.com/photo-1585036156171-384164a8c675?w=900"
+                src="/assets/images/heroes/login-bg.jpg"
                 alt="Masjid Al-Noor Interior"
                 className="h-44 w-full object-cover"
               />

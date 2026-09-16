@@ -82,7 +82,7 @@ export default function AdminLogin() {
         <div className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl lg:grid-cols-2 animate-fade-in">
           <div className="relative hidden min-h-[420px] lg:block">
             <img
-              src="https://images.unsplash.com/photo-1466442929976-97f336a657be?w=1200"
+              src="/assets/images/heroes/admin-bg.jpg"
               alt="Mosque dome architecture"
               className="absolute inset-0 h-full w-full object-cover"
             />

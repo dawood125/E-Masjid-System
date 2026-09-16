@@ -165,7 +165,7 @@ export default function Login() {
 
           <div className="relative min-h-[420px] hidden lg:block">
             <img
-              src="https://images.unsplash.com/photo-1585036156171-384164a8c675?w=1000"
+              src="/assets/images/heroes/login-bg.jpg"
               alt="Mosque interior"
               className="absolute inset-0 h-full w-full object-cover"
             />

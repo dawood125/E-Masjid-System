@@ -157,7 +157,7 @@ export default function ForgotPassword() {
 
           <div className="relative min-h-[420px] hidden lg:block">
             <img
-              src="https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1000"
+              src="/assets/images/heroes/forgot-password-bg.jpg"
               alt="Mosque architecture"
               className="absolute inset-0 h-full w-full object-cover"
             />

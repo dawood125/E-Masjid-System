@@ -140,7 +140,7 @@ export default function NikahBooking() {
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage:
-              "url('https://images.unsplash.com/photo-1564769625905-50e93615e769?w=1920')",
+              "url('/assets/images/heroes/hero-bg.jpg')",
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[#064e3b]/90 to-[#047857]/80" />
