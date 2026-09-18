@@ -5,9 +5,9 @@ const { sanitizeString, isValidObjectId } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
 const { tryOrNext } = require('../utils/asyncRoute');
 
-function todayMidnight() {
+function todayMidnightUTC() {
   const d = new Date();
-  d.setHours(0, 0, 0, 0);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
@@ -32,11 +32,6 @@ const listPublic = tryOrNext(async (req, res) => {
   const query = mosqueId ? { mosqueId } : {};
   if (includeAll !== 'true') {
     query.status = { $ne: 'draft' };
-    query.$or = [
-      { publishDate: { $lte: new Date() } },
-      { publishDate: { $exists: false } },
-      { publishDate: null },
-    ];
   }
   const safeLimit = clampLimit(limit);
   const safePage = clampPage(page);
@@ -84,7 +79,7 @@ const create = tryOrNext(async (req, res) => {
   const user = req.user;
   if (input.publishDate) {
     const pubDate = new Date(input.publishDate);
-    if (pubDate < todayMidnight()) throw httpError(400, 'Publication date cannot be in the past');
+    if (pubDate < todayMidnightUTC()) throw httpError(400, 'Publication date cannot be in the past');
   }
 
   let targetMosqueId;
