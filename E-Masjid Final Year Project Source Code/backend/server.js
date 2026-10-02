@@ -8,9 +8,7 @@ const errorHandler = require('./middleware/errorHandler');
 const { stripeWebhook } = require('./routes/stripeWebhook');
 
 
-if (process.env.SKIP_STARTUP !== '1') {
-  connectDB();
-}
+connectDB();
 
 const app = express();
 
@@ -59,9 +57,7 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 
-if (process.env.SKIP_STARTUP !== '1') {
-  app.listen(process.env.PORT || 5000);
-  process.on('unhandledRejection', (err) => console.error(err));
-}
+app.listen(process.env.PORT || 5000);
+process.on('unhandledRejection', (err) => console.error(err));
 
 module.exports = app;

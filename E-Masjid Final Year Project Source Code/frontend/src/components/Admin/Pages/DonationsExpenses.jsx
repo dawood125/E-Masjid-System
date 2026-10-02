@@ -239,7 +239,7 @@ export default function DonationsExpenses() {
     try {
       if (activeTab === 'donations') {
         const payload = {
-          donorName: recordForm.isAnonymous ? 'Anonymous' : (recordForm.donorName || 'Walk-in Donor'),
+          donorName: recordForm.donorName.trim() || (recordForm.isAnonymous ? 'Anonymous' : 'Walk-in Donor'),
           amount: Number(recordForm.amount),
           type: recordForm.type,
           paymentMethod: recordForm.paymentMethod,
@@ -683,26 +683,29 @@ export default function DonationsExpenses() {
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300 text-primary-700 focus:ring-primary-500"
                       checked={recordForm.isAnonymous}
-                      onChange={(e) => setRecordForm((p) => ({ ...p, isAnonymous: e.target.checked, ...(e.target.checked ? { donorName: '' } : {}) }))}
+                      onChange={(e) => {
+                        setRecordForm((p) => ({ ...p, isAnonymous: e.target.checked }))
+                        if (recordErrors.donorName) setRecordErrors((prev) => ({ ...prev, donorName: null }))
+                      }}
                       disabled={submitting}
                     />
                     <span className="text-sm font-medium text-gray-700">Anonymous Donor</span>
                   </label>
-                  {!recordForm.isAnonymous && (
-                    <FormField
-                      name="donorName"
-                      label="Donor Name"
-                      required
-                      value={recordForm.donorName}
-                      onChange={(e) => {
-                        setRecordForm((p) => ({ ...p, donorName: e.target.value }))
-                        if (recordErrors.donorName) setRecordErrors((prev) => ({ ...prev, donorName: null }))
-                      }}
-                      error={recordErrors.donorName}
-                      placeholder="Donor's full name (or walk-in)"
-                      disabled={submitting}
-                    />
-                  )}
+                  <FormField
+                    name="donorName"
+                    label="Donor Name"
+                    required={!recordForm.isAnonymous}
+                    optional={recordForm.isAnonymous}
+                    value={recordForm.donorName}
+                    onChange={(e) => {
+                      setRecordForm((p) => ({ ...p, donorName: e.target.value }))
+                      if (recordErrors.donorName) setRecordErrors((prev) => ({ ...prev, donorName: null }))
+                    }}
+                    error={recordErrors.donorName}
+                    placeholder="Donor's full name (or walk-in)"
+                    hint={recordForm.isAnonymous ? 'Only admins can see this name. The website shows it as Anonymous.' : undefined}
+                    disabled={submitting}
+                  />
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       name="type"

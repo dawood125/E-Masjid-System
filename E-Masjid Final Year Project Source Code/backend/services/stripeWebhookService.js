@@ -71,22 +71,13 @@ async function handleCheckoutCompleted(session) {
 }
 
 async function handleChargeRefunded(charge) {
-  const paymentIntent = charge.payment_intent;
-  const refundedAmount = typeof charge.amount_refunded === 'number' ? charge.amount_refunded / 100 : 0;
-  const query = paymentIntent
-    ? { stripePaymentId: paymentIntent }
-    : { stripeChargeId: charge.id };
-  const donation = await Donation.findOne(query);
+  if (!charge.payment_intent) return null;
+  const donation = await Donation.findOne({ stripePaymentId: charge.payment_intent });
   if (!donation) {
     console.warn(`[stripe-webhook] refund received but no donation found for charge ${charge.id}`);
     return null;
   }
   donation.status = 'refunded';
-  donation.stripeChargeId = charge.id;
-  if (charge.refunds && charge.refunds.data && charge.refunds.data.length) {
-    donation.stripeRefundId = charge.refunds.data[0].id;
-  }
-  donation.refundedAmount = refundedAmount;
   await donation.save();
   return donation;
 }

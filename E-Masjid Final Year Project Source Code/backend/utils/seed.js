@@ -29,7 +29,7 @@ const seedDB = async () => {
 
 
     const manager = await User.create({
-      name: 'Manager (Dawood Ahmed)', email: 'pa672189@gmail.com', password: 'manager123', role: 'manager', phone: '0300-7777777',
+      name: 'Dawood Ahmed', email: 'pa672189@gmail.com', password: 'manager123', role: 'manager', phone: '0300-7777777',
     });
     const admin = await User.create({
       name: 'Haji Ahmad', email: 'admin@emasjid.pk', password: 'admin123', role: 'admin', phone: '0300-2222222',
@@ -50,10 +50,10 @@ const seedDB = async () => {
 
 
     const realEmailAdmin = await User.create({
-      name: 'Admin User (Real Email)', email: 'dawood.bhatti8812@gmail.com', password: 'admin123', role: 'admin', phone: '0300-6666666',
+      name: 'Chaudhry Nadeem', email: 'dawood.bhatti8812@gmail.com', password: 'admin123', role: 'admin', phone: '0300-6666666',
     });
     const realEmailScholar = await User.create({
-      name: 'Scholar User (Real Email)', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888', specialization: 'Nikah Services',
+      name: 'Mufti Abdul Rehman', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888', specialization: 'Nikah Services',
     });
 
 

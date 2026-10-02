@@ -12,7 +12,7 @@ const TYPE_OPTIONS = [
   { value: 'tarawih', label: 'Tarawih (Ramadan)', icon: 'menu_book' },
   { value: 'milad-un-nabi', label: 'Milad-un-Nabi', icon: 'volunteer_activism' },
   { value: 'janazah', label: 'Janazah (Funeral)', icon: 'groups' },
-  { value: 'other', label: 'Custom', icon: 'auto_awesome' },
+  { value: 'other', label: 'Other', icon: 'auto_awesome' },
 ]
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/

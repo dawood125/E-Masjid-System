@@ -218,7 +218,7 @@ export default function ScholarDashboard() {
                     <p className="font-semibold text-gray-900">{booking.groomName}</p>
                     <p className="text-xs text-gray-500">Groom: {booking.groomName} & Bride: {booking.brideName}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{booking.contact}</td>
+                  <td className="px-4 py-3 text-gray-700">{booking.phone}</td>
                   <td className="px-4 py-3 font-medium text-gray-800">{formatDate(booking.ceremonyDate)}</td>
                   <td className="px-4 py-3 text-gray-700">{formatTime(booking.ceremonyTime)}</td>
                   <td className="px-4 py-3">
@@ -277,7 +277,7 @@ export default function ScholarDashboard() {
               <div className="space-y-1 text-sm text-gray-700">
                 <p><strong>Applicant:</strong> {booking.groomName}</p>
                 <p><strong>Couple:</strong> {booking.groomName} & {booking.brideName}</p>
-                <p><strong>Contact:</strong> {booking.contact}</p>
+                <p><strong>Contact:</strong> {booking.phone}</p>
                 <p><strong>Date & Time:</strong> {formatDate(booking.ceremonyDate)} - {formatTime(booking.ceremonyTime)}</p>
               </div>
 
@@ -329,7 +329,7 @@ export default function ScholarDashboard() {
               <div className="flex-1">
                 <h4 className="text-base font-bold text-gray-900">Nikah: {booking.groomName} & {booking.brideName}</h4>
                 <p className="mt-1 text-sm text-gray-600">Time: {formatTime(booking.confirmedTime || booking.ceremonyTime)}</p>
-                <p className="text-sm text-gray-600">Contact: {booking.contact}</p>
+                <p className="text-sm text-gray-600">Contact: {booking.phone}</p>
                 {booking.rejectionReason && (
                   <p className="mt-1 text-sm text-red-700">Note: {booking.rejectionReason}</p>
                 )}
@@ -365,7 +365,7 @@ export default function ScholarDashboard() {
               <div><span className="font-semibold text-gray-500">Applicant:</span> {selectedBooking.groomName}</div>
               <div><span className="font-semibold text-gray-500">Groom:</span> {selectedBooking.groomName}</div>
               <div><span className="font-semibold text-gray-500">Bride:</span> {selectedBooking.brideName}</div>
-              <div><span className="font-semibold text-gray-500">Contact:</span> {selectedBooking.contact}</div>
+              <div><span className="font-semibold text-gray-500">Contact:</span> {selectedBooking.phone}</div>
               <div><span className="font-semibold text-gray-500">Requested Date:</span> {formatDate(selectedBooking.ceremonyDate)}</div>
               <div><span className="font-semibold text-gray-500">Preferred Time:</span> {formatTime(selectedBooking.ceremonyTime)}</div>
             </div>

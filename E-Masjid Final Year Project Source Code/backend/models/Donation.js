@@ -12,9 +12,6 @@ const donationSchema = new mongoose.Schema({
   note: { type: String, trim: true, maxlength: 300 },
   stripeSessionId: { type: String, unique: true, sparse: true, index: true },
   stripePaymentId: { type: String, unique: true, sparse: true },
-  stripeChargeId: { type: String },
-  stripeRefundId: { type: String },
-  refundedAmount: { type: Number, default: 0 },
   mosqueId: { type: mongoose.Schema.Types.ObjectId, ref: 'Mosque' },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
