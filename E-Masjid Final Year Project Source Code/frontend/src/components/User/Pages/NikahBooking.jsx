@@ -17,6 +17,7 @@ const requirements = [
 ]
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PK_MOBILE_RE = /^(?:\+92|0092|92|0)3\d{9}$/
 
 function validate(form) {
   const errors = {}
@@ -29,8 +30,7 @@ function validate(form) {
   else if (form.brideName.trim().length > 100) errors.brideName = 'Bride name must be under 100 characters'
 
   if (!form.phone.trim()) errors.phone = 'Contact number is required'
-  else if (form.phone.trim().length < 7) errors.phone = 'Contact number looks too short'
-  else if (form.phone.trim().length > 20) errors.phone = 'Contact number is too long'
+  else if (!PK_MOBILE_RE.test(form.phone.replace(/[\s-]/g, ''))) errors.phone = 'Enter a valid Pakistani mobile number, e.g. 0300-1234567'
 
   if (!form.email.trim()) errors.email = 'Email is required'
   else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
@@ -209,6 +209,7 @@ export default function NikahBooking() {
                     onChange={(e) => update('phone', e.target.value)}
                     error={errors.phone}
                     placeholder="03XX-XXXXXXX"
+                    hint="Pakistani mobile number, e.g. 0300-1234567"
                     autoComplete="tel"
                   />
                   <FormField

@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { handleValidation } = require('../middleware/validate');
+const { protect } = require('../middleware/auth');
 const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/expensesController');
 
-router.get('/', ctrl.listExpenses);
+router.get('/', protect, ctrl.listExpenses);
 router.get('/admin', ...requireRole('admin', 'manager'), ctrl.listAdmin);
-router.get('/summary', ctrl.summary);
+router.get('/summary', protect, ctrl.summary);
+router.get('/balance', ...requireRole('admin'), ctrl.balance);
 
 router.post('/', ...requireRole('admin'), [
   body('description').isString().trim().isLength({ min: 3, max: 300 }).withMessage('Description is required'),

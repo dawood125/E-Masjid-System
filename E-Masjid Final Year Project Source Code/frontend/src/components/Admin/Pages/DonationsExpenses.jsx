@@ -15,13 +15,14 @@ function validateDonation(form) {
   return errs
 }
 
-function validateExpense(form) {
+function validateExpense(form, allowed) {
   const errs = {}
   if (!form.description.trim()) errs.description = 'Description is required'
   else if (form.description.trim().length < 3) errs.description = 'Please write a longer description'
   const amt = Number(form.amount)
   if (!form.amount && form.amount !== 0) errs.amount = 'Amount is required'
   else if (Number.isNaN(amt) || amt <= 0) errs.amount = 'Enter a valid amount greater than 0'
+  else if (allowed !== null && amt > allowed) errs.amount = `Expenses cannot be more than donations. Available balance is ${formatCurrency(Math.max(allowed, 0))}.`
   return errs
 }
 
@@ -85,6 +86,7 @@ export default function DonationsExpenses() {
   const [expensesTotalPages, setExpensesTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [expenseBalance, setExpenseBalance] = useState(null)
   const submittingRef = useRef(false)
   const scrollBeforeModalRef = useRef(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -152,6 +154,20 @@ export default function DonationsExpenses() {
     return () => { cancelled = true }
   
   }, [donationSafePage, expenseSafePage, typeFilter, categoryFilter, anonFilter, showToast])
+
+  useEffect(() => {
+    if (!isCreateOpen || activeTab !== 'expenses') return
+    let cancelled = false
+    setExpenseBalance(null)
+    api.getExpenseBalance()
+      .then((res) => { if (!cancelled) setExpenseBalance(res.data) })
+      .catch(() => { if (!cancelled) setExpenseBalance(null) })
+    return () => { cancelled = true }
+  }, [isCreateOpen, activeTab])
+
+  const allowedExpense = expenseBalance
+    ? expenseBalance.available + (recordForm._editExpenseId ? Number(recordForm._editExpenseAmount) || 0 : 0)
+    : null
 
   const donationTypes = DONATION_TYPES
   const expenseCategories = EXPENSE_CATEGORIES
@@ -224,7 +240,7 @@ export default function DonationsExpenses() {
     event.preventDefault()
     if (submittingRef.current) return
 
-    const v = activeTab === 'donations' ? validateDonation(recordForm) : validateExpense(recordForm)
+    const v = activeTab === 'donations' ? validateDonation(recordForm) : validateExpense(recordForm, allowedExpense)
     if (Object.keys(v).length > 0) {
       setRecordErrors(v)
       const firstField = Object.keys(v)[0]
@@ -600,6 +616,7 @@ export default function DonationsExpenses() {
                                 note: '',
                                 category: expense.category || 'Utilities',
                                 _editExpenseId: expense.id,
+                                _editExpenseAmount: expense.amount,
                               })
                               setRecordErrors({})
                               setActiveTab('expenses')
@@ -789,6 +806,7 @@ export default function DonationsExpenses() {
                 }}
                 error={recordErrors.amount}
                 placeholder="e.g., 5000"
+                hint={activeTab === 'expenses' && allowedExpense !== null ? `Available balance: ${formatCurrency(Math.max(allowedExpense, 0))}` : undefined}
                 disabled={submitting}
               />
               <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">

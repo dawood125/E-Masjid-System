@@ -4,6 +4,7 @@ const stripeLib = require('stripe');
 const Donation = require('../models/Donation');
 const { sanitizeString, isValidObjectId } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
+const { ensureDonationDropFits } = require('./balanceService');
 
 const ALLOWED_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
 
@@ -294,7 +295,16 @@ async function createOnlineDonation(input) {
   return createStripeCheckout(input);
 }
 
+function countedAmount(status, amount) {
+  return status === 'completed' ? Number(amount) || 0 : 0;
+}
+
 async function update(id, body, user) {
+  const existing = await Donation.findOne({ _id: id, mosqueId: user.mosqueId });
+  if (!existing) throw httpError(404, 'Donation not found');
+  const before = countedAmount(existing.status, existing.amount);
+  const after = countedAmount(body.status ?? existing.status, body.amount ?? existing.amount);
+  await ensureDonationDropFits(user.mosqueId, before - after);
   const donation = await Donation.findOneAndUpdate(
     { _id: id, mosqueId: user.mosqueId },
     body,
@@ -305,6 +315,9 @@ async function update(id, body, user) {
 }
 
 async function remove(id, user) {
+  const existing = await Donation.findOne({ _id: id, mosqueId: user.mosqueId });
+  if (!existing) throw httpError(404, 'Donation not found');
+  await ensureDonationDropFits(user.mosqueId, countedAmount(existing.status, existing.amount));
   const donation = await Donation.findOneAndDelete({ _id: id, mosqueId: user.mosqueId });
   if (!donation) throw httpError(404, 'Donation not found');
   return donation;

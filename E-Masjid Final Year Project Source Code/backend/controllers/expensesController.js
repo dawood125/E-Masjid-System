@@ -16,6 +16,11 @@ const summary = tryOrNext(async (req, res) => {
   res.json({ success: true, data: totals });
 });
 
+const balance = tryOrNext(async (req, res) => {
+  const data = await svc.balance(req.user);
+  res.json({ success: true, data });
+});
+
 const createExpense = tryOrNext(async (req, res) => {
   const expense = await svc.create(req.body, req.user);
   res.status(201).json({ success: true, data: expense });
@@ -31,4 +36,4 @@ const removeExpense = tryOrNext(async (req, res) => {
   res.json({ success: true, message: 'Expense deleted' });
 });
 
-module.exports = { listExpenses, listAdmin, summary, createExpense, updateExpense, removeExpense };
+module.exports = { listExpenses, listAdmin, summary, balance, createExpense, updateExpense, removeExpense };

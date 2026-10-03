@@ -1,11 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useUI } from '../../../hooks/useUI.js'
 import api from '../../../utils/api.js'
-import { formatDate } from '../../../utils/formatters.js'
+import { formatDate, formatTime } from '../../../utils/formatters.js'
 import FormField from '../../Common/FormField.jsx'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^[+\d][\d\s\-()]{6,20}$/
+
+const BOOKING_FILTERS = ['all', 'pending', 'accepted', 'rejected']
+
+const BOOKING_BADGE = {
+  pending: 'bg-amber-100 text-amber-700',
+  accepted: 'bg-emerald-100 text-emerald-700',
+  rejected: 'bg-red-100 text-red-700',
+  completed: 'bg-blue-100 text-blue-700',
+}
 
 function validateScholar(form) {
   const errs = {}
@@ -69,6 +78,8 @@ export default function Scholars() {
   const [loading, setLoading] = useState(true)
   const [confirmToggle, setConfirmToggle] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
+  const [bookings, setBookings] = useState([])
+  const [bookingFilter, setBookingFilter] = useState('all')
 
   const loadScholars = async () => {
     const res = await api.getScholars()
@@ -80,9 +91,10 @@ export default function Scholars() {
     let mounted = true
     ;(async () => {
       try {
-        const scholarList = await loadScholars()
+        const [scholarList, bookingRes] = await Promise.all([loadScholars(), api.getNikahBookings()])
         if (!mounted) return
         setScholars(scholarList)
+        setBookings(Array.isArray(bookingRes.data) ? bookingRes.data : [])
       } catch (err) {
         showToast(err.message || 'Failed to load scholars.', 'error')
       } finally {
@@ -93,6 +105,15 @@ export default function Scholars() {
   }, [showToast])
 
   const activeCount = scholars.filter((scholar) => scholar.isActive).length
+
+  const bookingCounts = useMemo(() => ({
+    total: bookings.length,
+    pending: bookings.filter((b) => b.status === 'pending').length,
+    accepted: bookings.filter((b) => b.status === 'accepted').length,
+    rejected: bookings.filter((b) => b.status === 'rejected').length,
+  }), [bookings])
+
+  const visibleBookings = bookingFilter === 'all' ? bookings : bookings.filter((b) => b.status === bookingFilter)
 
   const totalCompletedNikah = scholars.reduce((sum, scholar) => sum + (scholar.nikahPerformed || 0), 0)
 
@@ -357,11 +378,11 @@ export default function Scholars() {
                 <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-3 text-center">
                   <div>
                     <p className="text-lg font-bold text-gray-900">{scholar.nikahPerformed ?? 0}</p>
-                    <p className="text-xs text-gray-500">Nikah Performed</p>
+                    <p className="text-xs text-gray-500">Nikah Accepted</p>
                   </div>
                   <div>
                     <p className="text-lg font-bold text-gray-900">{scholar.pendingRequests ?? 0}</p>
-                    <p className="text-xs text-gray-500">Pending Requests</p>
+                    <p className="text-xs text-gray-500">Pending in Masjid</p>
                   </div>
                 </div>
               </div>
@@ -418,6 +439,100 @@ export default function Scholars() {
             <h4 className="text-base font-bold text-gray-900">Add New Scholar</h4>
             <p className="mt-1 text-sm text-gray-600">Register a new scholar to handle Nikah ceremonies.</p>
           </button>
+        </div>
+      </section>
+
+      <section id="nikah-bookings" className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="inline-flex items-center gap-2 text-lg font-bold text-gray-900">
+              <i className="material-icons-round text-primary-700">favorite</i>
+              Nikah Bookings Overview
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">Every Nikah request in your masjid and which scholar accepted it.</p>
+          </div>
+          <div className="inline-flex flex-wrap rounded-lg bg-gray-100 p-1">
+            {BOOKING_FILTERS.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setBookingFilter(status)}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-all duration-150 ${
+                  bookingFilter === status ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <article className="rounded-lg border border-gray-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total</p>
+            <p className="mt-1 text-xl font-bold text-gray-900">{bookingCounts.total}</p>
+          </article>
+          <article className="rounded-lg border border-amber-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pending</p>
+            <p className="mt-1 text-xl font-bold text-amber-700">{bookingCounts.pending}</p>
+          </article>
+          <article className="rounded-lg border border-emerald-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Accepted</p>
+            <p className="mt-1 text-xl font-bold text-emerald-700">{bookingCounts.accepted}</p>
+          </article>
+          <article className="rounded-lg border border-red-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Rejected</p>
+            <p className="mt-1 text-xl font-bold text-red-700">{bookingCounts.rejected}</p>
+          </article>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <tr>
+                <th className="px-4 py-3">Booking ID</th>
+                <th className="px-4 py-3">Couple</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Date & Time</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Scholar</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {visibleBookings.map((booking) => (
+                <tr key={booking._id}>
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-700">NKH-{String(booking._id).slice(-6).toUpperCase()}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-gray-900">{booking.groomName} & {booking.brideName}</p>
+                    <p className="text-xs text-gray-500">{booking.email}</p>
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">{booking.phone}</td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {formatDate(booking.confirmedDate || booking.ceremonyDate)}
+                    <span className="block text-xs text-gray-500">{formatTime(booking.confirmedTime || booking.ceremonyTime)}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${BOOKING_BADGE[booking.status] || 'bg-gray-100 text-gray-700'}`}>
+                      {booking.status}
+                    </span>
+                    {booking.status === 'rejected' && booking.rejectionReason && (
+                      <p className="mt-1 max-w-[220px] text-xs text-gray-500">{booking.rejectionReason}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {booking.scholarId?.name || (booking.status === 'pending' ? 'Waiting for a scholar' : '—')}
+                  </td>
+                </tr>
+              ))}
+              {!loading && visibleBookings.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                    {bookingFilter === 'all' ? 'No Nikah bookings yet.' : `No ${bookingFilter} bookings.`}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 

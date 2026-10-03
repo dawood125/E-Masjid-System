@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const { sanitizeString, isValidObjectId } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
+const { getBalance, ensureExpenseFits } = require('./balanceService');
 
 function toObjectId(id) {
   return mongoose.Types.ObjectId.createFromHexString(id);
@@ -109,6 +110,7 @@ async function aggregateSummary({ mosqueId }) {
 }
 
 async function create(input, user) {
+  await ensureExpenseFits(user.mosqueId, Number(input.amount));
   return Expense.create({
     ...input,
     description: sanitizeString(input.description),
@@ -119,6 +121,11 @@ async function create(input, user) {
 
 async function update(id, body, user) {
   if (!isValidObjectId(id)) throw httpError(400, 'Invalid expense id');
+  const existing = await Expense.findOne({ _id: id, mosqueId: user.mosqueId });
+  if (!existing) throw httpError(404, 'Expense not found');
+  if (body.amount !== undefined) {
+    await ensureExpenseFits(user.mosqueId, Number(body.amount) - existing.amount);
+  }
   const expense = await Expense.findOneAndUpdate(
     { _id: id, mosqueId: user.mosqueId },
     {
@@ -138,4 +145,9 @@ async function remove(id, user) {
   return expense;
 }
 
-module.exports = { listPublic, listAdmin, aggregateSummary, create, update, remove };
+async function balance(user) {
+  if (!user.mosqueId) throw httpError(400, 'Your account is not assigned to a mosque');
+  return getBalance(user.mosqueId);
+}
+
+module.exports = { listPublic, listAdmin, aggregateSummary, balance, create, update, remove };

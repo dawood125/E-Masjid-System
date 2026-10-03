@@ -6,6 +6,7 @@ const { handleValidation, isValidObjectId } = require('../middleware/validate');
 const authController = require('../controllers/authController');
 const { PASSWORD_REGEX, findActiveMosqueForRegistration } = require('../services/authService');
 const { tryOrNext } = require('../utils/asyncRoute');
+const { requireRole } = require('../utils/routeHelpers');
 
 const passwordRule = body('password')
   .isString()
@@ -63,6 +64,22 @@ router.post('/reset-password/:token', [
 ], authController.resetPassword);
 
 router.get('/me', protect, authController.getMe);
+
+router.put('/me', ...requireRole('manager'), [
+  body('name').optional().isString().trim().isLength({ min: 2, max: 80 }).withMessage('Name must be between 2 and 80 characters'),
+  body('email').optional().isString().trim().isEmail().withMessage('Valid email is required'),
+  body('phone').optional({ checkFalsy: true }).isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be between 7 and 20 characters'),
+  handleValidation,
+], authController.updateMe);
+
+router.put('/me/password', ...requireRole('manager'), [
+  body('currentPassword').isString().isLength({ min: 1 }).withMessage('Current password is required'),
+  body('newPassword')
+    .isString()
+    .matches(PASSWORD_REGEX)
+    .withMessage('Password must be at least 8 characters and include at least one letter and one number'),
+  handleValidation,
+], authController.changeMyPassword);
 
 router.put('/me/mosque', [
   protect,

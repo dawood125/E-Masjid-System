@@ -35,6 +35,7 @@ import ManagerLogin from './components/Manager/Pages/ManagerLogin'
 import ManagerDashboard from './components/Manager/Pages/Dashboard'
 import ManageMosques from './components/Manager/Pages/Mosques'
 import ManageAdmins from './components/Manager/Pages/Admins'
+import ManagerProfile from './components/Manager/Pages/Profile'
 
 import CommitteeLogin from './components/Committee/Pages/CommitteeLogin'
 import CommitteeDashboard from './components/Committee/Pages/Dashboard'
@@ -99,6 +100,7 @@ function App() {
               <Route index element={<ManagerDashboard />} />
               <Route path="mosques" element={<ManageMosques />} />
               <Route path="admins" element={<ManageAdmins />} />
+              <Route path="profile" element={<ManagerProfile />} />
             </Route>
 
             <Route path="/committee/login" element={<CommitteeLogin />} />

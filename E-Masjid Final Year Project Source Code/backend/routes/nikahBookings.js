@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { protect } = require('../middleware/auth');
-const { handleValidation } = require('../middleware/validate');
+const { handleValidation, normalizePakistaniMobile } = require('../middleware/validate');
 const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/nikahBookingsController');
 
@@ -15,7 +15,7 @@ router.post('/', protect, ...requireRole('community'), [
   body('brideName').isString().trim().isLength({ min: 2, max: 100 }).withMessage('Bride name must be 2 to 100 characters'),
   body('ceremonyDate').isISO8601().withMessage('Valid ceremony date is required'),
   body('ceremonyTime').isString().trim().isLength({ min: 3, max: 20 }).withMessage('Valid ceremony time is required'),
-  body('phone').isString().trim().isLength({ min: 7, max: 20 }).withMessage('Phone number must be 7 to 20 characters'),
+  body('phone').isString().custom((v) => normalizePakistaniMobile(v) !== null).withMessage('Enter a valid Pakistani mobile number, e.g. 0300-1234567'),
   body('email').isString().trim().isEmail().withMessage('Valid email address is required'),
   body('address').isString().trim().isLength({ min: 3, max: 500 }).withMessage('Address must be 3 to 500 characters'),
   body('notes').optional().isString().trim().isLength({ max: 1000 }).withMessage('Notes too long'),

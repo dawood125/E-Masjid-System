@@ -12,6 +12,15 @@ function generateTempPassword() {
   return Math.random().toString(36).slice(-10);
 }
 
+async function ensureNoActiveAdmin(mosqueId, exceptId) {
+  const filter = { role: 'admin', mosqueId, isActive: true };
+  if (exceptId) filter._id = { $ne: exceptId };
+  const current = await User.findOne(filter).select('name');
+  if (current) {
+    throw httpError(400, `This masjid already has an active admin (${current.name}). Deactivate them first to assign a new admin.`);
+  }
+}
+
 function userView(u, mosqueName) {
   const view = {
     id: u._id,
@@ -28,7 +37,9 @@ function userView(u, mosqueName) {
 
 router.get('/mosques', protect, authorize('manager'), async (req, res, next) => {
   try {
-    const mosques = await Mosque.find({ managerId: req.user._id }).sort({ createdAt: 1 });
+    const mosques = await Mosque.find({ managerId: req.user._id })
+      .populate('admins', 'name email isActive')
+      .sort({ createdAt: 1 });
     res.json({ success: true, data: mosques });
   } catch (e) { next(e); }
 });
@@ -56,6 +67,7 @@ router.post('/mosques/:mosqueId/admin', protect, authorize('manager'), [
 ], async (req, res, next) => {
   try {
     const mosque = await findManagedMosqueOrThrow(req, req.params.mosqueId);
+    await ensureNoActiveAdmin(mosque._id);
 
     const email = sanitizeString(req.body.email).toLowerCase();
     const existing = await User.findOne({ email });
@@ -94,6 +106,7 @@ router.post('/users', protect, authorize('manager'), [
 ], async (req, res, next) => {
   try {
     const mosque = await findManagedMosqueOrThrow(req, req.body.mosqueId);
+    if (req.body.role === 'admin') await ensureNoActiveAdmin(mosque._id);
 
     const email = sanitizeString(req.body.email).toLowerCase();
     const existing = await User.findOne({ email });
@@ -161,6 +174,9 @@ router.put('/admins/:adminId', protect, authorize('manager'), [
     });
     if (!admin) throw httpError(404, 'Admin not found in your managed mosques');
 
+    if (req.body.isActive === true && !admin.isActive) {
+      await ensureNoActiveAdmin(admin.mosqueId, admin._id);
+    }
     if (typeof req.body.isActive === 'boolean') {
       admin.isActive = req.body.isActive;
     }

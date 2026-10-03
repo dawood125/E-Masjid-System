@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../../utils/constants.js'
 import { formatCurrency, formatDate } from '../../../utils/formatters.js'
 import { useUI } from '../../../hooks/useUI.js'
 import { useMosque } from '../../../hooks/useMosque.js'
+import { useAuth } from '../../../hooks/useAuth.js'
 import api from '../../../utils/api.js'
 import { downloadTransparencyReport, EXPENSE_CATEGORIES } from '../../../utils/report.js'
 
@@ -33,6 +34,8 @@ function monthKey(dateString) {
 
 export default function Transparency() {
   const { activeMosqueId, activeMosque } = useMosque()
+  const { isAuthenticated, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
   const [monthFilter, setMonthFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -61,9 +64,16 @@ export default function Transparency() {
   const expenseSafePage = Math.max(1, expensePage)
 
   useEffect(() => {
+    if (authLoading || isAuthenticated) return
+    showToast('Please log in to view the transparency report.', 'info')
+    navigate(`${ROUTES.LOGIN}?returnUrl=${encodeURIComponent(ROUTES.TRANSPARENCY)}`, { replace: true })
+  }, [authLoading, isAuthenticated, navigate, showToast])
+
+  useEffect(() => {
     let mounted = true
 
     async function load() {
+      if (authLoading || !isAuthenticated) return
       const mosqueId = activeMosqueId
       if (!mosqueId) {
         setLoading(false)
@@ -127,7 +137,7 @@ export default function Transparency() {
 
     load()
     return () => { mounted = false }
-  }, [showToast, monthFilter, typeFilter, categoryFilter, donationSafePage, expenseSafePage, donationViewAll, expenseViewAll, activeMosqueId])
+  }, [showToast, monthFilter, typeFilter, categoryFilter, donationSafePage, expenseSafePage, donationViewAll, expenseViewAll, activeMosqueId, authLoading, isAuthenticated])
 
   function handleMonthChange(value) {
     setMonthFilter(value)
@@ -261,6 +271,8 @@ export default function Transparency() {
     (monthFilter !== 'all' ? 1 : 0) +
     (typeFilter !== 'all' ? 1 : 0) +
     (categoryFilter !== 'all' ? 1 : 0)
+
+  if (authLoading || !isAuthenticated) return null
 
   return (
     <section className="py-12 bg-white">

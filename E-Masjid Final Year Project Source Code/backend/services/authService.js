@@ -54,6 +54,7 @@ async function setUserMosque(userId, mosqueId) {
 
   const user = await User.findById(userId);
   if (!user) throw httpError(404, 'User not found');
+  if (user.role !== 'community') throw httpError(403, 'Staff accounts stay linked to their own masjid');
 
   user.mosqueId = mosque._id;
   await user.save();
@@ -79,6 +80,39 @@ async function loginUser({ email, password }) {
   }
 
   return { user, token: tokenForUser(user) };
+}
+
+async function updateProfile(userId, { name, email, phone, currentPassword }) {
+  const user = await User.findById(userId).select('+password');
+  if (!user) throw httpError(404, 'User not found');
+
+  if (email && email.toLowerCase() !== user.email) {
+    const lower = email.toLowerCase();
+    if (!currentPassword || !(await user.matchPassword(currentPassword))) {
+      throw httpError(400, 'Enter your current password to change your email');
+    }
+    const taken = await User.exists({ email: lower, _id: { $ne: user._id } });
+    if (taken) throw httpError(400, 'This email is already used by another account');
+    user.email = lower;
+  }
+  if (name) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  await user.save();
+
+  return User.findById(userId).select('-password').lean();
+}
+
+async function changePassword(userId, { currentPassword, newPassword }) {
+  const user = await User.findById(userId).select('+password');
+  if (!user) throw httpError(404, 'User not found');
+  if (!(await user.matchPassword(currentPassword))) {
+    throw httpError(400, 'Current password is incorrect');
+  }
+  if (currentPassword === newPassword) {
+    throw httpError(400, 'New password must be different from the current password');
+  }
+  user.password = newPassword;
+  await user.save();
 }
 
 function buildResetEmailHtml(resetUrl) {
@@ -249,6 +283,8 @@ module.exports = {
   registerUser,
   loginUser,
   setUserMosque,
+  updateProfile,
+  changePassword,
   requestPasswordReset,
   consumePasswordReset,
   sendVerificationCode,

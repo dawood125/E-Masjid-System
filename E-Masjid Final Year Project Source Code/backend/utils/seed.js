@@ -49,9 +49,6 @@ const seedDB = async () => {
 
 
 
-    const realEmailAdmin = await User.create({
-      name: 'Chaudhry Nadeem', email: 'dawood.bhatti8812@gmail.com', password: 'admin123', role: 'admin', phone: '0300-6666666',
-    });
     const realEmailScholar = await User.create({
       name: 'Mufti Abdul Rehman', email: 'dawoodah85@gmail.com', password: 'scholar123', role: 'scholar', phone: '0300-8888888', specialization: 'Nikah Services',
     });
@@ -92,7 +89,7 @@ const seedDB = async () => {
 
 
     await User.updateMany(
-      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailAdmin._id, realEmailScholar._id] } },
+      { _id: { $in: [admin._id, scholar._id, committee1._id, user1._id, realEmailScholar._id] } },
       { mosqueId: mosque._id }
     );
 
@@ -129,10 +126,10 @@ const seedDB = async () => {
 
 
     const expenses = [
-      { description: 'Mosque Utilities (Electricity & Water)', amount: 8000, category: 'Utilities', mosqueId: mosque._id, addedBy: admin._id },
-      { description: 'Staff Salaries - Monthly', amount: 25000, category: 'Salary', mosqueId: mosque._id, addedBy: admin._id },
-      { description: 'Renovation Materials', amount: 15000, category: 'Renovation', mosqueId: mosque._id, addedBy: admin._id },
-      { description: 'Charity Distribution', amount: 12000, category: 'Charity', mosqueId: mosque._id, addedBy: admin._id },
+      { description: 'Mosque Utilities (Electricity & Water)', amount: 6000, category: 'Utilities', mosqueId: mosque._id, addedBy: admin._id },
+      { description: 'Staff Salaries - Monthly', amount: 12000, category: 'Salary', mosqueId: mosque._id, addedBy: admin._id },
+      { description: 'Renovation Materials', amount: 5000, category: 'Renovation', mosqueId: mosque._id, addedBy: admin._id },
+      { description: 'Charity Distribution', amount: 3000, category: 'Charity', mosqueId: mosque._id, addedBy: admin._id },
     ];
     await Expense.insertMany(expenses);
 
@@ -385,7 +382,6 @@ const seedDB = async () => {
     console.log('  User (Al-Noor):   user@emasjid.pk / user1234');
     console.log('  User (Al-Rahman): user2@emasjid.pk / user1234');
     console.log('\n📧 Real-email accounts (for forgot-password cross-role testing — receive real Gmail):');
-    console.log('  Admin:     dawood.bhatti8812@gmail.com / admin123');
     console.log('  Scholar:   dawoodah85@gmail.com / scholar123');
     console.log('\n🕌 Seeded masjids (all in Sheikhupura, all under ONE super admin):');
     console.log('  - Masjid Al-Noor    (Civil Lines)    — admin: admin@emasjid.pk');

@@ -1,5 +1,5 @@
 const NikahBooking = require('../models/NikahBooking');
-const { sanitizeString, isValidObjectId } = require('../middleware/validate');
+const { sanitizeString, isValidObjectId, normalizePakistaniMobile } = require('../middleware/validate');
 const httpError = require('../middleware/httpError');
 
 function todayMidnight() {
@@ -64,7 +64,7 @@ async function createBooking(input, user) {
   return NikahBooking.create({
     groomName: sanitizeString(input.groomName),
     brideName: sanitizeString(input.brideName),
-    phone: sanitizeString(input.phone),
+    phone: normalizePakistaniMobile(input.phone),
     email: sanitizeString(input.email).toLowerCase(),
     address: sanitizeString(input.address),
     ceremonyDate: new Date(input.ceremonyDate),

@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { handleValidation, isValidObjectId } = require('../middleware/validate');
+const { protect } = require('../middleware/auth');
 const { requireRole } = require('../utils/routeHelpers');
 const ctrl = require('../controllers/donationsController');
 
-router.get('/', ctrl.listPublic);
-router.get('/top-donors', ctrl.topDonors);
-router.get('/summary', ctrl.summary);
+router.get('/', protect, ctrl.listPublic);
+router.get('/top-donors', protect, ctrl.topDonors);
+router.get('/summary', protect, ctrl.summary);
 router.get('/by-session/:sessionId', ctrl.getBySession);
 router.get('/status', ctrl.status);
 

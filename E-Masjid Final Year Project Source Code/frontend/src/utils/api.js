@@ -64,6 +64,8 @@ class ApiService {
   resetPassword(token, data) { return this.request('POST', `/api/auth/reset-password/${token}`, data) }
   getMe() { return this.request('GET', '/api/auth/me') }
   updateMyMosque(mosqueId) { return this.request('PUT', '/api/auth/me/mosque', { mosqueId }) }
+  updateMyProfile(data) { return this.request('PUT', '/api/auth/me', data) }
+  changeMyPassword(data) { return this.request('PUT', '/api/auth/me/password', data) }
   refreshToken() { return this.request('POST', '/api/auth/refresh-token') }
   logout() { return this.request('POST', '/api/auth/logout') }
 
@@ -81,6 +83,7 @@ class ApiService {
   getExpenses(params = '') { return this.request('GET', `/api/expenses${params ? '?' + params : ''}`) }
   getAdminExpenses(params = '') { return this.request('GET', `/api/expenses/admin${params ? '?' + params : ''}`) }
   getExpenseSummary(params = '') { return this.request('GET', `/api/expenses/summary${params ? '?' + params : ''}`) }
+  getExpenseBalance() { return this.request('GET', '/api/expenses/balance') }
   createExpense(data) { return this.request('POST', '/api/expenses', data) }
   updateExpense(id, data) { return this.request('PUT', `/api/expenses/${id}`, data) }
   deleteExpense(id) { return this.request('DELETE', `/api/expenses/${id}`) }

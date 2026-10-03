@@ -47,13 +47,18 @@ export function MosqueProvider({ children }) {
   }, [])
 
   const setActiveMosque = useCallback(async (mosqueId) => {
+    if (user && ['admin', 'scholar', 'committee'].includes(user.role)) {
+      if (mosqueId && String(mosqueId) === String(user.mosqueId)) return { ok: true, mosqueId }
+      return { ok: false, mosqueId, error: 'Staff accounts stay on their own masjid. Log out to browse another masjid.' }
+    }
+
     if (!mosqueId) {
       clearActiveMosqueId()
       setActiveMosqueIdState('')
       return { ok: true, mosqueId: '' }
     }
 
-    if (!user || !user._id) {
+    if (!user || !user._id || user.role !== 'community') {
       setActiveMosqueId(mosqueId)
       setActiveMosqueIdState(mosqueId)
       return { ok: true, mosqueId }

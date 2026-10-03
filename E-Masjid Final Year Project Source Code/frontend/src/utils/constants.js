@@ -99,6 +99,7 @@ export const ROUTES = {
   MANAGER_DASHBOARD: '/manager',
   MANAGER_MOSQUES: '/manager/mosques',
   MANAGER_ADMINS: '/manager/admins',
+  MANAGER_PROFILE: '/manager/profile',
 
   
   COMMITTEE_LOGIN: '/committee/login',

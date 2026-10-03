@@ -20,8 +20,16 @@ function sanitizeString(value) {
   return value.trim();
 }
 
+function normalizePakistaniMobile(value) {
+  const compact = String(value || '').replace(/[\s-]/g, '');
+  if (!/^(?:\+92|0092|92|0)3\d{9}$/.test(compact)) return null;
+  const local = `0${compact.slice(-10)}`;
+  return `${local.slice(0, 4)}-${local.slice(4)}`;
+}
+
 module.exports = {
   handleValidation,
   isValidObjectId,
   sanitizeString,
+  normalizePakistaniMobile,
 };

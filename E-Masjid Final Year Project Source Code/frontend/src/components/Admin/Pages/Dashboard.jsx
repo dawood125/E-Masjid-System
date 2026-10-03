@@ -162,14 +162,16 @@ export default function Dashboard() {
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
               <i className="material-icons-round">favorite</i>
             </div>
-            <span className="rounded-full bg-error-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-error">
-              Action Needed
-            </span>
+            {pendingNikahCount > 0 && (
+              <span className="rounded-full bg-error-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-error">
+                Action Needed
+              </span>
+            )}
           </div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pending Nikah</p>
           <h3 className="mt-2 text-2xl font-bold text-gray-900">{pendingNikahCount} Requests</h3>
           <Link to="/admin/scholars" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:text-primary-800">
-            Assign to Scholar
+            View Bookings
             <i className="material-icons-round text-base">arrow_forward</i>
           </Link>
         </article>

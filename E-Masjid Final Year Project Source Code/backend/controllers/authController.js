@@ -123,6 +123,25 @@ async function updateMyMosque(req, res, next) {
   } catch (e) { next(e); }
 }
 
+async function updateMe(req, res, next) {
+  try {
+    const fields = pickSanitized(req.body, ['name', 'email', 'phone']);
+    fields.currentPassword = req.body.currentPassword;
+    const user = await authService.updateProfile(req.user._id, fields);
+    res.json({ success: true, user: publicUser(user), message: 'Profile updated' });
+  } catch (e) { next(e); }
+}
+
+async function changeMyPassword(req, res, next) {
+  try {
+    await authService.changePassword(req.user._id, {
+      currentPassword: req.body.currentPassword,
+      newPassword: req.body.newPassword,
+    });
+    res.json({ success: true, message: 'Password changed' });
+  } catch (e) { next(e); }
+}
+
 function refreshToken(req, res) {
   const token = generateToken(req.user._id, req.user.role);
   setAuthCookie(res, token);
@@ -154,6 +173,8 @@ module.exports = {
   resetPassword,
   getMe,
   updateMyMosque,
+  updateMe,
+  changeMyPassword,
   refreshToken,
   sendVerification,
   verifyEmail,

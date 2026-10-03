@@ -41,6 +41,10 @@ function validateAdminForm(form) {
   return errs
 }
 
+function activeAdminOf(mosque) {
+  return (mosque.admins || []).find((a) => a && a.isActive) || null
+}
+
 export default function ManageMosques() {
   const [mosques, setMosques] = useState([])
   const [showForm, setShowForm] = useState(false)
@@ -223,7 +227,7 @@ export default function ManageMosques() {
           email: editForm.email.trim() || undefined,
         }
         const res = await api.updateMosque(editModalMosque._id, payload)
-        setMosques((prev) => prev.map((m) => (m._id === editModalMosque._id ? res.data : m)))
+        setMosques((prev) => prev.map((m) => (m._id === editModalMosque._id ? { ...res.data, admins: m.admins } : m)))
         showToast('Mosque updated successfully', 'success')
         closeEditModal()
       } catch (err) {
@@ -253,7 +257,7 @@ export default function ManageMosques() {
     ;(async () => {
       try {
         const res = await api.updateMosque(mosqueId, { isActive: newStatus })
-        setMosques((prev) => prev.map((m) => (m._id === mosqueId ? res.data : m)))
+        setMosques((prev) => prev.map((m) => (m._id === mosqueId ? { ...res.data, admins: m.admins } : m)))
         showToast('Status updated', 'success')
       } catch (e) {
         showToast(e.message || 'Failed to update status', 'error')
@@ -372,6 +376,10 @@ export default function ManageMosques() {
                         </span>
                       )}
                     </div>
+                    <p className={`mt-2 flex items-center gap-1 text-sm ${activeAdminOf(mosque) ? 'text-gray-700' : 'text-amber-700'}`}>
+                      <i className="material-icons-round text-base">admin_panel_settings</i>
+                      {activeAdminOf(mosque) ? `Admin: ${activeAdminOf(mosque).name}` : 'No active admin assigned'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -384,19 +392,21 @@ export default function ManageMosques() {
                       <i className="material-icons-round text-base">edit</i>
                       Edit
                     </button>
-                    <button
-                      onClick={() => {
-                        setAdminModalMosque(mosque)
-                        setAdminForm({ name: '', email: '', phone: '', password: '' })
-                        setAdminFormErrors({})
-                        setLastCreatedAdmin(null)
-                      }}
-                      className="btn btn-secondary btn-sm"
-                      title="Create a new admin account scoped to this masjid"
-                    >
-                      <i className="material-icons-round text-base">person_add</i>
-                      Add Admin
-                    </button>
+                    {!activeAdminOf(mosque) && (
+                      <button
+                        onClick={() => {
+                          setAdminModalMosque(mosque)
+                          setAdminForm({ name: '', email: '', phone: '', password: '' })
+                          setAdminFormErrors({})
+                          setLastCreatedAdmin(null)
+                        }}
+                        className="btn btn-secondary btn-sm"
+                        title="Create the admin account for this masjid"
+                      >
+                        <i className="material-icons-round text-base">person_add</i>
+                        Add Admin
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -415,7 +425,7 @@ export default function ManageMosques() {
               <div>
                 <h2 className="font-primary text-xl font-bold text-gray-900">Create Admin Account</h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  For masjid <span className="font-semibold text-gray-800">{adminModalMosque.name}</span>
+                  For masjid <span className="font-semibold text-gray-800">{adminModalMosque.name}</span>. Each masjid has one admin.
                 </p>
               </div>
               <button onClick={closeAdminModal} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Close">
@@ -493,9 +503,6 @@ export default function ManageMosques() {
                   </p>
                 </div>
                 <div className="flex items-center justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setLastCreatedAdmin(null)} className="btn btn-secondary">
-                    Create Another
-                  </button>
                   <button type="button" onClick={closeAdminModal} className="btn btn-primary bg-[#047857] hover:bg-[#064e3b]">
                     Done
                   </button>
